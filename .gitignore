@@ -1,0 +1,24 @@
+# Ignore PJSR directory (PixInsight JavaScript Runtime library)
+PJSR/
+
+# Ignore Archive folder in AstroBin Export
+AstroBin Export/archive/
+
+# Common temporary and system files
+*.tmp
+*.temp
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
