@@ -168,19 +168,19 @@ AstroBinDialog.prototype.createGlobalParametersSection = function()
 
    calibrationSizer.addStretch();
 
-   // Second row: Bortle, SQM, FWHM, Temperature
-   var environmentSizer = new HorizontalSizer;
-   environmentSizer.spacing = 4;
+   // Second row: Bortle Scale (dedicated row for better visibility)
+   var bortleSizer = new HorizontalSizer;
+   bortleSizer.spacing = 4;
 
    // Bortle Scale Dropdown
    var bortleLabel = new Label(this);
-   bortleLabel.text = "Bortle:";
-   bortleLabel.minWidth = 70;
+   bortleLabel.text = "Bortle Scale:";
+   bortleLabel.minWidth = 100;
    bortleLabel.textAlignment = TextAlign_VertCenter;
-   environmentSizer.add(bortleLabel);
+   bortleSizer.add(bortleLabel);
    
    this.bortleComboBox = new ComboBox(this);
-   this.bortleComboBox.setFixedWidth(200);
+   this.bortleComboBox.setFixedWidth(320); // Increased width for better readability
    this.bortleComboBox.toolTip = "Bortle Dark-Sky Scale - Select your sky conditions.\n" +
                                  "This dropdown shows descriptions to help you choose,\n" +
                                  "but only the number (1-9) is stored and exported.";
@@ -217,7 +217,49 @@ AstroBinDialog.prototype.createGlobalParametersSection = function()
       self.updateSQMFromBortle();
    };
    
-   environmentSizer.add(this.bortleComboBox);
+   bortleSizer.add(this.bortleComboBox);
+   bortleSizer.addStretch();
+
+   // Third row: Filter Brand (dedicated row for better visibility)
+   var filterBrandSizer = new HorizontalSizer;
+   filterBrandSizer.spacing = 4;
+
+   // Filter Brand Preference
+   var filterBrandLabel = new Label(this);
+   filterBrandLabel.text = "Filter Brand:";
+   filterBrandLabel.minWidth = 100;
+   filterBrandLabel.textAlignment = TextAlign_VertCenter;
+   filterBrandSizer.add(filterBrandLabel);
+   
+   this.filterBrandCombo = new ComboBox(this);
+   this.filterBrandCombo.editEnabled = false;
+   this.filterBrandCombo.setFixedWidth(200); // Increased width for better readability
+   this.filterBrandCombo.toolTip = "Preferred brand for auto-suggestion of filter IDs";
+   this.filterBrandCombo.addItem("Auto"); // Default option
+   
+   // Populate with available brands from filter database
+   var brands = this.getUniqueBrands();
+   for (var i = 0; i < brands.length; i++) {
+      this.filterBrandCombo.addItem(brands[i]);
+   }
+   
+   // Set current selection based on config
+   for (var i = 0; i < this.filterBrandCombo.numberOfItems; i++) {
+      if (this.filterBrandCombo.itemText(i) === CONFIG.preferredFilterBrand) {
+         this.filterBrandCombo.currentItem = i;
+         break;
+      }
+   }
+   
+   this.filterBrandCombo.onItemSelected = function(index) {
+      CONFIG.preferredFilterBrand = this.itemText(index);
+   };
+   filterBrandSizer.add(this.filterBrandCombo);
+   filterBrandSizer.addStretch();
+
+   // Fourth row: SQM, FWHM, Temperature
+   var environmentSizer = new HorizontalSizer;
+   environmentSizer.spacing = 4;
 
    // Mean SQM
    var meanSqmLabel = new Label(this);
@@ -275,41 +317,19 @@ AstroBinDialog.prototype.createGlobalParametersSection = function()
    this.temperatureEdit.onTextUpdated = function(text) { CONFIG.ambientTemp = text; };
    environmentSizer.add(this.temperatureEdit);
 
-   // Filter Brand Preference
-   var filterBrandLabel = new Label(this);
-   filterBrandLabel.text = "Filter Brand:";
-   filterBrandLabel.minWidth = 100;
-   filterBrandLabel.textAlignment = TextAlign_VertCenter;
-   environmentSizer.add(filterBrandLabel);
-   this.filterBrandCombo = new ComboBox(this);
-   this.filterBrandCombo.editEnabled = false;
-   this.filterBrandCombo.setFixedWidth(100);
-   this.filterBrandCombo.toolTip = "Preferred brand for auto-suggestion of filter IDs";
-   this.filterBrandCombo.addItem("Auto"); // Default option
-   
-   // Populate with available brands from filter database
-   var brands = this.getUniqueBrands();
-   for (var i = 0; i < brands.length; i++) {
-      this.filterBrandCombo.addItem(brands[i]);
-   }
-   
-   // Set current selection based on config
-   for (var i = 0; i < this.filterBrandCombo.numberOfItems; i++) {
-      if (this.filterBrandCombo.itemText(i) === CONFIG.preferredFilterBrand) {
-         this.filterBrandCombo.currentItem = i;
-         break;
-      }
-   }
-   
-   this.filterBrandCombo.onItemSelected = function(index) {
-      CONFIG.preferredFilterBrand = this.itemText(index);
-   };
-   environmentSizer.add(this.filterBrandCombo);
-
    environmentSizer.addStretch();
 
+   // Layout the rows with spacing
    this.globalParametersGroupBox.sizer.add(calibrationSizer);
+   this.globalParametersGroupBox.sizer.addSpacing(8); // Add space between rows
+   this.globalParametersGroupBox.sizer.add(bortleSizer);
+   this.globalParametersGroupBox.sizer.addSpacing(4); // Add space between rows
+   this.globalParametersGroupBox.sizer.add(filterBrandSizer);
+   this.globalParametersGroupBox.sizer.addSpacing(8); // Add space between rows
    this.globalParametersGroupBox.sizer.add(environmentSizer);
+   
+   // Add space before info messages
+   this.globalParametersGroupBox.sizer.addSpacing(12);
    
    // Add info label for metadata status and helpful guidance
    this.metadataInfoLabel = new Label(this);

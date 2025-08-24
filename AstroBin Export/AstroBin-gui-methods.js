@@ -82,7 +82,12 @@ AstroBinDialog.prototype.analyzeImages = function()
       processEvents();
       
       this.populateImageTree();
-      this.analysisStatusLabel.text = "Analysis complete: " + g_analysisData.length + " unique sessions found";
+      
+      // Calculate total integration time for display
+      var totalIntegrationTime = this.calculateTotalIntegrationTime();
+      var integrationText = totalIntegrationTime > 0 ? " (Total integration: " + this.formatDuration(totalIntegrationTime) + ")" : "";
+      
+      this.analysisStatusLabel.text = "Analysis complete: " + g_analysisData.length + " unique sessions found" + integrationText;
       
    } catch (e) {
       console.criticalln("Error during analysis: " + e);
@@ -532,7 +537,7 @@ function FilterMappingDialog()
    this.__base__();
    
    this.windowTitle = "Filter Mapping";
-   this.scaledMinWidth = 800;  // Increased width to accommodate manual entry controls
+   this.scaledMinWidth = 900;  // Further increased width to accommodate wider manual entry field
    this.scaledMinHeight = 400;
    
    // Get unique filters from analysis data
@@ -653,7 +658,7 @@ FilterMappingDialog.prototype.createFilterMappingRow = function(filterName)
    // Manual Filter ID input (initially hidden)
    var manualIdEdit = new Edit(this.filterMappingGroupBox);
    manualIdEdit.text = "";
-   manualIdEdit.minWidth = 100;
+   manualIdEdit.minWidth = 300; // Increased width to accommodate full AstroBin URLs
    manualIdEdit.maxHeight = 25;
    manualIdEdit.toolTip = "Enter AstroBin filter ID (e.g., from URL: app.astrobin.com/equipment/explorer/filter/4359/)";
    manualIdEdit.visible = false;
@@ -705,7 +710,8 @@ FilterMappingDialog.prototype.createFilterMappingRow = function(filterName)
    
    // Allow Enter key in manual ID field to trigger validation
    manualIdEdit.onKeyPress = function(keyCode, modifiers) {
-      if (keyCode === KeyCode_Return || keyCode === KeyCode_Enter) {
+      // Use numeric key codes instead of undefined constants
+      if (keyCode === 13 || keyCode === 16777221) { // 13 = Return, 16777221 = Enter
          self.validateManualFilterId(manualIdEdit, filterIdLabel, filterName);
          return true;
       }
@@ -813,10 +819,17 @@ FilterMappingDialog.prototype.validateManualFilterId = function(manualIdEdit, fi
    }
    
    // Extract ID from URL if a full AstroBin URL was pasted
-   var idMatch = enteredId.match(/\/filter\/(\d+)\//);
-   if (idMatch) {
-      enteredId = idMatch[1];
-      manualIdEdit.text = enteredId; // Update the field with just the ID
+   // Use string methods instead of regex for better PixInsight compatibility
+   var filterPos = enteredId.indexOf('/filter/');
+   if (filterPos !== -1) {
+      var startPos = filterPos + 8; // length of '/filter/'
+      var endPos = enteredId.indexOf('/', startPos);
+      if (endPos === -1) endPos = enteredId.length; // No trailing slash
+      var extractedId = enteredId.substring(startPos, endPos);
+      if (extractedId && !isNaN(extractedId)) {
+         enteredId = extractedId;
+         manualIdEdit.text = enteredId; // Update the field with just the ID
+      }
    }
    
    // Validate that it's a number
@@ -1215,4 +1228,20 @@ AstroBinDialog.prototype.formatDuration = function(seconds)
    if (secs > 0 && hours === 0) parts.push(secs + "s");
    
    return parts.join(" ") || "0 min";
+};
+
+// Simple helper to calculate total integration time from analysis data
+AstroBinDialog.prototype.calculateTotalIntegrationTime = function()
+{
+   if (!g_analysisData || g_analysisData.length === 0) return 0;
+   
+   var totalSeconds = 0;
+   for (var i = 0; i < g_analysisData.length; i++) {
+      var data = g_analysisData[i];
+      var exposure = parseFloat(data.duration) || 0; // Use 'duration' instead of 'exposure'
+      var count = parseInt(data.number, 10) || 0;    // Use 'number' instead of 'count'
+      totalSeconds += exposure * count;
+   }
+   
+   return totalSeconds;
 };
