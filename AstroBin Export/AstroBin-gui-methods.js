@@ -265,8 +265,8 @@ AstroBinDialog.prototype.generateCSV = function()
       // Update the display to show current values
       this.populateImageTree();
       
-      // Generate CSV content with updated data
-      var csvContent = this.createCSVContent(g_analysisData);
+   // Generate CSV content with updated data
+   var csvContent = this.createCSVContent(g_analysisData);
       this.csvPreviewTextBox.text = csvContent;
       
       this.saveCSVButton.enabled = true;
@@ -291,6 +291,11 @@ AstroBinDialog.prototype.createCSVContent = function(data)
    ].join(",");
    lines.push(header);
    
+   // Column population map (headers always present; unchecked columns produce empty values)
+   var cols = CONFIG.exportColumns || {};
+   // Safety: required columns enforced
+   cols.number = true; cols.duration = true;
+
    // Data rows
    for (var i = 0; i < data.length; i++) {
       var a = data[i];
@@ -361,17 +366,25 @@ AstroBinDialog.prototype.createCSVContent = function(data)
          fwhmStr = fwhmVal.toFixed(2).replace(/\.?0+$/, '');
       }
       
+      // Build row honoring column population settings
       var row = [
-         a.date,
-         a.filterId,
-         a.number,
-         durationStr,
-         "",
-         a.binning,
-         gainStr,
-         sensorCoolingStr,
-         fNumberStr,
-         a.darks, a.flats, a.flatDarks, a.bias, bortleStr, sqmStr, fwhmStr, ambientTempStr
+         cols.date ? a.date : "",
+         cols.filter ? a.filterId : "",
+         /* required */ a.number,
+         /* required */ durationStr,
+         cols.iso ? "" : "",
+         cols.binning ? a.binning : "",
+         cols.gain ? gainStr : "",
+         cols.sensorCooling ? sensorCoolingStr : "",
+         cols.fNumber ? fNumberStr : "",
+         cols.darks ? a.darks : "",
+         cols.flats ? a.flats : "",
+         cols.flatDarks ? a.flatDarks : "",
+         cols.bias ? a.bias : "",
+         cols.bortle ? bortleStr : "",
+         cols.meanSqm ? sqmStr : "",
+         cols.meanFwhm ? fwhmStr : "",
+         cols.temperature ? ambientTempStr : ""
       ].join(",");
       lines.push(row);
    }
@@ -406,6 +419,96 @@ AstroBinDialog.prototype.copyCSVToClipboard = function()
    console.noteln("CSV content is in the preview box. Please select all text and copy manually.");
    this.csvPreviewTextBox.selectAll();
 };
+
+   // Modal: Export Columns selection
+   AstroBinDialog.prototype.showExportColumnsDialog = function()
+   {
+      var dlg = new Dialog(this);
+      dlg.windowTitle = "Export Columns";
+      dlg.scaledMinWidth = 380;
+      dlg.scaledMinHeight = 300;
+      dlg.sizer = new VerticalSizer;
+      dlg.sizer.margin = 8; dlg.sizer.spacing = 6;
+
+      var desc = new Label(dlg);
+      desc.text = "Choose which columns should be populated in the CSV.\nHeaders remain, unchecked columns output empty cells.";
+      desc.wordWrapping = true;
+      dlg.sizer.add(desc);
+
+      var grid = new VerticalSizer; grid.spacing = 2;
+      var current = CONFIG.exportColumns || DEFAULT_EXPORT_COLUMNS;
+
+      function makeCheck(text, key, disabled) {
+         var cb = new CheckBox(dlg);
+         cb.text = text;
+         cb.checked = !!current[key];
+         if (disabled) { cb.checked = true; cb.enabled = false; }
+         cb.onCheck = function(v){ /* no-op live */ };
+         cb.__key__ = key;
+         cb.__required__ = !!disabled;
+         return cb;
+      }
+
+      var checks = [];
+      checks.push(makeCheck("Date", "date"));
+      checks.push(makeCheck("Filter ID", "filter"));
+      checks.push(makeCheck("Number (required)", "number", true));
+      checks.push(makeCheck("Duration (required)", "duration", true));
+      checks.push(makeCheck("ISO (unused placeholder)", "iso"));
+      checks.push(makeCheck("Binning", "binning"));
+      checks.push(makeCheck("Gain", "gain"));
+      checks.push(makeCheck("Sensor Cooling", "sensorCooling"));
+      checks.push(makeCheck("F/Number", "fNumber"));
+      checks.push(makeCheck("Darks", "darks"));
+      checks.push(makeCheck("Flats", "flats"));
+      checks.push(makeCheck("Flat Darks", "flatDarks"));
+      checks.push(makeCheck("Bias", "bias"));
+      checks.push(makeCheck("Bortle", "bortle"));
+      checks.push(makeCheck("Mean SQM", "meanSqm"));
+      checks.push(makeCheck("Mean FWHM", "meanFwhm"));
+      checks.push(makeCheck("Ambient Temperature", "temperature"));
+
+      for (var i = 0; i < checks.length; i++) grid.add(checks[i]);
+      dlg.sizer.add(grid, 100);
+
+      var btns = new HorizontalSizer; btns.spacing = 6;
+      var resetBtn = new PushButton(dlg); resetBtn.text = "Reset"; resetBtn.toolTip = "Restore defaults";
+      var okBtn = new PushButton(dlg); okBtn.text = "OK"; okBtn.defaultButton = true;
+      var cancelBtn = new PushButton(dlg); cancelBtn.text = "Cancel";
+      btns.addStretch(); btns.add(resetBtn); btns.add(okBtn); btns.add(cancelBtn);
+      dlg.sizer.add(btns);
+
+      var self = this;
+      resetBtn.onClick = function(){
+         for (var i=0;i<checks.length;i++) {
+            var c = checks[i];
+            var defVal = DEFAULT_EXPORT_COLUMNS[c.__key__];
+            c.checked = c.__required__ ? true : !!defVal;
+         }
+      };
+      okBtn.onClick = function(){
+         var map = {};
+         for (var i=0;i<checks.length;i++) map[checks[i].__key__] = !!checks[i].checked;
+         // Enforce required
+         map.number = true; map.duration = true;
+         // Persist
+         CONFIG.exportColumns = map;
+         try {
+            saveExportColumnSettings(map);
+         } catch (e) {
+            console.criticalln("[AstroBin] Failed to save export columns: " + e);
+         }
+         // Refresh CSV preview if present
+         if (self.csvPreviewTextBox.text && self.csvPreviewTextBox.text.length > 0) {
+            var csv = self.createCSVContent(g_analysisData);
+            self.csvPreviewTextBox.text = csv;
+         }
+         dlg.ok();
+      };
+      cancelBtn.onClick = function(){ dlg.cancel(); };
+
+      dlg.execute();
+   };
 
 AstroBinDialog.prototype.updateConfigFromUI = function()
 {

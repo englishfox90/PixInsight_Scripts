@@ -556,10 +556,17 @@ AstroBinDialog.prototype.createCSVPreviewSection = function()
    this.copyCSVButton.onClick = function() { self.copyCSVToClipboard(); };
    this.copyCSVButton.enabled = false;
    
+   // Settings button (opens export columns dialog)
+   this.exportSettingsButton = new PushButton(this);
+   this.exportSettingsButton.text = "Columns...";
+   this.exportSettingsButton.toolTip = "Select which columns to populate in the CSV";
+   this.exportSettingsButton.onClick = function() { self.showExportColumnsDialog(); };
+   
    exportSizer.add(this.generateCSVButton);
    exportSizer.add(this.saveCSVButton);
    exportSizer.add(this.copyCSVButton);
    exportSizer.addStretch();
+   exportSizer.add(this.exportSettingsButton);
 
    // CSV preview text
    this.csvPreviewTextBox = new TextBox(this);

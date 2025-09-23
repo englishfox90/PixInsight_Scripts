@@ -1,10 +1,10 @@
 /*
  * PixInsight PJSR: AstroBin Acquisitions CSV Builder v3
  * Enhanced version with dynamic filter CSV loading
- * 
+ *
  * This version loads filter mappings from the astrobin_filters.csv file
  * and provides a comprehensive GUI for data review and export.
- * 
+ *
  * Modular structure for easier maintenance and debugging.
  */
 
@@ -22,6 +22,8 @@
 #include <pjsr/StdIcon.jsh>
 #include <pjsr/Color.jsh>
 #include <pjsr/FontFamily.jsh>
+// Needed for DataType_* constants used by Settings.read/write
+#include <pjsr/DataType.jsh>
 
 // Include our modular components
 #include "AstroBin-core.js"
@@ -41,22 +43,22 @@ function main(){
       }
 
       console.show();
-      console.writeln("AstroBin Acquisitions CSV Builder v2.1");
+      console.writeln("AstroBin Acquisitions CSV Builder v3");
       console.writeln("=======================================");
       console.writeln("Script starting at: " + new Date().toISOString());
-      
+
       console.writeln("Using JavaScript filter database...");
       console.writeln("Filter database loaded: " + ASTROBIN_FILTERS.length + " filters available");
-      
+
       // Initialize dialog without CSV dependency
-      
+
       // Show the dialog
       console.writeln("Creating dialog...");
       var dialog = new AstroBinDialog();
       console.writeln("Executing dialog...");
       dialog.execute();
       console.writeln("Script completed successfully.");
-      
+
    } catch (e) {
       console.criticalln("*** FATAL ERROR in main(): " + e);
       console.criticalln("Stack trace: " + (e.stack || "No stack trace available"));

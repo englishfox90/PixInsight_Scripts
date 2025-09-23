@@ -192,22 +192,30 @@ function analyzeFiles( files ){
         
         // Handle SQM calculation - priority: direct SQM > lux conversion > Bortle estimation
         if (sqmStr) {
-           globalData.meanSqm = parseFloat(sqmStr);
+           var sqmValue = parseFloat(sqmStr);
+           if (!isNaN(sqmValue) && isFinite(sqmValue)) {
+              // Clamp direct SQM readings to realistic range (15.0 to 22.2)
+              globalData.meanSqm = Math.min(22.2, Math.max(15.0, sqmValue));
+              console.writeln("Using direct SQM: " + globalData.meanSqm.toFixed(2) + " mag/arcsec²");
+           }
         } else if (skyBrightnessStr) {
-           // Convert from lux to mag/arcsec²
-           // Formula: SQM = -2.5 * log10(lux) + 25.2 
-           // This converts linear lux scale to logarithmic magnitude scale
-           // Note: 25.2 is an approximation - exact calibration varies by instrument
+           // Convert from lux to mag/arcsec² using corrected formula
+           // Formula: SQM = 14.18 - 2.5 * log10(lux)
+           // This approximation assumes Lambertian sky distribution
+           // Note: lux is horizontal illuminance and can vary with moon phase, clouds, etc.
            var luxValue = parseFloat(skyBrightnessStr);
-           if (luxValue > 0) {
-              globalData.meanSqm = -2.5 * Math.log10(luxValue) + 25.2;
-              console.writeln("Converted sky brightness " + luxValue + " lux to SQM: " + globalData.meanSqm.toFixed(2) + " mag/arcsec²");
+           if (!isNaN(luxValue) && isFinite(luxValue) && luxValue > 0) {
+              var calculatedSqm = 14.18 - 2.5 * Math.log10(luxValue);
+              // Clamp to realistic SQM range to avoid impossible values
+              globalData.meanSqm = Math.min(22.2, Math.max(15.0, calculatedSqm));
+              console.writeln("Converted sky brightness " + luxValue + " lux to SQM: " + globalData.meanSqm.toFixed(2) + " mag/arcsec² (approx)");
            }
         } else if (bortleStr) {
            // Estimate SQM from Bortle scale as fallback
            var bortleValue = parseFloat(bortleStr);
-           if (bortleValue >= 1 && bortleValue <= 9) {
-              globalData.meanSqm = bortleToSQM(bortleValue);
+           if (!isNaN(bortleValue) && isFinite(bortleValue) && bortleValue >= 1 && bortleValue <= 9) {
+              var estimatedSqm = bortleToSQM(bortleValue);
+              globalData.meanSqm = Math.min(22.2, Math.max(15.0, estimatedSqm));
               globalData.bortle = bortleValue;
               console.writeln("Estimated SQM " + globalData.meanSqm.toFixed(2) + " mag/arcsec² from Bortle Class " + bortleValue);
            }

@@ -25,8 +25,91 @@ var CONFIG = {
   meanSqm: "",
   meanFwhm: "",
   ambientTemp: "",
-  preferredFilterBrand: "Auto"
+  preferredFilterBrand: "Auto",
+  // Which CSV columns should be populated (headers are always present)
+  exportColumns: undefined
 };
+
+// Settings module identifier for PixInsight Settings registry
+// Use a unique settings module name to avoid collisions with other scripts
+var AB_SETTINGS_MODULE = "AstroBinCSVExport";
+var EXPORT_COLUMNS_VERSION = 1; // bump if schema changes
+
+// Default export columns: all enabled; 'number' and 'duration' are required
+var DEFAULT_EXPORT_COLUMNS = {
+  date: true,
+  filter: true,
+  number: true,      // required
+  duration: true,    // required
+  iso: true,
+  binning: true,
+  gain: true,
+  sensorCooling: true,
+  fNumber: true,
+  darks: true,
+  flats: true,
+  flatDarks: true,
+  bias: true,
+  bortle: true,
+  meanSqm: true,
+  meanFwhm: true,
+  temperature: true
+};
+
+function loadExportColumnSettings() {
+  var cols = {};
+  try {
+    console.writeln("[AstroBin] Loading export column settings...");
+    var init = Settings.read(AB_SETTINGS_MODULE + "/exportColumns/_initialized", DataType_UInt32);
+    var initialized = (init === 1 || init === "1");
+
+    if (!initialized) {
+      // First run or older settings: use defaults until user saves
+      for (var d in DEFAULT_EXPORT_COLUMNS) cols[d] = !!DEFAULT_EXPORT_COLUMNS[d];
+      // Enforce required columns
+      cols.number = true; cols.duration = true;
+      console.writeln("[AstroBin] Export column settings not found; using defaults.");
+      return cols;
+    }
+
+    // Initialized: read stored values (UInt32 0/1)
+    for (var key in DEFAULT_EXPORT_COLUMNS) {
+      var ret = Settings.read(AB_SETTINGS_MODULE + "/exportColumns/" + key, DataType_UInt32);
+      var val = (ret === 1 || ret === true || ret === "1" || ret === "true");
+      cols[key] = !!val;
+    }
+    // Enforce required columns
+    cols.number = true;
+    cols.duration = true;
+    console.writeln("[AstroBin] Export column settings loaded.");
+  } catch (e) {
+    // Fall back to defaults on error
+    cols = DEFAULT_EXPORT_COLUMNS;
+    console.warningln("[AstroBin] Failed to read settings, using defaults. Error: " + e);
+  }
+  return cols;
+}
+
+function saveExportColumnSettings(columns) {
+  try {
+    console.writeln("[AstroBin] Saving export column settings...");
+    for (var key in DEFAULT_EXPORT_COLUMNS) {
+      var val = columns.hasOwnProperty(key) ? !!columns[key] : DEFAULT_EXPORT_COLUMNS[key];
+      // Enforce required columns saved as true
+      if (key === 'number' || key === 'duration') val = true;
+      Settings.write(AB_SETTINGS_MODULE + "/exportColumns/" + key, DataType_UInt32, val ? 1 : 0);
+    }
+    // Mark as initialized
+    Settings.write(AB_SETTINGS_MODULE + "/exportColumns/_initialized", DataType_UInt32, EXPORT_COLUMNS_VERSION);
+    console.writeln("[AstroBin] Export column settings saved.");
+  } catch (e) {
+    // Non-fatal; continue
+    console.criticalln("[AstroBin] Error saving export column settings: " + e);
+  }
+}
+
+// Initialize export columns in CONFIG at load time
+CONFIG.exportColumns = loadExportColumnSettings();
 
 // Core utility functions
 function endsWithAny( s, exts ){
