@@ -269,31 +269,31 @@ var ASTROBIN_FILTERS = [
   {id: "1397", brand: "ZWO", name: "CH4", display: "ZWO CH4", keywords: ["zwo", "asi", "ch4", "methane"]}
 ];
 
+// Internal helper moved out of suggestFilterId to avoid nested function warning in strict mode
+function _astrobinValidFilterId(id){ return id && (""+id).trim().length>0; }
+
 // Helper function to suggest AstroBin filter ID based on FITS filter name
 function suggestFilterId(fitsFilterName)
 {
    if (!fitsFilterName) return "";
-   
    var filterName = fitsFilterName.toLowerCase();
    var preferredBrand = CONFIG.preferredFilterBrand;
    var preferredMatch = "";
    var fallbackMatch = "";
 
    // 1. Personal filter set override when preferred brand is Auto
-   // Map common substrings to canonical keys
    if (CONFIG.preferredFilterBrand === "Auto" && CONFIG.personalFilterSet) {
       var pset = CONFIG.personalFilterSet;
-      function valid(id){ return id && (""+id).trim().length>0; }
       // Luminance
-      if ((filterName.indexOf("lum") >= 0 || filterName.indexOf("lumin") >= 0 || filterName === "l" || filterName.indexOf("luma")>=0) && valid(pset.L)) return pset.L;
+      if ((filterName.indexOf("lum") >= 0 || filterName.indexOf("lumin") >= 0 || filterName === "l" || filterName.indexOf("luma")>=0) && _astrobinValidFilterId(pset.L)) return pset.L;
       // Red Green Blue
-      if (filterName.indexOf("red") >= 0 && valid(pset.R)) return pset.R;
-      if (filterName.indexOf("green") >= 0 && valid(pset.G)) return pset.G;
-      if (filterName.indexOf("blue") >= 0 && valid(pset.B)) return pset.B;
+      if (filterName.indexOf("red") >= 0 && _astrobinValidFilterId(pset.R)) return pset.R;
+      if (filterName.indexOf("green") >= 0 && _astrobinValidFilterId(pset.G)) return pset.G;
+      if (filterName.indexOf("blue") >= 0 && _astrobinValidFilterId(pset.B)) return pset.B;
       // Narrowband Ha OIII SII (case-insensitive variants)
-      if ((filterName.indexOf("ha") >= 0 || filterName.indexOf("h-alpha") >= 0 || filterName.indexOf("halpha") >= 0) && valid(pset.Ha)) return pset.Ha;
-      if ((filterName.indexOf("oiii") >= 0 || filterName.indexOf("o3") >= 0 || filterName.indexOf("oxygen") >= 0) && valid(pset.OIII)) return pset.OIII;
-      if ((filterName.indexOf("sii") >= 0 || filterName.indexOf("s2") >= 0 || filterName.indexOf("sulfur") >= 0 || filterName.indexOf("sulphur") >= 0) && valid(pset.SII)) return pset.SII;
+      if ((filterName.indexOf("ha") >= 0 || filterName.indexOf("h-alpha") >= 0 || filterName.indexOf("halpha") >= 0) && _astrobinValidFilterId(pset.Ha)) return pset.Ha;
+      if ((filterName.indexOf("oiii") >= 0 || filterName.indexOf("o3") >= 0 || filterName.indexOf("oxygen") >= 0) && _astrobinValidFilterId(pset.OIII)) return pset.OIII;
+      if ((filterName.indexOf("sii") >= 0 || filterName.indexOf("s2") >= 0 || filterName.indexOf("sulfur") >= 0 || filterName.indexOf("sulphur") >= 0) && _astrobinValidFilterId(pset.SII)) return pset.SII;
    }
    
    // Search through the filter database using keywords

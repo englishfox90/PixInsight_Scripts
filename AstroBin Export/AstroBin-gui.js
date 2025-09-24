@@ -495,10 +495,16 @@ AstroBinDialog.prototype.createImageAnalysisSection = function()
    this.imageTreeBox.setHeaderText(7, "Gain");
    this.imageTreeBox.setHeaderText(8, "Temp (°C)");
    
-   // Set column widths and enable editing for Filter ID column
-   for (var i = 0; i < 9; i++) {
-      this.imageTreeBox.setColumnWidth(i, 100);
-   }
+   // Set column widths: Date(100), Filter(75), Filter Name(150), rest 75
+   this.imageTreeBox.setColumnWidth(0, 100); // Date
+   this.imageTreeBox.setColumnWidth(1, 50);  // Filter (raw FITS)
+   this.imageTreeBox.setColumnWidth(2, 250); // Filter Name (brand + display)
+   this.imageTreeBox.setColumnWidth(3, 75);  // Filter ID
+   this.imageTreeBox.setColumnWidth(4, 50);  // Count
+   this.imageTreeBox.setColumnWidth(5, 75);  // Duration
+   this.imageTreeBox.setColumnWidth(6, 50);  // Binning
+   this.imageTreeBox.setColumnWidth(7, 50);  // Gain
+   this.imageTreeBox.setColumnWidth(8, 75);  // Temp (°C)
    
    // Enable editing on all columns except first column (make column 2 editable)
    this.imageTreeBox.editEnabled = true;
