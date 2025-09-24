@@ -646,6 +646,7 @@ function FilterMappingDialog()
    // Get unique filters from analysis data
    this.uniqueFilters = this.getUniqueFilters();
    this.filterMappings = {}; // Store current mappings
+   this.personalControls = {}; // Store personal filter row controls
    
    this.createFilterMappingUI();
    this.populateFilterMappings();
@@ -678,9 +679,40 @@ FilterMappingDialog.prototype.createFilterMappingUI = function()
    this.instructionsLabel.text = "Map your detected filters to AstroBin filter IDs:\n" +
                                 "• Select brand and filter from database, OR\n" +
                                 "• Choose \"Manual Entry\" to enter an AstroBin filter ID directly\n" +
-                                "• You can paste full AstroBin URLs (e.g., app.astrobin.com/equipment/explorer/filter/4359/) - the ID will be extracted automatically";
+                                "• You can paste full AstroBin URLs (e.g., app.astrobin.com/equipment/explorer/filter/4359/) - the ID will be extracted automatically\n\n" +
+                                "Personal Filter Set: Define your preferred LRGB + SHO filter IDs once; they will auto-apply when brand is Auto.";
    this.instructionsLabel.wordWrapping = true;
    this.instructionsLabel.minHeight = 60;
+
+   // Personal Filter Set Group
+   this.personalGroupBox = new GroupBox(this);
+   this.personalGroupBox.title = "Personal Mono Filter Set (LRGB + Ha OIII SII)";
+   this.personalGroupBox.sizer = new VerticalSizer;
+   this.personalGroupBox.sizer.margin = 6;
+   this.personalGroupBox.sizer.spacing = 4;
+
+   var roles = ["L","R","G","B","Ha","OIII","SII"];
+   for (var r = 0; r < roles.length; r++) {
+      this.createPersonalFilterRow(roles[r]);
+   }
+
+   // Personal buttons
+   var personalBtnSizer = new HorizontalSizer;
+   personalBtnSizer.spacing = 4;
+   this.savePersonalButton = new PushButton(this.personalGroupBox);
+   this.savePersonalButton.text = "Save Personal Set";
+   this.savePersonalButton.toolTip = "Persist the current personal filter IDs";
+   this.savePersonalButton.onClick = function(){ self.savePersonalFilterSet(); };
+   this.applyPersonalButton = new PushButton(this.personalGroupBox);
+   this.applyPersonalButton.text = "Apply Personal Set";
+   this.applyPersonalButton.toolTip = "Apply personal IDs to current session filters (where roles detected)";
+   this.applyPersonalButton.onClick = function(){ self.applyPersonalToSession(); };
+   personalBtnSizer.addStretch();
+   personalBtnSizer.add(this.savePersonalButton);
+   personalBtnSizer.add(this.applyPersonalButton);
+   this.personalGroupBox.sizer.add(personalBtnSizer);
+
+   this.loadPersonalFilterSetIntoUI();
    
    // Create container for filter mappings
    this.filterMappingGroupBox = new GroupBox(this);
@@ -723,8 +755,148 @@ FilterMappingDialog.prototype.createFilterMappingUI = function()
    this.sizer.margin = 8;
    this.sizer.spacing = 6;
    this.sizer.add(this.instructionsLabel);
+   this.sizer.add(this.personalGroupBox);
    this.sizer.add(this.filterMappingGroupBox, 100);
    this.sizer.add(this.buttonSizer);
+};
+
+FilterMappingDialog.prototype.createPersonalFilterRow = function(role)
+{
+  var rowSizer = new HorizontalSizer;
+  rowSizer.spacing = 4;
+
+  var label = new Label(this.personalGroupBox);
+  label.text = role + ":";
+  label.minWidth = 40;
+  label.textAlignment = TextAlign_Right | TextAlign_VertCenter;
+
+  var brandCombo = new ComboBox(this.personalGroupBox);
+  brandCombo.editEnabled = false;
+  brandCombo.minWidth = 130;
+  brandCombo.addItem("-- Brand --");
+  var brands = this.getUniqueBrands();
+  for (var i = 0; i < brands.length; i++) brandCombo.addItem(brands[i]);
+  brandCombo.addItem("-- Manual Entry --");
+
+  var filterCombo = new ComboBox(this.personalGroupBox);
+  filterCombo.editEnabled = false;
+  filterCombo.minWidth = 180;
+  filterCombo.addItem("-- Filter --");
+  filterCombo.enabled = false;
+
+  var manualEdit = new Edit(this.personalGroupBox);
+  manualEdit.text = "";
+  manualEdit.minWidth = 120;
+  manualEdit.visible = false;
+
+  var validateBtn = new PushButton(this.personalGroupBox);
+  validateBtn.text = "Set";
+  validateBtn.visible = false;
+  validateBtn.minWidth = 40;
+
+  var idLabel = new Label(this.personalGroupBox);
+  idLabel.text = "";
+  idLabel.minWidth = 70;
+   idLabel.maxHeight = 24;
+  idLabel.styleSheet = "QLabel { border: 1px solid gray; padding: 4px; background: white; }";
+
+  var self = this;
+  brandCombo.onItemSelected = function(index){
+     var txt = brandCombo.itemText(index);
+     if (txt === "-- Manual Entry --") {
+        filterCombo.visible = false; filterCombo.enabled = false;
+        manualEdit.visible = true; validateBtn.visible = true;
+        idLabel.text = "";
+     } else if (index === 0) {
+        filterCombo.enabled = false; filterCombo.visible = true;
+        manualEdit.visible = false; validateBtn.visible = false;
+        idLabel.text = "";
+     } else {
+        filterCombo.visible = true; manualEdit.visible = false; validateBtn.visible = false;
+        self.updateFilterCombo(brandCombo, filterCombo, idLabel, role + "(personal)");
+     }
+  };
+  filterCombo.onItemSelected = function(index){
+     if (index === 0){ idLabel.text = ""; return; }
+     var selectedText = filterCombo.itemText(index);
+     for (var i = 0; i < ASTROBIN_FILTERS.length; i++) {
+        var f = ASTROBIN_FILTERS[i];
+        if ((f.display || f.name) === selectedText) {
+           idLabel.text = f.id.toString();
+           idLabel.styleSheet = "QLabel { border: 1px solid green; padding: 4px; background: #e6ffe6; }";
+           break;
+        }
+     }
+  };
+  validateBtn.onClick = function(){
+     var entered = manualEdit.text.trim();
+     var filterPos = entered.indexOf('/filter/');
+     if (filterPos !== -1) { // extract if URL
+        var sp = filterPos + 8; var ep = entered.indexOf('/', sp); if (ep === -1) ep = entered.length; entered = entered.substring(sp, ep); manualEdit.text = entered;
+     }
+     var num = parseInt(entered,10);
+     if (isNaN(num) || num <= 0){ idLabel.text = "Invalid"; idLabel.styleSheet = "QLabel { border: 1px solid red; padding: 4px; background: #ffe6e6; }"; return; }
+     // check presence
+     var exists = false; for (var i=0;i<ASTROBIN_FILTERS.length;i++){ if (ASTROBIN_FILTERS[i].id == num){ exists = true; break; } }
+     idLabel.text = num.toString();
+     if (exists) idLabel.styleSheet = "QLabel { border: 1px solid green; padding: 4px; background: #e6ffe6; }"; else idLabel.styleSheet = "QLabel { border: 1px solid orange; padding: 4px; background: #fff3cd; }";
+  };
+  manualEdit.onKeyPress = function(keyCode){ if (keyCode===13||keyCode===16777221){ validateBtn.onClick(); return true;} return false; };
+
+  rowSizer.add(label); rowSizer.add(brandCombo); rowSizer.add(filterCombo); rowSizer.add(manualEdit); rowSizer.add(validateBtn); rowSizer.add(idLabel); rowSizer.addStretch();
+  this.personalGroupBox.sizer.add(rowSizer);
+  this.personalControls[role] = {brandCombo: brandCombo, filterCombo: filterCombo, manualEdit: manualEdit, validateBtn: validateBtn, idLabel: idLabel};
+};
+
+FilterMappingDialog.prototype.loadPersonalFilterSetIntoUI = function(){
+  if (!CONFIG.personalFilterSet) return;
+  var set = CONFIG.personalFilterSet;
+  for (var role in this.personalControls){
+     var id = set[role] || "";
+     if (!id) continue;
+     // attempt to locate in database
+     var ctrl = this.personalControls[role];
+     var target = null;
+     for (var i=0;i<ASTROBIN_FILTERS.length;i++){ if (ASTROBIN_FILTERS[i].id.toString()===id){ target=ASTROBIN_FILTERS[i]; break; } }
+     if (target){
+        // select brand
+        for (var bi=0; bi<ctrl.brandCombo.numberOfItems; bi++) if (ctrl.brandCombo.itemText(bi)===target.brand){ ctrl.brandCombo.currentItem=bi; break; }
+        this.updateFilterCombo(ctrl.brandCombo, ctrl.filterCombo, ctrl.idLabel, role + "(personal)");
+        var targetText = target.display || target.name;
+        for (var fi=0; fi<ctrl.filterCombo.numberOfItems; fi++) if (ctrl.filterCombo.itemText(fi)===targetText){ ctrl.filterCombo.currentItem=fi; ctrl.idLabel.text=target.id.toString(); ctrl.idLabel.styleSheet="QLabel { border: 1px solid green; padding: 4px; background: #e6ffe6; }"; break; }
+     } else {
+        // manual fallback
+        for (var mi=0; mi<ctrl.brandCombo.numberOfItems; mi++) if (ctrl.brandCombo.itemText(mi)==="-- Manual Entry --") { ctrl.brandCombo.currentItem=mi; ctrl.filterCombo.visible=false; ctrl.manualEdit.visible=true; ctrl.validateBtn.visible=true; ctrl.manualEdit.text=id; ctrl.validateBtn.onClick(); break; }
+     }
+  }
+};
+
+FilterMappingDialog.prototype.savePersonalFilterSet = function(){
+  var set = {L:"",R:"",G:"",B:"",Ha:"",OIII:"",SII:""};
+  for (var role in this.personalControls){
+     var id = this.personalControls[role].idLabel.text.trim();
+     if (id && id.toLowerCase() !== "invalid") set[role]=id; else set[role]="";
+  }
+  CONFIG.personalFilterSet = set;
+  if (typeof savePersonalFilterSet === 'function') savePersonalFilterSet(set);
+  console.writeln("[AstroBin] Personal filter set updated: " + JSON.stringify(set));
+};
+
+FilterMappingDialog.prototype.applyPersonalToSession = function(){
+   if (!CONFIG.personalFilterSet) return;
+   var set = CONFIG.personalFilterSet;
+   for (var i=0;i<g_analysisData.length;i++){
+       var fName = (g_analysisData[i].filter || "").toLowerCase();
+       if (fName.indexOf('lum')>=0 || fName === 'l' || fName.indexOf('lumin')>=0) { if (set.L) { g_analysisData[i].filterId = set.L; continue; } }
+       if (fName.indexOf('red')>=0)   { if (set.R)  { g_analysisData[i].filterId = set.R; continue; } }
+       if (fName.indexOf('green')>=0) { if (set.G)  { g_analysisData[i].filterId = set.G; continue; } }
+       if (fName.indexOf('blue')>=0)  { if (set.B)  { g_analysisData[i].filterId = set.B; continue; } }
+       if (fName.indexOf('ha')>=0 || fName.indexOf('h-alpha')>=0 || fName.indexOf('halpha')>=0) { if (set.Ha) { g_analysisData[i].filterId = set.Ha; continue; } }
+       if (fName.indexOf('oiii')>=0 || fName.indexOf('oxygen')>=0 || fName.indexOf('o3')>=0) { if (set.OIII) { g_analysisData[i].filterId = set.OIII; continue; } }
+       if (fName.indexOf('sii')>=0 || fName.indexOf('sulfur')>=0 || fName.indexOf('sulphur')>=0 || fName.indexOf('s2')>=0) { if (set.SII) { g_analysisData[i].filterId = set.SII; continue; } }
+   }
+   console.writeln("[AstroBin] Applied personal filter set to session.");
+   this.populateFilterMappings();
 };
 
 FilterMappingDialog.prototype.createFilterMappingRow = function(filterName)

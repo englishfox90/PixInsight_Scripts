@@ -27,13 +27,16 @@ var CONFIG = {
   ambientTemp: "",
   preferredFilterBrand: "Auto",
   // Which CSV columns should be populated (headers are always present)
-  exportColumns: undefined
+  exportColumns: undefined,
+  // User's personal mono filter set (AstroBin filter IDs as strings or "")
+  personalFilterSet: undefined
 };
 
 // Settings module identifier for PixInsight Settings registry
 // Use a unique settings module name to avoid collisions with other scripts
 var AB_SETTINGS_MODULE = "AstroBinCSVExport";
 var EXPORT_COLUMNS_VERSION = 1; // bump if schema changes
+var PERSONAL_FILTER_SET_VERSION = 1; // versioning if schema changes later
 
 // Default export columns: all enabled; 'number' and 'duration' are required
 var DEFAULT_EXPORT_COLUMNS = {
@@ -110,6 +113,46 @@ function saveExportColumnSettings(columns) {
 
 // Initialize export columns in CONFIG at load time
 CONFIG.exportColumns = loadExportColumnSettings();
+CONFIG.personalFilterSet = loadPersonalFilterSet();
+
+// Personal Filter Set: L R G B Ha OIII SII
+var DEFAULT_PERSONAL_FILTER_SET = { L: "", R: "", G: "", B: "", Ha: "", OIII: "", SII: "" };
+
+function loadPersonalFilterSet() {
+  var set = {};
+  try {
+    var init = Settings.read(AB_SETTINGS_MODULE + "/personalFilters/_initialized", DataType_UInt32);
+    var initialized = (init === 1 || init === "1");
+    if (!initialized) {
+      for (var key in DEFAULT_PERSONAL_FILTER_SET) set[key] = ""; // empty defaults
+      return set;
+    }
+    for (var key in DEFAULT_PERSONAL_FILTER_SET) {
+      var val = Settings.read(AB_SETTINGS_MODULE + "/personalFilters/" + key, DataType_String);
+      if (val === undefined || val === null) val = "";
+      set[key] = ("" + val).trim();
+    }
+    return set;
+  } catch (e) {
+    for (var k in DEFAULT_PERSONAL_FILTER_SET) set[k] = "";
+    console.warningln("[AstroBin] Failed to load personal filter set: " + e);
+    return set;
+  }
+}
+
+function savePersonalFilterSet(set) {
+  try {
+    if (!set) return;
+    for (var key in DEFAULT_PERSONAL_FILTER_SET) {
+      var val = set.hasOwnProperty(key) ? (set[key] || "") : "";
+      Settings.write(AB_SETTINGS_MODULE + "/personalFilters/" + key, DataType_String, val);
+    }
+    Settings.write(AB_SETTINGS_MODULE + "/personalFilters/_initialized", DataType_UInt32, PERSONAL_FILTER_SET_VERSION);
+    console.writeln("[AstroBin] Personal filter set saved.");
+  } catch (e) {
+    console.criticalln("[AstroBin] Error saving personal filter set: " + e);
+  }
+}
 
 // Core utility functions
 function endsWithAny( s, exts ){
