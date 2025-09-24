@@ -22,17 +22,22 @@ Located in `AstroBin Export/` directory.
 
 #### ✅ Key Features:
 - **Automatic FITS Header Analysis**: Extracts exposure data, filters, telescope info, and more
-- **Comprehensive Filter Database**: 200+ filters across 22 manufacturers including:
-  - Baader, Astronomik, ZWO, SVBony, Askar, Optolong, Chroma, etc.
-  - Full dual-band filter support (SV220, SV260, D1, D2, C1, C2 series)
-- **Manual Filter ID Entry**: For filters not in database - paste AstroBin URLs or enter IDs directly
-- **Bortle Scale Integration**: Dropdown with descriptions for accurate sky quality selection
-- **Integration Summary**: Detailed session statistics and insights
+ - **Comprehensive Filter Database**: 200+ filters across 22 manufacturers including:
+   - Antlia (incl. EDGE & Ultra 2.5nm series), Askar ColorMagic, Astrodon, Astronomik, Baader (CMOS), Chroma, Optolong (L-eNhance / L-eXtreme), IDAS (NB, LPS), Altair, ZWO, SVBony, Vaonis/Vespera, Omega, TS-Optics, and more
+   - Dual / tri / quad band coverage (ALP-T, Triband, Duo, Quad, NBZ, etc.)
+ - **Personal LRGB + SHO Filter Set**: Define and persist your own preferred filter IDs for L, R, G, B, Ha, OIII, SII; auto‑applied when brand preference is set to `Auto`.
+ - **Filter Name Column (UI)**: Displays resolved `Brand + Display Name` alongside raw FITS filter and editable Filter ID for clarity.
+ - **Filter ID Auto‑Suggestion with Precedence**: Personal set → Preferred Brand match → Keyword fallback.
+ - **Selectable / Persistent CSV Columns**: Choose which data columns to populate (headers always present for AstroBin compatibility). Choices persist between sessions.
+ - **Improved SQM Derivation**: Correct luminosity conversion using `SQM = 14.18 − 2.5*log10(lux)` with clamping (15.0–22.2). Priority: direct SQM FITS header → LUX conversion → Bortle estimate → blank.
+ - **Raw Frame Filtering**: Automatically excludes masters, calibrated, and integration outputs—only counts true LIGHT subframes.
+ - **Manual Filter ID Entry**: For filters not in database - paste AstroBin URLs or enter IDs directly.
+ - **Bortle Scale Integration**: Dropdown with descriptive ranges for accurate sky quality selection.
+ - **Integration Summary**: Detailed per‑session statistics and environmental aggregation.
 
 #### 🔧 Setup Requirements:
-1. **Filter Database**: `astrobin_filters.csv` must be in the same directory
-2. **Calibrated Images**: Works best with WBPP-calibrated or similar processed files
-3. **FITS Headers**: Requires proper FITS metadata for automatic detection
+1. **Calibrated Images**: Works best with WBPP-calibrated or similar processed files
+2. **FITS Headers**: Requires proper FITS metadata for automatic detection
 
 #### 📊 Generated CSV Format:
 Compatible with AstroBin's bulk upload expecting columns:
@@ -42,15 +47,79 @@ Compatible with AstroBin's bulk upload expecting columns:
 #### 🎯 Workflow:
 1. Load script in PixInsight
 2. Select directory containing processed FITS files
-3. Review and map any unmapped filters using the Filter Mapping Dialog
-4. Set Bortle scale and location details
-5. Generate CSV and upload to AstroBin
+3. (Optional) Click **Map Filters** to:
+  - Review auto‑mapped filters
+  - Enter missing IDs or paste AstroBin filter URLs
+  - Define / Save your **Personal Filter Set** (LRGB + Ha/OIII/SII)
+4. Set Bortle scale & environmental parameters (SQM auto‑fills from FITS / LUX / Bortle where possible)
+5. (Optional) Use **Columns...** to toggle which CSV columns get populated
+6. Generate CSV and upload to AstroBin
 
 #### ⚠️ Important Notes:
 - **Manual Filter Entry**: If your filter isn't in the database, select "Manual Entry" and paste the AstroBin filter URL (e.g., `https://app.astrobin.com/equipment/explorer/filter/4359/`) or enter the ID directly
 - **Bortle Scale**: Choose the most accurate sky quality rating for your location
 - **File Organization**: Keep processed files in organized directories for best results
 - **Backup**: Always backup your original FITS files before processing
+ - **Raw Frame Logic**: Only true LIGHT subframes are tallied—files whose paths or `IMAGETYP` suggest masters, calibrations, or integrations are ignored to prevent double counting.
+ - **Filter Name vs Filter**: `Filter` shows the literal FITS header; `Filter Name` is the resolved database display string for readability.
+
+---
+
+### 🧪 Personal Filter Set (LRGB + SHO)
+
+Use this when you mix brands (e.g., Baader LRGB + Antlia 3nm SHO) but want consistent auto‑mapping.
+
+1. Run an analysis and open **Map Filters**.
+2. In the Personal Filter Set section enter the AstroBin IDs (or pick from already mapped rows).
+3. Click **Save Personal Set** (persists via PixInsight Settings).
+4. Ensure **Filter Brand** is set to `Auto` (top of main dialog) so precedence is:
+  - Personal set match (substring heuristics: `lum|lumin|l`, `red`, `green`, `blue`, `ha|h-alpha|halpha`, `oiii|o3|oxygen`, `sii|s2|sulfur|sulphur`)
+  - Preferred brand keyword match (if brand not Auto)
+  - First keyword fallback in database
+5. Re‑run or refresh (**Analyze Images**) to see mappings applied.
+
+You can click **Apply Personal Set** inside the mapping dialog to force remap without a full re‑analysis.
+
+---
+
+### 🗂️ Selectable CSV Column Population
+
+Use **Columns...** to toggle which fields are populated. Headers always remain so AstroBin bulk import format is stable. `number` and `duration` are enforced populated (required by AstroBin).
+
+Stored per user via PixInsight Settings (UInt32 flags) so your choices persist between sessions.
+
+---
+
+### 🌌 SQM & Environmental Logic
+
+Priority for SQM:
+1. Direct FITS SQM header
+2. FITS LUX header converted with `SQM = 14.18 − 2.5 * log10(lux)` (clamped 15.0–22.2)
+3. Bortle selection estimated midpoint
+4. Left blank
+
+FWHM & ambient temperature lock (disabled in UI) if reliably extracted from FITS session metadata.
+
+---
+
+### 🧹 Raw Frame Filtering Rules
+
+Excluded automatically (case‑insensitive path or type checks):
+`master`, `calibrated`, `integration`, `fastIntegration` and any `IMAGETYP` containing `master` or `integrat`. This prevents counting the same exposure metadata multiple times.
+
+---
+
+### 🆕 Recent Enhancements (2025‑09‑23)
+| Feature | Summary |
+|---------|---------|
+| Filter Name column | Adds readable brand + display name next to raw FITS filter & editable ID |
+| Personal Filter Set | Persist LRGB + SHO preferred IDs and auto‑apply when brand=Auto |
+| Column selection & persistence | Choose which columns are populated; stored in Settings |
+| Correct SQM formula | Proper LUX → SQM conversion & fallback hierarchy |
+| Raw frame filtering | Excludes masters/calibrated/integration outputs |
+| Expanded database | Added EDGE, Ultra narrow, Triband, V‑Pro, NBZ, extra Baader CMOS, etc. |
+
+---
 
 ---
 
@@ -135,7 +204,8 @@ The script automatically reads these FITS keywords:
 ### AstroBin Export:
 - **No Analysis Data**: Ensure FITS files have proper headers and are in selected directory
 - **Filter Not Found**: Use "Manual Entry" option in Filter Mapping Dialog
-- **CSV Issues**: Verify `astrobin_filters.csv` is present and not corrupted
+ - **Unexpected Filter ID**: Check if personal filter set is overriding (brand set to Auto); adjust or clear personal set if needed
+ - **Missing Filter Name**: Ensure a valid Filter ID is present; edit the ID cell and it will refresh the name column
 
 ### MasterSignature:
 - **Font Issues**: Ensure `Space.ttf` is in `lib/font/` directory
