@@ -34,6 +34,9 @@ var ASTROBIN_FILTERS = [
   {id: "63", brand: "Antlia", name: "Green", display: "Antlia Green", keywords: ["antlia", "green", "g"]},
   {id: "68", brand: "Antlia", name: "Blue", display: "Antlia Blue", keywords: ["antlia", "blue", "b"]},
   {id: "73", brand: "Antlia", name: "U-Venus", display: "Antlia U-Venus", keywords: ["antlia", "u-venus", "venus", "uv"]},
+   {id: "2022", brand: "Antlia", name: "EDGE H-alpha 4.5nm", display: "Antlia EDGE Ha 4.5nm", keywords: ["antlia", "edge", "ha", "h-alpha", "4.5nm", "656", "hydrogen"]},
+   {id: "2023", brand: "Antlia", name: "EDGE OIII 4.5nm", display: "Antlia EDGE OIII 4.5nm", keywords: ["antlia", "edge", "oiii", "o3", "oxygen", "4.5nm", "501"]},
+   {id: "2024", brand: "Antlia", name: "EDGE SII 4.5nm", display: "Antlia EDGE SII 4.5nm", keywords: ["antlia", "edge", "sii", "s2", "sulfur", "4.5nm", "672"]},
 
   // ==================== ASKAR FILTERS ====================
   {id: "78", brand: "Askar", name: "Color Magic H-alpha 5nm", display: "Askar H-alpha 5nm", keywords: ["askar", "ha", "h-alpha", "656", "5nm", "color", "magic"]},
