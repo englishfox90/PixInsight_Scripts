@@ -23,6 +23,33 @@ function bortleToSQM(bortleClass)
    return sqmValues[roundedClass] || 19.0; // Default fallback
 }
 
+// Determine whether a file path should be excluded based on directory name.
+// We exclude any files inside directories typically produced by WBPP outputs:
+// master, calibrated, integration, fastIntegration (case-insensitive)
+function isExcludedOutputPath(path) {
+  var lower = path.toLowerCase();
+  return lower.indexOf('/master/') >= 0 || lower.indexOf('\\master\\') >= 0 ||
+         lower.indexOf('/calibrated/') >= 0 || lower.indexOf('\\calibrated\\') >= 0 ||
+         lower.indexOf('/integration/') >= 0 || lower.indexOf('\\integration\\') >= 0 ||
+         lower.indexOf('/fastintegration/') >= 0 || lower.indexOf('\\fastintegration\\') >= 0;
+}
+
+// Classify IMAGETYP/IMGTYPE into a normalized frame type.
+// Returns one of: LIGHT, DARK, FLAT, FLATDARK, BIAS, MASTER (for any master frames), or undefined if unrecognized.
+function classifyImageType(imageTypeStr) {
+  if (!imageTypeStr) return undefined;
+  var t = imageTypeStr.toLowerCase();
+  // If it looks like a master/integrated frame, tag as MASTER so we can exclude.
+  if (t.indexOf('master') >= 0 || t.indexOf('integrat') >= 0) return 'MASTER';
+  if (t.indexOf('light') >= 0) return 'LIGHT';
+  // Order matters: flat dark / dark flat before plain dark or flat.
+  if (t.indexOf('flat') >= 0 && t.indexOf('dark') >= 0) return 'FLATDARK';
+  if (t.indexOf('bias') >= 0) return 'BIAS';
+  if (t.indexOf('dark') >= 0) return 'DARK';
+  if (t.indexOf('flat') >= 0) return 'FLAT';
+  return undefined;
+}
+
 function analyzeFiles( files ){
   var rows = [];
   var globalData = {}; // Store global parameters from first image
@@ -39,51 +66,41 @@ function analyzeFiles( files ){
   
   for ( var i=0; i<files.length; i++ ){
     var p = files[i];
-    
-    try{
+    // Skip known output/integration folders entirely
+    if (isExcludedOutputPath(p)) continue;
+    try {
       var ff = openForKeywords( p );
-      var imageTypeStr = readKeyword( ff, "IMAGETYP" ) || readKeyword( ff, "IMGTYPE" );
-      
-      // Count calibration frames
-      if (imageTypeStr) {
-        var imageType = imageTypeStr.toLowerCase();
-        if (imageType.indexOf("bias") >= 0) {
-          calibrationCounts.bias++;
-        } else if (imageType.indexOf("dark") >= 0) {
-          if (imageType.indexOf("flat") >= 0) {
-            calibrationCounts.flatDarks++;
-          } else {
-            calibrationCounts.darks++;
-          }
-        } else if (imageType.indexOf("flat") >= 0) {
-          calibrationCounts.flats++;
+      var imageTypeStr = readKeyword( ff, 'IMAGETYP' ) || readKeyword( ff, 'IMGTYPE' );
+      var frameClass = classifyImageType(imageTypeStr);
+
+      // Count only raw calibration frames (exclude masters)
+      if (frameClass === 'BIAS') calibrationCounts.bias++;
+      else if (frameClass === 'DARK') calibrationCounts.darks++;
+      else if (frameClass === 'FLAT') calibrationCounts.flats++;
+      else if (frameClass === 'FLATDARK') calibrationCounts.flatDarks++;
+
+      // Only consider metadata from raw frames (exclude MASTER / unknown)
+      if (frameClass && frameClass !== 'MASTER') {
+        if (!availableMetadata.hasAmbientTemp) {
+          var ambTempStr = readKeyword( ff, 'AMBTEMP' ) || readKeyword( ff, 'AMBIENTTEMP' );
+          if (ambTempStr) availableMetadata.hasAmbientTemp = true;
+        }
+        if (!availableMetadata.hasSQM) {
+          var sqmStr = readKeyword( ff, 'SQM' ) || readKeyword( ff, 'SKYMAG' );
+          var skyBrightnessStr = readKeyword( ff, 'SKYBRGHT' ) || readKeyword( ff, 'SKY-BRGHT' ) || readKeyword( ff, 'SKYLUX' );
+          if (sqmStr || skyBrightnessStr) availableMetadata.hasSQM = true;
+        }
+        if (!availableMetadata.hasFWHM) {
+          var fwhmStr = readKeyword( ff, 'FWHM' ) || readKeyword( ff, 'SEEING' );
+          if (fwhmStr) availableMetadata.hasFWHM = true;
+        }
+        if (!availableMetadata.hasBortle) {
+          var bortleStr = readKeyword( ff, 'BORTLE' ) || readKeyword( ff, 'LIGHTPOL' );
+          if (bortleStr) availableMetadata.hasBortle = true;
         }
       }
-      
-      // Check for available metadata (from any image)
-      if (!availableMetadata.hasAmbientTemp) {
-        var ambTempStr = readKeyword( ff, "AMBTEMP" ) || readKeyword( ff, "AMBIENTTEMP" );
-        if (ambTempStr) availableMetadata.hasAmbientTemp = true;
-      }
-      
-      if (!availableMetadata.hasSQM) {
-        var sqmStr = readKeyword( ff, "SQM" ) || readKeyword( ff, "SKYMAG" );
-        var skyBrightnessStr = readKeyword( ff, "SKYBRGHT" ) || readKeyword( ff, "SKY-BRGHT" ) || readKeyword( ff, "SKYLUX" );
-        if (sqmStr || skyBrightnessStr) availableMetadata.hasSQM = true;
-      }
-      
-      if (!availableMetadata.hasFWHM) {
-        var fwhmStr = readKeyword( ff, "FWHM" ) || readKeyword( ff, "SEEING" );
-        if (fwhmStr) availableMetadata.hasFWHM = true;
-      }
-      
-      if (!availableMetadata.hasBortle) {
-        var bortleStr = readKeyword( ff, "BORTLE" ) || readKeyword( ff, "LIGHTPOL" );
-        if (bortleStr) availableMetadata.hasBortle = true;
-      }
-      
       ff.close();
-    }catch(e){
+    } catch (e) {
       // Continue scanning other files
     }
   }
@@ -95,21 +112,20 @@ function analyzeFiles( files ){
   // Second pass: process LIGHT images for data extraction
   for ( var i=0; i<files.length; i++ ){
     var p = files[i];
-    
-    // Show progress every 10 files
+    if (isExcludedOutputPath(p)) continue; // Skip integration-like outputs
+
+    // Show progress every 10 files (only for candidates)
     if (i % 10 === 0 || i === files.length - 1) {
       console.writeln("Processing file " + (i + 1) + " of " + files.length + ": " + File.extractName(p));
     }
-    
-    try{
+
+    try {
       var ff = openForKeywords( p );
-      var imageTypeStr = readKeyword( ff, "IMAGETYP" ) || readKeyword( ff, "IMGTYPE" );
-      
-      // Skip calibration frames - we only want LIGHT images in the results
-      if (imageTypeStr && imageTypeStr.toLowerCase().indexOf("light") < 0) {
-        ff.close();
-        continue;
-      }
+      var imageTypeStr = readKeyword( ff, 'IMAGETYP' ) || readKeyword( ff, 'IMGTYPE' );
+      var frameClass = classifyImageType(imageTypeStr);
+
+      // Only process raw LIGHT subs (exclude masters and other frame types)
+      if (frameClass !== 'LIGHT') { ff.close(); continue; }
       
       var dateStr = readKeyword( ff, "DATE-OBS" ) || readKeyword( ff, "DATEOBS" );
       var filter = readKeyword( ff, "FILTER" );
