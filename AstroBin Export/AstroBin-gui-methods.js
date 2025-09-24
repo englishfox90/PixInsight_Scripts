@@ -213,12 +213,30 @@ AstroBinDialog.prototype.populateImageTree = function()
         }
       }
       
-      node.setText(2, String(data.filterId || ""));
-      node.setText(3, String(data.number || "0"));
-      node.setText(4, data.duration ? String(data.duration) + "s" : "N/A");
-      node.setText(5, String(data.binning || "N/A"));
-      node.setText(6, String(data.gain || "N/A"));
-      node.setText(7, data.sensorCooling ? String(data.sensorCooling) : "N/A");
+      // Column 2: Resolved Filter Name (Brand + Display) from filterId if available
+      var resolvedName = "";
+      if (data.filterId) {
+         try {
+            var f = findFilterById(data.filterId);
+            if (f) {
+               var disp = f.display || f.name || data.filterId;
+               if (disp.toLowerCase().indexOf(f.brand.toLowerCase()) === 0) {
+                  resolvedName = disp; // already includes brand prefix
+               } else {
+                  resolvedName = f.brand + " " + disp;
+               }
+            }
+         } catch (e) {
+            console.warningln("Lookup failed for filterId " + data.filterId + ": " + e);
+         }
+      }
+      node.setText(2, resolvedName);
+      node.setText(3, String(data.filterId || ""));
+      node.setText(4, String(data.number || "0"));
+      node.setText(5, data.duration ? String(data.duration) + "s" : "N/A");
+      node.setText(6, String(data.binning || "N/A"));
+      node.setText(7, String(data.gain || "N/A"));
+      node.setText(8, data.sensorCooling ? String(data.sensorCooling) : "N/A");
       
       // Store data index for editing
       node.dataIndex = i;

@@ -481,20 +481,22 @@ AstroBinDialog.prototype.createImageAnalysisSection = function()
    this.imageTreeBox = new TreeBox(this);
    this.imageTreeBox.alternateRowColor = true;
    this.imageTreeBox.headerVisible = true;
-   this.imageTreeBox.numberOfColumns = 8;
+   // Added new column (index 2) "Filter Name" showing resolved brand + filter display
+   this.imageTreeBox.numberOfColumns = 9;
    this.imageTreeBox.rootDecoration = false;
    this.imageTreeBox.multipleSelection = true;
    this.imageTreeBox.setHeaderText(0, "Date");
-   this.imageTreeBox.setHeaderText(1, "Filter");
-   this.imageTreeBox.setHeaderText(2, "Filter ID");
-   this.imageTreeBox.setHeaderText(3, "Count");
-   this.imageTreeBox.setHeaderText(4, "Duration");
-   this.imageTreeBox.setHeaderText(5, "Binning");
-   this.imageTreeBox.setHeaderText(6, "Gain");
-   this.imageTreeBox.setHeaderText(7, "Temp (°C)");
+   this.imageTreeBox.setHeaderText(1, "Filter");        // Raw FITS filter value
+   this.imageTreeBox.setHeaderText(2, "Filter Name");   // Resolved brand + display (new)
+   this.imageTreeBox.setHeaderText(3, "Filter ID");
+   this.imageTreeBox.setHeaderText(4, "Count");
+   this.imageTreeBox.setHeaderText(5, "Duration");
+   this.imageTreeBox.setHeaderText(6, "Binning");
+   this.imageTreeBox.setHeaderText(7, "Gain");
+   this.imageTreeBox.setHeaderText(8, "Temp (°C)");
    
    // Set column widths and enable editing for Filter ID column
-   for (var i = 0; i < 8; i++) {
+   for (var i = 0; i < 9; i++) {
       this.imageTreeBox.setColumnWidth(i, 100);
    }
    
@@ -507,12 +509,30 @@ AstroBinDialog.prototype.createImageAnalysisSection = function()
    // Enable editing event handler
    var self = this;
    this.imageTreeBox.onNodeUpdated = function(node, column) {
-      if (column === 2 && node.dataIndex !== undefined) {
-         // Update the filter ID when user edits column 2
-         var newFilterId = node.text(2);
+      // Filter ID column moved to index 3 after adding Filter Name column
+      if (column === 3 && node.dataIndex !== undefined) {
+         var newFilterId = node.text(3);
          if (g_analysisData && g_analysisData[node.dataIndex]) {
             g_analysisData[node.dataIndex].filterId = newFilterId;
             console.writeln("Updated filter ID for image " + (node.dataIndex + 1) + " to: " + newFilterId);
+         }
+         // Update Filter Name (column 2) immediately after edit
+         try {
+            var filterNameCombined = "";
+            if (newFilterId) {
+               var f = findFilterById(newFilterId);
+               if (f) {
+                  var disp = f.display || f.name || newFilterId;
+                  if (disp.toLowerCase().indexOf(f.brand.toLowerCase()) === 0) {
+                     filterNameCombined = disp; // already starts with brand
+                  } else {
+                     filterNameCombined = f.brand + " " + disp;
+                  }
+               }
+            }
+            node.setText(2, filterNameCombined);
+         } catch (e) {
+            console.warningln("Could not update filter name column: " + e);
          }
          // Regenerate CSV if it exists
          if (self.csvPreviewTextBox && self.csvPreviewTextBox.text) {
