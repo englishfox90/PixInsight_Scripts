@@ -4,6 +4,10 @@ PJSR/
 # Ignore Archive folder in AstroBin Export
 AstroBin Export/archive/
 
+# Build artifacts
+build/
+node_modules/
+
 # Common temporary and system files
 *.tmp
 *.temp

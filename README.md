@@ -20,6 +20,54 @@ Located in `AstroBin Export/` directory.
 
 **Purpose:** Generates CSV files compatible with AstroBin's bulk acquisition upload feature.
 
+### 📦 Installation Options
+
+#### Option A: PixInsight Update Repository (Recommended)
+
+The easiest way to install and keep AstroBin Export up to date:
+
+1. **Open PixInsight**
+2. **Go to** `Resources → Updates → Manage Repositories...`
+3. **Click** the **Add** button
+4. **Paste this URL:**
+   ```
+   https://raw.githubusercontent.com/englishfox90/PixInsight_Scripts/main/updates/
+   ```
+   *(Make sure to include the trailing slash)*
+5. **Click OK** to close the Manage Repositories dialog
+6. **Click** `Check for Updates`
+7. **Select** the AstroBin Export package when it appears
+8. **Click** `Apply` and restart PixInsight when prompted
+9. **Find the script** under `Script → PFRAstro → AstroBin Export`
+
+**Benefits:**
+- Automatic update notifications
+- One-click installation
+- Proper integration with PixInsight's script system
+- No manual file management
+
+#### Option B: Manual Installation (Advanced Users)
+
+For users who prefer manual control or want to modify the scripts:
+
+1. **Clone or download** this repository
+2. **Navigate to** the `AstroBin Export/` folder
+3. **Copy all files** (excluding the `archive/` subdirectory) to your preferred location
+4. **In PixInsight**, go to `Script → Feature Scripts...`
+5. **Click Add** and navigate to `AstroBin_CSV_Export_v3_Modular.js`
+6. **The script** will appear under `Script → PFRAstro → AstroBin Export`
+
+**Required Files:**
+- `AstroBin_CSV_Export_v3_Modular.js` (main script)
+- `AstroBin-core.js`
+- `AstroBin-filter-database.js`
+- `AstroBin-analysis.js`
+- `AstroBin-gui.js`
+- `AstroBin-gui-methods.js`
+- `astrobin_filters.csv` (optional, legacy)
+
+**Note:** All files must remain in the same directory for the `#include` statements to work correctly.
+
 #### ✅ Key Features:
 - **Automatic FITS Header Analysis**: Extracts exposure data, filters, telescope info, and more
  - **Comprehensive Filter Database**: 200+ filters across 22 manufacturers including:
@@ -216,3 +264,110 @@ The script automatically reads these FITS keywords:
 
 
 *Scripts developed for astrophotography workflow optimization with PixInsight*
+
+---
+
+## 🔧 Developer Guide
+
+### Building and Releasing AstroBin Export Package
+
+This repository includes tooling to build and publish AstroBin Export as a PixInsight Update Repository package.
+
+#### Prerequisites
+
+- Node.js (v14 or higher)
+- Git
+- Access to push to the repository
+
+#### Build Process
+
+1. **Update version number** (if needed):
+   ```powershell
+   # Edit version in build script or use --version flag
+   npm run build:astrobin -- --version=1.1.0
+   ```
+
+2. **Build the package**:
+   ```powershell
+   npm run build:astrobin
+   ```
+
+   This will:
+   - Create a temporary build directory with proper PixInsight structure
+   - Copy all required JavaScript files to `src/scripts/AstroBin/`
+   - Copy resource files to `rsc/AstroBin/`
+   - Generate a ZIP package in `updates/`
+   - Calculate SHA1 hash and file size
+   - Update `updates/updates.xri` with package metadata
+   - Clean up temporary files
+
+3. **Verify the package**:
+   - Check that `updates/AstroBinExport-X.Y.Z-YYYYMMDD.zip` was created
+   - Review `updates/updates.xri` for correct metadata
+   - Optionally test by extracting the ZIP and verifying structure
+
+4. **Commit and push**:
+   ```powershell
+   git add updates/
+   git commit -m "Release AstroBin Export v1.0.0"
+   git push origin main
+   ```
+
+5. **Test the update**:
+   - Open PixInsight
+   - Go to `Resources → Updates → Manage Repositories...`
+   - Add or refresh the repository URL
+   - Check for updates
+   - Verify the package installs correctly
+
+#### Release Checklist
+
+- [ ] Test all functionality with current PixInsight version
+- [ ] Update version number if needed
+- [ ] Run `npm run build:astrobin`
+- [ ] Verify ZIP contents and updates.xri metadata
+- [ ] Commit new package files
+- [ ] Push to GitHub
+- [ ] Test installation via PixInsight Update Repository
+- [ ] Update release notes/changelog if applicable
+
+#### Package Structure
+
+The build process creates this structure inside the ZIP:
+
+```
+src/scripts/AstroBin/
+├── AstroBin_CSV_Export_v3_Modular.js
+├── AstroBin-core.js
+├── AstroBin-filter-database.js
+├── AstroBin-analysis.js
+├── AstroBin-gui.js
+└── AstroBin-gui-methods.js
+
+rsc/AstroBin/
+└── astrobin_filters.csv
+```
+
+#### Files and Directories
+
+- **`tools/build-astrobin-package.mjs`** - Build script for creating packages
+- **`updates/`** - Contains ZIP packages and updates.xri
+- **`docs/ASTROBIN_STRUCTURE.md`** - Detailed documentation of the tool structure
+- **`package.json`** - NPM scripts configuration
+
+#### Troubleshooting Build Issues
+
+**"File not found" error:**
+- Ensure all source files exist in `AstroBin Export/` directory
+- Check that file names match exactly (case-sensitive)
+
+**ZIP creation fails:**
+- Verify PowerShell is available
+- Check disk space
+- Ensure write permissions for `updates/` directory
+
+**SHA1 mismatch:**
+- Rebuild the package completely
+- Don't manually edit the ZIP file
+
+---
