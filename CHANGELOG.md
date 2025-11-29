@@ -1,9 +1,28 @@
-# Changelog - AstroBin Export
+# Changelog - PixInsight Custom Scripts
 
-All notable changes to the AstroBin Export package will be documented in this file.
+All notable changes to the PixInsight scripts and build system will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- Multi-project build system with `packaging.config.json`
+- `npm run build:packages` command for building all ready projects
+- Configuration-driven package management
+- Support for multiple projects in single `updates.xri`
+- Automatic cleanup of old package files
+- Project status tracking (ready/not ready)
+
+### Changed
+- Build system now uses `packaging.config.json` instead of hardcoded paths
+- `updates.xri` is now fully generated (not manually edited)
+- Package structure defined per-project in configuration
+
+### Deprecated
+- `npm run build:astrobin` (use `npm run build:packages` instead)
+- Legacy single-project build script (will be removed in future version)
 
 ## [1.0.0] - 2025-11-29
 

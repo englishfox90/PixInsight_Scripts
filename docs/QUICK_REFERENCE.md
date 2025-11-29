@@ -26,48 +26,79 @@
 
 ## For Developers
 
-### Building a New Release
+### Building Packages (New Multi-Project System)
 
 ```powershell
 # 1. Navigate to repository
 cd "d:\Astrophotography\PixInsight Files\PixInsight Custom Scripts"
 
-# 2. Build the package (optionally specify version)
+# 2. Install dependencies (first time only)
+npm install
+
+# 3. Build all ready projects
+npm run build:packages
+
+# 4. Commit and push
+git add updates/ packaging.config.json
+git commit -m "Release updates"
+git push origin main
+```
+
+### Updating Project Versions
+
+```powershell
+# 1. Edit packaging.config.json
+# Change the version number for the desired project
+
+# 2. Build packages
+npm run build:packages
+
+# 3. Commit with tag
+git add packaging.config.json updates/
+git commit -m "Release ProjectName vX.Y.Z"
+git tag -a vX.Y.Z -m "Release notes"
+git push origin main --tags
+```
+
+### Making a Project Ready for Distribution
+
+1. Edit `packaging.config.json`
+2. Find your project entry
+3. Change `"ready": false` to `"ready": true`
+4. Run `npm run build:packages`
+5. Commit and push
+
+### Legacy Build (Deprecated)
+
+```powershell
+# Old single-project build (still works but deprecated)
 npm run build:astrobin
 # or with version:
 npm run build:astrobin -- --version=1.1.0
-
-# 3. Commit and push
-git add updates/
-git commit -m "Release AstroBin Export v1.0.0"
-git push origin main
-
-# 4. Test in PixInsight by adding/refreshing the repository
 ```
 
 ### What the Build Does
 
+- ✅ Reads `packaging.config.json` for project definitions
+- ✅ Builds ZIP packages for all projects marked `"ready": true`
 - ✅ Copies source files to proper PixInsight structure
-- ✅ Creates ZIP package in `updates/`
-- ✅ Calculates SHA1 hash
-- ✅ Updates `updates.xri` with metadata
-- ✅ Cleans up temporary files
+- ✅ Generates unified `updates.xri` manifest
+- ✅ Calculates SHA1 hash for each package
+- ✅ Cleans up old packages and temporary files
 
-### Files Included in Package
+### Files Included in Packages
 
-**Scripts:**
-- AstroBin_CSV_Export_v3_Modular.js (main entry)
-- AstroBin-core.js
-- AstroBin-filter-database.js
-- AstroBin-analysis.js
-- AstroBin-gui.js
-- AstroBin-gui-methods.js
+Configuration in `packaging.config.json` controls which files are included:
 
-**Resources:**
-- astrobin_filters.csv
+**AstroBin Export:**
+- All JavaScript modules (6 files)
+- CSV filter database
+- Excludes: archive/ directory
 
-**Excluded:**
-- archive/ subdirectory (old versions)
+**Signature (when ready):**
+- MasterSignature.js
+- Font files
+- Logo resources
 
 ---
 

@@ -1,0 +1,72 @@
+{
+  "repository": {
+    "name": "PixInsight Custom Scripts",
+    "description": "Custom PixInsight scripts update repository",
+    "minPixInsightVersion": "1.8.0"
+  },
+  "projects": {
+    "AstroBinExport": {
+      "ready": true,
+      "name": "AstroBin Export",
+      "sourceDir": "AstroBin Export",
+      "zipNamePrefix": "AstroBinExport",
+      "version": "1.0.0",
+      "piScriptRoot": "src/scripts/AstroBin",
+      "piResourceRoot": "rsc/AstroBin",
+      "description": "Generates CSV files compatible with AstroBin's bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.",
+      "features": [
+        "Automatic FITS header analysis",
+        "200+ filters across 22+ manufacturers",
+        "Personal LRGB + SHO filter set support",
+        "Selectable/persistent CSV columns",
+        "Improved SQM derivation",
+        "Raw frame filtering",
+        "Manual filter ID entry",
+        "Bortle scale integration"
+      ],
+      "files": {
+        "scripts": [
+          "AstroBin_CSV_Export_v3_Modular.js",
+          "AstroBin-core.js",
+          "AstroBin-filter-database.js",
+          "AstroBin-analysis.js",
+          "AstroBin-gui.js",
+          "AstroBin-gui-methods.js"
+        ],
+        "resources": [
+          "astrobin_filters.csv"
+        ],
+        "exclude": [
+          "archive"
+        ]
+      }
+    },
+    "Signature": {
+      "ready": false,
+      "name": "Master Signature",
+      "sourceDir": "Signature",
+      "zipNamePrefix": "Signature",
+      "version": "0.1.0",
+      "piScriptRoot": "src/scripts/Signature",
+      "piResourceRoot": "rsc/Signature",
+      "description": "Adds professional signature blocks and logos to processed astrophotography images with automatic FITS integration.",
+      "features": [
+        "Two-line signature format",
+        "Automatic FITS integration",
+        "Logo overlay support",
+        "Live preview with zoom",
+        "Professional typography"
+      ],
+      "files": {
+        "scripts": [
+          "MasterSignature.js"
+        ],
+        "resources": [
+          "lib/font/Space.ttf",
+          "lib/logos/logo.png"
+        ],
+        "exclude": []
+      }
+    }
+  }
+}

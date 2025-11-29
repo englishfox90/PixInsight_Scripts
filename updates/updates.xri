@@ -2,30 +2,28 @@
 <xri version="1.0">
   <description>
     <p>
-      PixInsight custom scripts update repository.
+      PixInsight Custom Scripts
     </p>
     <p>
-      This repository provides the AstroBin Export tool for generating CSV files
-      compatible with AstroBin's bulk acquisition upload feature.
+      This repository provides the AstroBin Export tool.
     </p>
   </description>
 
   <platform os="all" arch="noarch" version="1.8.0:">
+
     <package fileName="AstroBinExport-1.0.0-20251129.zip"
-             sha1="0d8c35fd33ddd9081c050a3fc3b61394e11addaf"
+             sha1="e4526fdc17d6c1368fa6d05577b040af3529690a"
              type="script"
-             releaseDate="2025-11-29T23:30:21.716Z">
+             releaseDate="2025-11-29T23:43:14.243Z">
       <title>
         AstroBin Export
       </title>
       <description>
         <p>
-          AstroBin CSV Export Tool v1.0.0
+          AstroBin Export v1.0.0
         </p>
         <p>
-          Generates CSV files compatible with AstroBin's bulk acquisition upload feature.
-          Includes automatic FITS header analysis, comprehensive filter database (200+ filters),
-          personal filter sets, selectable CSV columns, and more.
+          Generates CSV files compatible with AstroBin's bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.
         </p>
         <p>
           <b>Key Features:</b>
@@ -42,5 +40,6 @@
         </ul>
       </description>
     </package>
+
   </platform>
 </xri>

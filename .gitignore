@@ -7,6 +7,7 @@ AstroBin Export/archive/
 # Build artifacts
 build/
 node_modules/
+updates/tmp/
 
 # Common temporary and system files
 *.tmp

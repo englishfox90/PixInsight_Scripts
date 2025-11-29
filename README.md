@@ -269,105 +269,193 @@ The script automatically reads these FITS keywords:
 
 ## 🔧 Developer Guide
 
-### Building and Releasing AstroBin Export Package
+### Multi-Project Build System
 
-This repository includes tooling to build and publish AstroBin Export as a PixInsight Update Repository package.
+This repository uses a configuration-driven build system that can package multiple PixInsight tools for distribution via the Update Repository.
 
-#### Prerequisites
+#### Configuration File: `packaging.config.json`
 
+The build system is controlled by `packaging.config.json`, which defines:
+- Which projects exist in the repository
+- Which projects are ready for distribution (`"ready": true`)
+- Version numbers and package metadata
+- File inclusion/exclusion patterns
+
+**Example structure:**
+```json
+{
+  "projects": {
+    "AstroBinExport": {
+      "ready": true,
+      "version": "1.0.0",
+      "sourceDir": "AstroBin Export",
+      ...
+    },
+    "Signature": {
+      "ready": false,
+      "version": "0.1.0",
+      ...
+    }
+  }
+}
+```
+
+#### Building Packages
+
+**Prerequisites:**
 - Node.js (v14 or higher)
 - Git
-- Access to push to the repository
 
-#### Build Process
+**Install dependencies:**
+```powershell
+npm install
+```
 
-1. **Update version number** (if needed):
-   ```powershell
-   # Edit version in build script or use --version flag
-   npm run build:astrobin -- --version=1.1.0
+**Build all ready projects:**
+```powershell
+npm run build:packages
+```
+
+This command will:
+1. ✅ Read `packaging.config.json`
+2. ✅ Build ZIP packages for all projects with `"ready": true`
+3. ✅ Generate/update `updates/updates.xri` with current package metadata
+4. ✅ Calculate SHA1 hashes and file sizes
+5. ✅ Clean up old package files
+6. ✅ Remove temporary build directories
+
+**Build output:**
+- `updates/<ProjectName>-<version>-<YYYYMMDD>.zip` - Package files
+- `updates/updates.xri` - PixInsight repository manifest
+
+#### Adding a New Project to the Build System
+
+1. **Add project configuration** to `packaging.config.json`:
+   ```json
+   "MyNewTool": {
+     "ready": false,
+     "name": "My New Tool",
+     "sourceDir": "MyNewTool",
+     "zipNamePrefix": "MyNewTool",
+     "version": "0.1.0",
+     "piScriptRoot": "src/scripts/MyNewTool",
+     "piResourceRoot": "rsc/MyNewTool",
+     "description": "Brief description...",
+     "features": ["Feature 1", "Feature 2"],
+     "files": {
+       "scripts": ["main.js"],
+       "resources": [],
+       "exclude": ["archive"]
+     }
+   }
    ```
 
-2. **Build the package**:
+2. **When ready to release**, set `"ready": true`
+
+3. **Run the build**:
    ```powershell
-   npm run build:astrobin
+   npm run build:packages
    ```
-
-   This will:
-   - Create a temporary build directory with proper PixInsight structure
-   - Copy all required JavaScript files to `src/scripts/AstroBin/`
-   - Copy resource files to `rsc/AstroBin/`
-   - Generate a ZIP package in `updates/`
-   - Calculate SHA1 hash and file size
-   - Update `updates/updates.xri` with package metadata
-   - Clean up temporary files
-
-3. **Verify the package**:
-   - Check that `updates/AstroBinExport-X.Y.Z-YYYYMMDD.zip` was created
-   - Review `updates/updates.xri` for correct metadata
-   - Optionally test by extracting the ZIP and verifying structure
 
 4. **Commit and push**:
    ```powershell
-   git add updates/
-   git commit -m "Release AstroBin Export v1.0.0"
+   git add packaging.config.json updates/
+   git commit -m "Add MyNewTool to update repository"
    git push origin main
    ```
 
-5. **Test the update**:
-   - Open PixInsight
-   - Go to `Resources → Updates → Manage Repositories...`
-   - Add or refresh the repository URL
-   - Check for updates
-   - Verify the package installs correctly
+#### Updating Existing Project Versions
+
+1. **Edit version** in `packaging.config.json`:
+   ```json
+   "AstroBinExport": {
+     "version": "1.1.0",
+     ...
+   }
+   ```
+
+2. **Rebuild packages**:
+   ```powershell
+   npm run build:packages
+   ```
+
+3. **Commit and tag**:
+   ```powershell
+   git add packaging.config.json updates/
+   git commit -m "Release AstroBin Export v1.1.0"
+   git tag -a v1.1.0 -m "Release notes..."
+   git push origin main --tags
+   ```
+
+### Building and Releasing AstroBin Export Package
+
+#### Legacy Single-Project Build (Deprecated)
+
+The old `npm run build:astrobin` command still works but is deprecated. Use `npm run build:packages` instead.
 
 #### Release Checklist
 
 - [ ] Test all functionality with current PixInsight version
-- [ ] Update version number if needed
-- [ ] Run `npm run build:astrobin`
-- [ ] Verify ZIP contents and updates.xri metadata
-- [ ] Commit new package files
-- [ ] Push to GitHub
+- [ ] Update version in `packaging.config.json` if needed
+- [ ] Run `npm run build:packages`
+- [ ] Verify ZIP contents and `updates.xri` metadata
+- [ ] Commit package files and configuration
+- [ ] Tag release: `git tag -a vX.Y.Z -m "Release notes"`
+- [ ] Push to GitHub: `git push origin main --tags`
 - [ ] Test installation via PixInsight Update Repository
-- [ ] Update release notes/changelog if applicable
+
+#### Current Project Status
+
+| Project | Ready | Version | Description |
+|---------|-------|---------|-------------|
+| **AstroBin Export** | ✅ Yes | 1.0.0 | CSV export tool for AstroBin |
+| **Signature** | ❌ No | 0.1.0 | Image signature tool (experimental) |
+
+*To enable Signature for distribution, set `"ready": true` in `packaging.config.json`*
 
 #### Package Structure
 
-The build process creates this structure inside the ZIP:
+The build process creates this structure inside each ZIP:
 
 ```
-src/scripts/AstroBin/
-├── AstroBin_CSV_Export_v3_Modular.js
-├── AstroBin-core.js
-├── AstroBin-filter-database.js
-├── AstroBin-analysis.js
-├── AstroBin-gui.js
-└── AstroBin-gui-methods.js
+src/scripts/<ProjectName>/
+├── (JavaScript files)
 
-rsc/AstroBin/
-└── astrobin_filters.csv
+rsc/<ProjectName>/
+└── (Resource files)
 ```
 
 #### Files and Directories
 
-- **`tools/build-astrobin-package.mjs`** - Build script for creating packages
+- **`packaging.config.json`** - Multi-project build configuration
+- **`tools/build-packages.mjs`** - Multi-project build script (recommended)
+- **`tools/build-astrobin-package.mjs`** - Legacy single-project build script (deprecated)
 - **`updates/`** - Contains ZIP packages and updates.xri
-- **`docs/ASTROBIN_STRUCTURE.md`** - Detailed documentation of the tool structure
+- **`docs/`** - Documentation files
 - **`package.json`** - NPM scripts configuration
 
 #### Troubleshooting Build Issues
 
 **"File not found" error:**
-- Ensure all source files exist in `AstroBin Export/` directory
-- Check that file names match exactly (case-sensitive)
+- Ensure all source files exist in the project's source directory
+- Check that file names in `packaging.config.json` match exactly (case-sensitive)
+- Verify the `files.scripts` and `files.resources` arrays are correct
+
+**"No packages to include" warning:**
+- At least one project must have `"ready": true` in `packaging.config.json`
+- Check that the project configuration is valid JSON
 
 **ZIP creation fails:**
-- Verify PowerShell is available
-- Check disk space
+- Verify Node.js and npm are installed correctly
+- Check disk space in `updates/` directory
 - Ensure write permissions for `updates/` directory
 
 **SHA1 mismatch:**
-- Rebuild the package completely
-- Don't manually edit the ZIP file
+- Rebuild the package completely with `npm run build:packages`
+- Don't manually edit ZIP files or `updates.xri`
+
+**Old build script issues:**
+- Use `npm run build:packages` instead of `npm run build:astrobin`
+- The old script is maintained for compatibility but may be removed in future versions
 
 ---

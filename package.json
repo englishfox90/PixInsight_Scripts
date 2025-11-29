@@ -4,9 +4,13 @@
   "description": "PixInsight custom scripts with update repository support",
   "type": "module",
   "scripts": {
+    "build:packages": "node tools/build-packages.mjs",
     "build:astrobin": "node tools/build-astrobin-package.mjs"
   },
   "keywords": ["pixinsight", "astrophotography", "astrobin"],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "adm-zip": "^0.5.10"
+  }
 }
