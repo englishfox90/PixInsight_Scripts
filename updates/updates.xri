@@ -9,12 +9,12 @@
     </p>
   </description>
 
-  <platform os="all" arch="noarch" version="1.8.0:2.0.0">
+  <platform os="all" arch="noarch" version="1.8.0:">
 
     <package fileName="AstroBinExport-1.0.0-20251129.zip"
              sha1="e4526fdc17d6c1368fa6d05577b040af3529690a"
              type="script"
-             releaseDate="2025-11-29T23:43:14.243Z">
+             releaseDate="20251129">
       <title>
         AstroBin Export
       </title>

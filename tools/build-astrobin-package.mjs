@@ -165,7 +165,8 @@ function updateXriFile(zipName, zipPath) {
   
   const fileSize = getFileSize(zipPath);
   const sha1Hash = calculateSHA1(zipPath);
-  const releaseDate = new Date().toISOString();
+  const now = new Date();
+  const releaseDate = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   
   console.log(`   File size: ${fileSize} bytes`);
   console.log(`   SHA1: ${sha1Hash}`);

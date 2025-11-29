@@ -244,7 +244,7 @@ function buildProjectPackage(projectKey, projectConfig) {
     filePath: zipPath,
     fileSize: fileSize,
     sha1: sha1,
-    releaseDate: new Date().toISOString(),
+    releaseDate: getDateStamp(),
     project: projectConfig
   };
 }
