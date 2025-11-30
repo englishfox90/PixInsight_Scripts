@@ -10,7 +10,6 @@
   </description>
 
   <platform os="all" arch="noarch" version="1.8.0:2.0.0">
-
     <package fileName="AstroBinExport-1.0.0-20251129.zip"
              sha1="e4526fdc17d6c1368fa6d05577b040af3529690a"
              type="script"
@@ -23,7 +22,7 @@
           AstroBin Export v1.0.0
         </p>
         <p>
-          Generates CSV files compatible with AstroBin's bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.
+          Generates CSV files compatible with AstroBin&apos;s bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.
         </p>
         <p>
           <b>Key Features:</b>
@@ -40,6 +39,5 @@
         </ul>
       </description>
     </package>
-
   </platform>
 </xri>

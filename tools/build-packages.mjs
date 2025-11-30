@@ -78,6 +78,155 @@ function getDateStamp() {
 }
 
 /**
+ * Validate the generated updates.xri file
+ */
+function validateUpdatesXri(xriPath, packages) {
+  console.log('\n🔍 Validating updates.xri...');
+  
+  const errors = [];
+  const warnings = [];
+  
+  // Read the XRI file
+  if (!fs.existsSync(xriPath)) {
+    errors.push('updates.xri file does not exist');
+    return { valid: false, errors, warnings };
+  }
+  
+  const xriContent = fs.readFileSync(xriPath, 'utf8');
+  
+  // Check 1: No BOM
+  if (xriContent.charCodeAt(0) === 0xFEFF) {
+    errors.push('File contains BOM (Byte Order Mark) - must be pure UTF-8');
+  }
+  
+  // Check 2: Valid XML structure
+  try {
+    // Basic XML structure validation
+    if (!xriContent.includes('<?xml version="1.0" encoding="UTF-8"?>')) {
+      errors.push('Missing or incorrect XML declaration');
+    }
+    
+    if (!xriContent.includes('<xri version="1.0">')) {
+      errors.push('Missing <xri version="1.0"> root element');
+    }
+    
+    if (!xriContent.includes('</xri>')) {
+      errors.push('Missing </xri> closing tag');
+    }
+    
+    if (!xriContent.includes('<platform ')) {
+      errors.push('Missing <platform> element');
+    }
+  } catch (e) {
+    errors.push(`XML structure error: ${e.message}`);
+  }
+  
+  // Check 3: Validate all fileName attributes match actual files
+  for (const pkg of packages) {
+    const fileNamePattern = `fileName="${pkg.fileName}"`;
+    if (!xriContent.includes(fileNamePattern)) {
+      errors.push(`Package ${pkg.fileName} not found in updates.xri or filename mismatch`);
+    }
+    
+    // Verify file exists on disk (case-sensitive)
+    const actualPath = path.join(UPDATES_DIR, pkg.fileName);
+    if (!fs.existsSync(actualPath)) {
+      errors.push(`ZIP file referenced in XRI does not exist: ${pkg.fileName}`);
+    } else {
+      // Verify exact case match
+      const dirFiles = fs.readdirSync(UPDATES_DIR);
+      if (!dirFiles.includes(pkg.fileName)) {
+        errors.push(`Case mismatch: ${pkg.fileName} not found with exact casing in updates/`);
+      }
+    }
+  }
+  
+  // Check 4: Validate releaseDate format (digits only, YYYYMMDD or YYYYMMDDHHMM)
+  for (const pkg of packages) {
+    const releaseDatePattern = `releaseDate="${pkg.releaseDate}"`;
+    if (!xriContent.includes(releaseDatePattern)) {
+      errors.push(`Release date mismatch for ${pkg.fileName}`);
+    }
+    
+    // Verify format is digits only
+    if (!/^\d{8}(\d{4})?$/.test(pkg.releaseDate)) {
+      errors.push(`Invalid releaseDate format for ${pkg.fileName}: ${pkg.releaseDate} (must be YYYYMMDD or YYYYMMDDHHMM)`);
+    }
+  }
+  
+  // Check 5: Validate platform version range
+  const platformMatch = xriContent.match(/<platform[^>]+version="([^"]+)"/);
+  if (platformMatch) {
+    const versionRange = platformMatch[1];
+    // Must be in format "MIN:MAX", not half-open like "1.8.0:"
+    if (!versionRange.includes(':')) {
+      errors.push(`Platform version range must include colon: ${versionRange}`);
+    } else if (versionRange.endsWith(':')) {
+      errors.push(`Platform version range must be fully specified (MIN:MAX), not half-open: ${versionRange}`);
+    }
+  } else {
+    errors.push('Platform version attribute not found');
+  }
+  
+  // Check 6: No trailing whitespace before closing tags
+  const lines = xriContent.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Check for trailing spaces before >
+    if (/ >/.test(line)) {
+      warnings.push(`Line ${i + 1}: Trailing space before closing '>' - may cause parser issues`);
+    }
+    // Check for trailing whitespace at end of line
+    if (/\s+$/.test(line)) {
+      warnings.push(`Line ${i + 1}: Trailing whitespace at end of line`);
+    }
+  }
+  
+  // Check 7: All <package> elements are inside <platform>
+  const platformStart = xriContent.indexOf('<platform');
+  const platformEnd = xriContent.indexOf('</platform>');
+  
+  if (platformStart === -1 || platformEnd === -1) {
+    errors.push('<platform> element not properly formed');
+  } else {
+    const packageMatches = [...xriContent.matchAll(/<package /g)];
+    for (const match of packageMatches) {
+      if (match.index < platformStart || match.index > platformEnd) {
+        errors.push('<package> element found outside <platform> element');
+      }
+    }
+  }
+  
+  // Check 8: Validate SHA1 format (40 hex characters)
+  for (const pkg of packages) {
+    if (!/^[a-f0-9]{40}$/.test(pkg.sha1)) {
+      errors.push(`Invalid SHA1 hash format for ${pkg.fileName}: ${pkg.sha1}`);
+    }
+  }
+  
+  // Report results
+  if (errors.length > 0) {
+    console.log('   ❌ Validation FAILED:');
+    errors.forEach(err => console.log(`      • ${err}`));
+  }
+  
+  if (warnings.length > 0) {
+    console.log('   ⚠️  Warnings:');
+    warnings.forEach(warn => console.log(`      • ${warn}`));
+  }
+  
+  if (errors.length === 0 && warnings.length === 0) {
+    console.log('   ✅ Validation passed - updates.xri is valid');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings
+  };
+}
+
+/**
  * Copy files recursively, excluding specified patterns
  */
 function copyFiles(sourceDir, targetDir, files, excludePatterns = []) {
@@ -231,26 +380,53 @@ function buildProjectPackage(projectKey, projectConfig) {
     return null;
   }
   
-  // Calculate metadata
-  const fileSize = fs.statSync(zipPath).size;
-  const fileBuffer = fs.readFileSync(zipPath);
+  // AUTO-DISCOVER: Read the actual filename from disk
+  // This ensures case-sensitivity is correct
+  const actualFiles = fs.readdirSync(UPDATES_DIR);
+  const actualZipFile = actualFiles.find(f => f === zipFileName);
+  
+  if (!actualZipFile) {
+    console.error(`   ❌ Error: ZIP file not found after creation: ${zipFileName}`);
+    return null;
+  }
+  
+  const actualZipPath = path.join(UPDATES_DIR, actualZipFile);
+  
+  // Calculate metadata using the actual discovered file
+  const fileSize = fs.statSync(actualZipPath).size;
+  const fileBuffer = fs.readFileSync(actualZipPath);
   const sha1 = createHash('sha1').update(fileBuffer).digest('hex');
   
   console.log(`   📊 Package size: ${(fileSize / 1024).toFixed(2)} KB`);
   console.log(`   🔐 SHA1: ${sha1}`);
   
+  // Generate release date in strict YYYYMMDD format (digits only)
+  const releaseDate = dateStamp;
+  
   return {
-    fileName: zipFileName,
-    filePath: zipPath,
+    fileName: actualZipFile,  // Use the ACTUAL filename from disk
+    filePath: actualZipPath,
     fileSize: fileSize,
     sha1: sha1,
-    releaseDate: getDateStamp(),
+    releaseDate: releaseDate,  // YYYYMMDD format
     project: projectConfig
   };
 }
 
 /**
- * Generate updates.xri manifest
+ * Escape XML special characters
+ */
+function escapeXml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
+ * Generate updates.xri manifest with strict formatting
  */
 function generateUpdatesXri(packages, repoConfig) {
   console.log('\n📝 Generating updates.xri manifest...');
@@ -260,28 +436,28 @@ function generateUpdatesXri(packages, repoConfig) {
     return;
   }
   
-  // Build package entries
-  let packageEntries = '';
+  // Build package entries with NO trailing whitespace
+  const packageEntries = [];
   
   for (const pkg of packages) {
     const featuresHtml = pkg.project.features
-      .map(f => `          <li>${f}</li>`)
+      .map(f => `          <li>${escapeXml(f)}</li>`)
       .join('\n');
     
-    packageEntries += `
-    <package fileName="${pkg.fileName}"
+    // Strict formatting: no trailing spaces, attributes on separate lines for clarity
+    const packageXml = `    <package fileName="${pkg.fileName}"
              sha1="${pkg.sha1}"
              type="script"
              releaseDate="${pkg.releaseDate}">
       <title>
-        ${pkg.project.name}
+        ${escapeXml(pkg.project.name)}
       </title>
       <description>
         <p>
-          ${pkg.project.name} v${pkg.project.version}
+          ${escapeXml(pkg.project.name)} v${pkg.project.version}
         </p>
         <p>
-          ${pkg.project.description}
+          ${escapeXml(pkg.project.description)}
         </p>
         <p>
           <b>Key Features:</b>
@@ -290,8 +466,9 @@ function generateUpdatesXri(packages, repoConfig) {
 ${featuresHtml}
         </ul>
       </description>
-    </package>
-`;
+    </package>`;
+    
+    packageEntries.push(packageXml);
   }
   
   // Determine description based on number of packages
@@ -303,29 +480,37 @@ ${featuresHtml}
     repoDescription = `This repository provides multiple tools: ${projectNames}.`;
   }
   
-  // Build complete XRI
+  // Build complete XRI with strict version range format: "MIN:MAX"
+  // PixInsight requires a fully-specified range, not half-open like "1.8.0:"
+  const minVersion = repoConfig.minPixInsightVersion || '1.8.0';
+  const maxVersion = '2.0.0'; // Conservative upper bound
+  
   const xriContent = `<?xml version="1.0" encoding="UTF-8"?>
 <xri version="1.0">
   <description>
     <p>
-      ${repoConfig.name}
+      ${escapeXml(repoConfig.name)}
     </p>
     <p>
-      ${repoDescription}
+      ${escapeXml(repoDescription)}
     </p>
   </description>
 
-  <platform os="all" arch="noarch" version="${repoConfig.minPixInsightVersion}:">
-${packageEntries}
+  <platform os="all" arch="noarch" version="${minVersion}:${maxVersion}">
+${packageEntries.join('\n\n')}
   </platform>
 </xri>
 `;
   
   const xriPath = path.join(UPDATES_DIR, 'updates.xri');
-  fs.writeFileSync(xriPath, xriContent, 'utf8');
+  
+  // Write with explicit UTF-8, no BOM
+  fs.writeFileSync(xriPath, xriContent, { encoding: 'utf8' });
   
   console.log(`   ✅ Generated manifest with ${packages.length} package(s)`);
   console.log(`   📄 ${xriPath}`);
+  
+  return xriPath;
 }
 
 /**
@@ -425,7 +610,17 @@ function main() {
     }
     
     // Generate updates.xri
-    generateUpdatesXri(packages, config.repository);
+    const xriPath = generateUpdatesXri(packages, config.repository);
+    
+    // Validate the generated updates.xri
+    const validation = validateUpdatesXri(xriPath, packages);
+    
+    if (!validation.valid) {
+      console.error('\n❌ updates.xri validation failed!');
+      console.error('The generated manifest contains errors that will cause PixInsight to reject it.');
+      cleanup();
+      process.exit(1);
+    }
     
     // Clean up old ZIPs
     cleanupOldZips(packages);

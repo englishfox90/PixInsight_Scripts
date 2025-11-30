@@ -319,10 +319,23 @@ npm run build:packages
 This command will:
 1. ✅ Read `packaging.config.json`
 2. ✅ Build ZIP packages for all projects with `"ready": true`
-3. ✅ Generate/update `updates/updates.xri` with current package metadata
-4. ✅ Calculate SHA1 hashes and file sizes
-5. ✅ Clean up old package files
-6. ✅ Remove temporary build directories
+3. ✅ **Auto-discover actual filenames** from disk (ensures case-sensitivity)
+4. ✅ Generate/update `updates/updates.xri` with current package metadata
+5. ✅ Calculate SHA1 hashes and file sizes
+6. ✅ **Validate updates.xri** for PixInsight compatibility
+7. ✅ Clean up old package files
+8. ✅ Remove temporary build directories
+
+**Validation Checks:**
+- ✅ Release dates are in `YYYYMMDD` format (no ISO timestamps)
+- ✅ Version range is fully specified (`1.8.0:2.0.0`, not `1.8.0:`)
+- ✅ ZIP filenames match exactly (case-sensitive)
+- ✅ No trailing whitespace in XML
+- ✅ Proper XML character escaping
+- ✅ Valid SHA1 hashes (40 hex characters)
+- ✅ No BOM in UTF-8 file
+
+If validation fails, the build aborts with clear error messages.
 
 **Build output:**
 - `updates/<ProjectName>-<version>-<YYYYMMDD>.zip` - Package files
@@ -428,10 +441,14 @@ rsc/<ProjectName>/
 #### Files and Directories
 
 - **`packaging.config.json`** - Multi-project build configuration
-- **`tools/build-packages.mjs`** - Multi-project build script (recommended)
+- **`tools/build-packages.mjs`** - Multi-project build script with validation (recommended)
 - **`tools/build-astrobin-package.mjs`** - Legacy single-project build script (deprecated)
 - **`updates/`** - Contains ZIP packages and updates.xri
 - **`docs/`** - Documentation files
+  - `BUILD_SYSTEM.md` - Build system overview
+  - `XML_FORMAT_REQUIREMENTS.md` - **PixInsight XML format requirements and safeguards**
+  - `ASTROBIN_STRUCTURE.md` - AstroBin tool structure
+  - `QUICK_REFERENCE.md` - Quick reference guide
 - **`package.json`** - NPM scripts configuration
 
 #### Troubleshooting Build Issues

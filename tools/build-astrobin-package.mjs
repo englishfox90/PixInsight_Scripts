@@ -158,6 +158,18 @@ function getFileSize(filePath) {
 }
 
 /**
+ * Escape XML special characters
+ */
+function escapeXml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
  * Generate or update updates.xri file
  */
 function updateXriFile(zipName, zipPath) {
@@ -183,7 +195,7 @@ function updateXriFile(zipName, zipPath) {
     </p>
   </description>
 
-  <platform os="all" arch="noarch" version="1.8.0:">
+  <platform os="all" arch="noarch" version="1.8.0:2.0.0">
     <package fileName="${zipName}"
              sha1="${sha1Hash}"
              type="script"
