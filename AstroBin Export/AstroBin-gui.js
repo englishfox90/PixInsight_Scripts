@@ -15,11 +15,12 @@ function AstroBinDialog()
    this.__base__();
    
    // Set dialog properties
-   this.windowTitle = "AstroBin CSV Export v3";
+   this.windowTitle = SCRIPT_NAME + " v" + SCRIPT_VERSION;
    this.scaledMinWidth = 900;
    this.scaledMinHeight = 700;
 
    // Create main sections
+   this.createScriptInfoSection();
    this.createFileSelectionSection();
    this.createGlobalParametersSection();
    this.createImageAnalysisSection();
@@ -30,6 +31,7 @@ function AstroBinDialog()
    this.sizer = new VerticalSizer;
    this.sizer.margin = 8;
    this.sizer.spacing = 6;
+   this.sizer.add(this.scriptInfoGroupBox);
    this.sizer.add(this.fileSelectionGroupBox);
    this.sizer.add(this.globalParametersGroupBox);
    this.sizer.add(this.imageAnalysisGroupBox, 100); // Takes most space
@@ -40,6 +42,42 @@ function AstroBinDialog()
 }
 
 AstroBinDialog.prototype = new Dialog;
+
+// Script Info Section
+AstroBinDialog.prototype.createScriptInfoSection = function()
+{
+   this.scriptInfoGroupBox = new GroupBox(this);
+   this.scriptInfoGroupBox.title = ""; // No title for signature box
+   this.scriptInfoGroupBox.sizer = new VerticalSizer;
+   this.scriptInfoGroupBox.sizer.margin = 4;
+   this.scriptInfoGroupBox.sizer.spacing = 2;
+   this.scriptInfoGroupBox.styleSheet = "QGroupBox { padding-top: 0px; margin-top: 0px; }";
+
+   // First row: Name/version on left, author on right
+   var titleSizer = new HorizontalSizer;
+   titleSizer.spacing = 4;
+   
+   this.titleLabel = new Label(this);
+   this.titleLabel.text = SCRIPT_NAME + " v" + SCRIPT_VERSION;
+   this.titleLabel.styleSheet = "QLabel { font-weight: bold; }";
+   
+   this.copyrightLabel = new Label(this);
+   this.copyrightLabel.text = "© " + SCRIPT_DEVELOPER;
+   this.copyrightLabel.textAlignment = TextAlign_Right;
+   
+   titleSizer.add(this.titleLabel);
+   titleSizer.addStretch();
+   titleSizer.add(this.copyrightLabel);
+   
+   // Description line
+   this.descriptionLabel = new Label(this);
+   this.descriptionLabel.text = SCRIPT_DESCRIPTION;
+   this.descriptionLabel.wordWrapping = true;
+   this.descriptionLabel.useRichText = false;
+
+   this.scriptInfoGroupBox.sizer.add(titleSizer);
+   this.scriptInfoGroupBox.sizer.add(this.descriptionLabel);
+};
 
 // File Selection Section
 AstroBinDialog.prototype.createFileSelectionSection = function()
