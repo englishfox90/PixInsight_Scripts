@@ -10,7 +10,7 @@
       "name": "AstroBin Export",
       "sourceDir": "AstroBin Export",
       "zipNamePrefix": "AstroBinExport",
-      "version": "3.1.0",
+      "version": "3.1.1",
       "piScriptRoot": "src/scripts/AstroBin",
       "piResourceRoot": "rsc/AstroBin",
       "description": "Generates CSV files compatible with AstroBin's bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.",
