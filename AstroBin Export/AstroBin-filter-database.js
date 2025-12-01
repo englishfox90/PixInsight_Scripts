@@ -287,9 +287,9 @@ function suggestFilterId(fitsFilterName)
       // Luminance
       if ((filterName.indexOf("lum") >= 0 || filterName.indexOf("lumin") >= 0 || filterName === "l" || filterName.indexOf("luma")>=0) && pset.L && _astrobinValidFilterId(pset.L)) return pset.L;
       // Red Green Blue
-      if (filterName.indexOf("red") >= 0 && pset.R && _astrobinValidFilterId(pset.R)) return pset.R;
-      if (filterName.indexOf("green") >= 0 && pset.G && _astrobinValidFilterId(pset.G)) return pset.G;
-      if (filterName.indexOf("blue") >= 0 && pset.B && _astrobinValidFilterId(pset.B)) return pset.B;
+      if ((filterName === "r" || filterName.indexOf("red") >= 0) && pset.R && _astrobinValidFilterId(pset.R)) return pset.R;
+      if ((filterName === "g" || filterName.indexOf("green") >= 0) && pset.G && _astrobinValidFilterId(pset.G)) return pset.G;
+      if ((filterName === "b" || filterName.indexOf("blue") >= 0) && pset.B && _astrobinValidFilterId(pset.B)) return pset.B;
       // Narrowband Ha OIII SII (case-insensitive variants)
       if ((filterName.indexOf("ha") >= 0 || filterName.indexOf("h-alpha") >= 0 || filterName.indexOf("halpha") >= 0) && pset.Ha && _astrobinValidFilterId(pset.Ha)) return pset.Ha;
       if ((filterName.indexOf("oiii") >= 0 || filterName.indexOf("o3") >= 0 || filterName.indexOf("oxygen") >= 0) && pset.OIII && _astrobinValidFilterId(pset.OIII)) return pset.OIII;

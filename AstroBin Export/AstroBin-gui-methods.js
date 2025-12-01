@@ -918,13 +918,13 @@ FilterMappingDialog.prototype.applyPersonalToSession = function(){
        if (fName.indexOf('lum')>=0 || fName === 'l' || fName.indexOf('lumin')>=0) { 
           if (set.L && _astrobinValidFilterId(set.L)) { g_analysisData[i].filterId = set.L; appliedCount++; continue; } 
        }
-       if (fName.indexOf('red')>=0) { 
+       if (fName === 'r' || fName.indexOf('red')>=0) { 
           if (set.R && _astrobinValidFilterId(set.R)) { g_analysisData[i].filterId = set.R; appliedCount++; continue; } 
        }
-       if (fName.indexOf('green')>=0) { 
+       if (fName === 'g' || fName.indexOf('green')>=0) { 
           if (set.G && _astrobinValidFilterId(set.G)) { g_analysisData[i].filterId = set.G; appliedCount++; continue; } 
        }
-       if (fName.indexOf('blue')>=0) { 
+       if (fName === 'b' || fName.indexOf('blue')>=0) { 
           if (set.B && _astrobinValidFilterId(set.B)) { g_analysisData[i].filterId = set.B; appliedCount++; continue; } 
        }
        if (fName.indexOf('ha')>=0 || fName.indexOf('h-alpha')>=0 || fName.indexOf('halpha')>=0) { 

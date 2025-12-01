@@ -11,7 +11,7 @@
 
   <platform os="all" arch="noarch" version="1.8.0:2.0.0">
     <package fileName="AstroBinExport-3.1.0-20251130.zip"
-             sha1="59407a193c60dc9fb3b28f1eb3eae276496f0045"
+             sha1="83fa7c9b89540f8a3b2cbf08616cab73411c54d2"
              type="script"
              releaseDate="20251130">
       <title>
