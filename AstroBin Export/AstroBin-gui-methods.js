@@ -867,8 +867,8 @@ FilterMappingDialog.prototype.createPersonalFilterRow = function(role)
 };
 
 FilterMappingDialog.prototype.loadPersonalFilterSetIntoUI = function(){
-  if (!CONFIG.personalFilterSet) return;
-  var set = CONFIG.personalFilterSet;
+  var set = getPersonalFilterSet();
+  if (!set) return;
   for (var role in this.personalControls){
      var id = set[role] || "";
      if (!id) continue;
@@ -896,8 +896,10 @@ FilterMappingDialog.prototype.savePersonalFilterSet = function(){
      if (id && id.toLowerCase() !== "invalid") set[role]=id; else set[role]="";
   }
   CONFIG.personalFilterSet = set;
-  if (typeof savePersonalFilterSet === 'function') savePersonalFilterSet(set);
-  console.writeln("[AstroBin] Personal filter set updated: " + JSON.stringify(set));
+  console.writeln("[AstroBin] Personal filter set updated in memory: " + JSON.stringify(set));
+  
+  // Call the global save function to persist to PixInsight Settings
+  savePersonalFilterSet(set);
 };
 
 FilterMappingDialog.prototype.applyPersonalToSession = function(){
