@@ -634,7 +634,7 @@ AstroBinDialog.prototype.showFilterMappingDialog = function()
    
    // Create filter mapping dialog
    try {
-      var filterDialog = new FilterMappingDialog();
+      var filterDialog = new FilterMappingDialog(this);
       console.writeln("Filter mapping dialog created successfully");
       
       // Execute the dialog and update the main tree if OK was pressed
@@ -652,11 +652,12 @@ AstroBinDialog.prototype.showFilterMappingDialog = function()
 };
 
 // Filter Mapping Dialog Class
-function FilterMappingDialog()
+function FilterMappingDialog(parentDialog)
 {
    this.__base__ = Dialog;
    this.__base__();
    
+   this.parentDialog = parentDialog; // Store reference to main dialog
    this.windowTitle = "Filter Mapping";
    this.scaledMinWidth = 900;  // Further increased width to accommodate wider manual entry field
    this.scaledMinHeight = 400;
@@ -903,20 +904,46 @@ FilterMappingDialog.prototype.savePersonalFilterSet = function(){
 };
 
 FilterMappingDialog.prototype.applyPersonalToSession = function(){
-   if (!CONFIG.personalFilterSet) return;
-   var set = CONFIG.personalFilterSet;
+   var set = getPersonalFilterSet();
+   if (!set) {
+      console.warningln("[AstroBin] No personal filter set defined.");
+      return;
+   }
+   
+   var appliedCount = 0;
    for (var i=0;i<g_analysisData.length;i++){
        var fName = (g_analysisData[i].filter || "").toLowerCase();
-       if (fName.indexOf('lum')>=0 || fName === 'l' || fName.indexOf('lumin')>=0) { if (set.L) { g_analysisData[i].filterId = set.L; continue; } }
-       if (fName.indexOf('red')>=0)   { if (set.R)  { g_analysisData[i].filterId = set.R; continue; } }
-       if (fName.indexOf('green')>=0) { if (set.G)  { g_analysisData[i].filterId = set.G; continue; } }
-       if (fName.indexOf('blue')>=0)  { if (set.B)  { g_analysisData[i].filterId = set.B; continue; } }
-       if (fName.indexOf('ha')>=0 || fName.indexOf('h-alpha')>=0 || fName.indexOf('halpha')>=0) { if (set.Ha) { g_analysisData[i].filterId = set.Ha; continue; } }
-       if (fName.indexOf('oiii')>=0 || fName.indexOf('oxygen')>=0 || fName.indexOf('o3')>=0) { if (set.OIII) { g_analysisData[i].filterId = set.OIII; continue; } }
-       if (fName.indexOf('sii')>=0 || fName.indexOf('sulfur')>=0 || fName.indexOf('sulphur')>=0 || fName.indexOf('s2')>=0) { if (set.SII) { g_analysisData[i].filterId = set.SII; continue; } }
+       var oldId = g_analysisData[i].filterId;
+       
+       if (fName.indexOf('lum')>=0 || fName === 'l' || fName.indexOf('lumin')>=0) { 
+          if (set.L && _astrobinValidFilterId(set.L)) { g_analysisData[i].filterId = set.L; appliedCount++; continue; } 
+       }
+       if (fName.indexOf('red')>=0) { 
+          if (set.R && _astrobinValidFilterId(set.R)) { g_analysisData[i].filterId = set.R; appliedCount++; continue; } 
+       }
+       if (fName.indexOf('green')>=0) { 
+          if (set.G && _astrobinValidFilterId(set.G)) { g_analysisData[i].filterId = set.G; appliedCount++; continue; } 
+       }
+       if (fName.indexOf('blue')>=0) { 
+          if (set.B && _astrobinValidFilterId(set.B)) { g_analysisData[i].filterId = set.B; appliedCount++; continue; } 
+       }
+       if (fName.indexOf('ha')>=0 || fName.indexOf('h-alpha')>=0 || fName.indexOf('halpha')>=0) { 
+          if (set.Ha && _astrobinValidFilterId(set.Ha)) { g_analysisData[i].filterId = set.Ha; appliedCount++; continue; } 
+       }
+       if (fName.indexOf('oiii')>=0 || fName.indexOf('oxygen')>=0 || fName.indexOf('o3')>=0) { 
+          if (set.OIII && _astrobinValidFilterId(set.OIII)) { g_analysisData[i].filterId = set.OIII; appliedCount++; continue; } 
+       }
+       if (fName.indexOf('sii')>=0 || fName.indexOf('sulfur')>=0 || fName.indexOf('sulphur')>=0 || fName.indexOf('s2')>=0) { 
+          if (set.SII && _astrobinValidFilterId(set.SII)) { g_analysisData[i].filterId = set.SII; appliedCount++; continue; } 
+       }
    }
-   console.writeln("[AstroBin] Applied personal filter set to session.");
+   console.noteln("[AstroBin] Applied personal filter set to " + appliedCount + " filter(s) in session.");
    this.populateFilterMappings();
+   
+   // Refresh main dialog tree to show updated filter IDs
+   if (this.parentDialog && this.parentDialog.populateImageTree) {
+      this.parentDialog.populateImageTree();
+   }
 };
 
 FilterMappingDialog.prototype.createFilterMappingRow = function(filterName)
