@@ -26,19 +26,31 @@
 #include <pjsr/DataType.jsh>
 
 // Include our modular components
-#include "SNRAnalysis-core.js"
-#include "SNRAnalysis-ui.js"
-#include "SNRAnalysis-progress.js"
-#include "SNRAnalysis-subframe-scanner.js"
-#include "SNRAnalysis-depth-planner.js"
-#include "SNRAnalysis-integrator.js"
-#include "SNRAnalysis-star-removal.js"
-#include "SNRAnalysis-stretch.js"
-#include "SNRAnalysis-snr.js"
-#include "SNRAnalysis-roi-auto.js"
-#include "SNRAnalysis-graph.js"
-#include "SNRAnalysis-insights.js"
-#include "SNRAnalysis-output.js"
+// Core modules
+#include "core/SNRAnalysis-core.js"
+#include "core/SNRAnalysis-depth-planner.js"
+
+// Utilities
+#include "utils/SNRAnalysis-subframe-scanner.js"
+
+// Processing modules
+#include "processing/SNRAnalysis-integrator.js"
+#include "processing/SNRAnalysis-star-removal.js"
+#include "processing/SNRAnalysis-stretch.js"
+#include "processing/SNRAnalysis-snr.js"
+
+// Analysis modules
+#include "analysis/SNRAnalysis-roi-auto.js"
+#include "analysis/SNRAnalysis-graph.js"
+#include "analysis/SNRAnalysis-insights.js"
+#include "analysis/SNRAnalysis-output.js"
+
+// UI modules
+#include "ui/SNRAnalysis-ui-header.js"
+#include "ui/SNRAnalysis-ui-sections.js"
+#include "ui/SNRAnalysis-ui.js"
+#include "ui/SNRAnalysis-progress.js"
+#include "ui/SNRAnalysis-results-dialog.js"
 
 /**
  * Process a single filter group (analysis only, ref_master and ROIs already done)
@@ -226,8 +238,13 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
       progress.updateElapsed();
       console.writeln("Generating graph" + filterLabel + "...");
       graphPath = generateGraph(results, CONFIG.outputDir, filterSuffix, filterName);
-      console.writeln("Graph written: snr_graph" + filterSuffix + ".png");
-      progress.updateStep(stepName, progress.STATE_SUCCESS, "Graph saved");
+      if (graphPath) {
+         console.writeln("Graph written: " + graphPath);
+         progress.updateStep(stepName, progress.STATE_SUCCESS, "Graph saved");
+      } else {
+         console.warningln("Graph generation failed");
+         progress.updateStep(stepName, progress.STATE_WARNING, "Graph failed");
+      }
    }
    progress.updateElapsed();
    
@@ -523,7 +540,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       progress.updateElapsed();
       console.writeln("Generating graph" + filterLabel + "...");
       graphPath = generateGraph(results, CONFIG.outputDir, filterSuffix, filterName);
-      console.writeln("Graph written: snr_graph" + filterSuffix + ".png");
+      if (graphPath) { console.writeln("Graph written: " + graphPath); } else { console.warningln("Graph generation failed"); }
       progress.updateStep(stepName, progress.STATE_SUCCESS, "Graph saved");
    }
    progress.updateElapsed();

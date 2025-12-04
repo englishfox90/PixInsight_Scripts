@@ -85,8 +85,10 @@ function removeStarsWithStarX(config, job, imageWindow) {
    
    // Configure parameters (version-safe)
    if (hasNewStyle) {
-      // Newer StarXTerminator versions
+      // Newer StarXTerminator versions - configure to generate new image
+      if (P.hasOwnProperty("generateStarless")) P.generateStarless = true;
       if (P.hasOwnProperty("createStarlessImage")) P.createStarlessImage = true;
+      if (P.hasOwnProperty("replaceTarget")) P.replaceTarget = false;  // Don't replace original
       if (P.hasOwnProperty("newStarlessImageId")) P.newStarlessImageId = finalId;
       if (P.hasOwnProperty("linear")) P.linear = !!config.starRemovalLinear;
       if (P.hasOwnProperty("ai_file")) P.ai_file = "";  // Default model
@@ -147,14 +149,23 @@ function removeStarsWithStarX(config, job, imageWindow) {
    }
    
    if (!starlessWindow || starlessWindow.isNull) {
-      console.warningln("StarXTerminator output window not found for " + job.label);
-      console.warningln("Tried IDs: " + possibleIds.join(", "));
-      console.warningln("Available windows:");
-      var allWindows = ImageWindow.windows;
-      for (var i = 0; i < allWindows.length; i++) {
-         console.warningln("  - " + allWindows[i].mainView.id);
+      // Check if StarXTerminator modified the original image in-place (newer versions)
+      // Original window should still exist and now contains the starless image
+      console.writeln("No separate starless window created - checking if original was modified in-place");
+      if (imageWindow && !imageWindow.isNull) {
+         console.writeln("Using original window (stars removed in-place): " + imageWindow.mainView.id);
+         starlessWindow = imageWindow;
+         foundId = imageWindow.mainView.id;
+      } else {
+         console.warningln("StarXTerminator output window not found for " + job.label);
+         console.warningln("Tried IDs: " + possibleIds.join(", "));
+         console.warningln("Available windows:");
+         var allWindows = ImageWindow.windows;
+         for (var i = 0; i < allWindows.length; i++) {
+            console.warningln("  - " + allWindows[i].mainView.id);
+         }
+         return null;
       }
-      return null;
    }
    
    // Rename to our standard naming if needed

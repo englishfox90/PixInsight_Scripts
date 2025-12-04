@@ -67,6 +67,46 @@
         ],
         "exclude": []
       }
+    },
+    "SNRAnalysis": {
+      "ready": false,
+      "name": "SNR Analysis",
+      "sourceDir": "SNR Analysis",
+      "zipNamePrefix": "SNRAnalysis",
+      "version": "1.0.0",
+      "piScriptRoot": "src/scripts/SNRAnalysis",
+      "piResourceRoot": "rsc/SNRAnalysis",
+      "description": "Analyzes how SNR improves with integration depth by creating partial integrations from calibrated subframes and measuring SNR in user-defined ROIs. Generates graphs, CSV/JSON output, and provides insights about diminishing returns.",
+      "features": [
+        "Multiple integration depth strategies (OSC preset, doubling, Fibonacci, logarithmic, custom)",
+        "Full-depth reference integration with ROI selection",
+        "Per-depth partial integrations",
+        "Optional starless stack generation (StarNet2/StarXTerminator)",
+        "Optional STF-based stretching",
+        "ROI-based SNR measurement",
+        "CSV and JSON output with full metadata",
+        "SNR vs time graph generation",
+        "Automated insights (diminishing returns, scaling exponent, recommended ranges)",
+        "Detailed timing logs"
+      ],
+      "files": {
+        "scripts": [
+          "SNRAnalysis_Main.js",
+          "SNRAnalysis-core.js",
+          "SNRAnalysis-ui.js",
+          "SNRAnalysis-subframe-scanner.js",
+          "SNRAnalysis-depth-planner.js",
+          "SNRAnalysis-integrator.js",
+          "SNRAnalysis-star-removal.js",
+          "SNRAnalysis-stretch.js",
+          "SNRAnalysis-snr.js",
+          "SNRAnalysis-graph.js",
+          "SNRAnalysis-insights.js",
+          "SNRAnalysis-output.js"
+        ],
+        "resources": [],
+        "exclude": []
+      }
     }
   }
 }

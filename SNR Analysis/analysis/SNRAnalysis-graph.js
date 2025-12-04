@@ -156,41 +156,76 @@ function generateGraph(results, outputDir, filterSuffix, filterName) {
    
    g.end();
    
-   // Try to save as PNG first, fallback to JPEG
-   var graphSaved = false;
+   // Save bitmap to file using PixInsight's FileFormat API
    var graphPath = null;
    
-   // Try PNG
+   // Try PNG first
    var pngPath = outputDir + "/snr_graph" + filterSuffix + ".png";
-   try {
-      if (bmp.save(pngPath)) {
-         console.writeln("Graph saved: " + pngPath);
-         graphSaved = true;
-         graphPath = pngPath;
+   var pngFormat = new FileFormat("PNG", false, false);
+   
+   if (pngFormat.canWrite) {
+      try {
+         var writer = new FileFormatInstance(pngFormat);
+         if (writer.create(pngPath)) {
+            var img = new Image(bmp.width, bmp.height);
+            img.blend(bmp);
+            
+            if (writer.writeImage(img)) {
+               writer.close();
+               console.writeln("Graph saved as PNG: " + pngPath);
+               graphPath = pngPath;
+            } else {
+               writer.close();
+            }
+         }
+      } catch (e) {
+         console.warningln("PNG save failed: " + e.message);
       }
-   } catch (e) {
-      // PNG failed, try JPEG
    }
    
    // Try JPEG if PNG failed
-   if (!graphSaved) {
+   if (!graphPath) {
       var jpgPath = outputDir + "/snr_graph" + filterSuffix + ".jpg";
-      try {
-         if (bmp.save(jpgPath)) {
-            console.writeln("Graph saved: " + jpgPath);
-            graphSaved = true;
-            graphPath = jpgPath;
+      var jpgFormat = new FileFormat("JPEG", false, false);
+      
+      if (jpgFormat.canWrite) {
+         try {
+            var writer = new FileFormatInstance(jpgFormat);
+            if (writer.create(jpgPath)) {
+               var img = new Image(bmp.width, bmp.height);
+               img.blend(bmp);
+               
+               if (writer.writeImage(img)) {
+                  writer.close();
+                  console.writeln("Graph saved as JPEG: " + jpgPath);
+                  graphPath = jpgPath;
+               } else {
+                  writer.close();
+               }
+            }
+         } catch (e) {
+            console.warningln("JPEG save failed: " + e.message);
          }
-      } catch (e) {
-         console.warningln("Failed to save graph: " + e.message);
       }
    }
    
-   if (!graphSaved) {
-      console.warningln("Could not save graph image - no suitable format available");
+   // Try BMP as last resort
+   if (!graphPath) {
+      var bmpPath = outputDir + "/snr_graph" + filterSuffix + ".bmp";
+      try {
+         if (bmp.save(bmpPath)) {
+            console.writeln("Graph saved as BMP: " + bmpPath);
+            graphPath = bmpPath;
+         }
+      } catch (e) {
+         console.warningln("BMP save failed: " + e.message);
+      }
    }
    
-   console.writeln("Graph generation complete");
+   if (!graphPath) {
+      console.warningln("Could not save graph - all formats failed. Check PixInsight file format support.");
+   }
+   
    return graphPath;
 }
 

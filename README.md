@@ -6,9 +6,108 @@ A collection of custom PixInsight JavaScript (PJSR) scripts for astrophotography
 
 ```
 ├── AstroBin Export/          # AstroBin CSV export tools
+├── SNR Analysis/             # SNR vs Integration Time analysis tool
 ├── Signature/                # Image signature and export tools
 └── .gitignore                # Git ignore rules
 ```
+
+---
+
+## 📊 SNR Analysis Tool
+
+Located in `SNR Analysis/` directory.
+
+### Main Script: `SNRAnalysis_Main.js`
+
+**Purpose:** Analyzes how Signal-to-Noise Ratio (SNR) improves with integration depth to identify diminishing returns and optimize imaging sessions.
+
+### 📦 Installation
+
+**Manual Installation:**
+
+1. **Clone or download** this repository
+2. **Navigate to** the `SNR Analysis/` folder
+3. **In PixInsight**, go to `Script → Feature Scripts...`
+4. **Click Add** and navigate to `SNRAnalysis_Main.js`
+5. **The script** will appear under `Script → PFRAstro → SNR Analysis`
+
+**Note:** All module files must remain in their organized folder structure for `#include` directives to work correctly.
+
+### 🗂️ Module Organization
+
+The SNR Analysis tool follows a clean, modular architecture with all files under 500 lines. See [MODULE_STRUCTURE.txt](SNR%20Analysis/MODULE_STRUCTURE.txt) for complete documentation.
+
+**Folder structure:**
+- **`core/`** - Core configuration and depth planning (2 modules)
+- **`utils/`** - File scanning utilities (1 module)
+- **`processing/`** - Image integration and SNR measurement (4 modules)
+- **`analysis/`** - ROI detection, graphs, insights (4 modules)
+- **`ui/`** - User interface components (5 modules)
+
+### ✅ Key Features:
+
+- **Progressive Integration Analysis**: Creates partial integrations at various depths (8, 16, 32, 64... subs)
+- **Automatic ROI Detection**: AI-powered background/foreground region detection with progressive relaxation
+- **Manual ROI Mode**: User-defined preview regions for precise control
+- **Multi-Filter Support**: Analyze Ha, OIII, SII, and other filters independently
+- **Star Removal Integration**: Optional StarXTerminator or StarNet2 processing
+- **Diminishing Returns Analysis**: Identifies when additional integration provides minimal SNR improvement
+- **Visual Graphs**: PNG/JPEG/BMP graph generation with preview in results dialog
+- **Comprehensive Insights**: Scaling exponent analysis, future projection calculations
+- **CSV/JSON Export**: Detailed results for external analysis
+
+### 🔧 Setup Requirements:
+
+1. **Calibrated Subframes**: WBPP-calibrated or similar processed FITS/XISF files
+2. **StarXTerminator/StarNet2** (optional): For starless SNR measurements
+3. **FITS Headers**: Proper exposure time and filter metadata
+
+### 🎯 Workflow:
+
+1. **Select input directory** containing calibrated subframes
+2. **Choose ROI mode**: 
+   - **Auto**: Script detects background and foreground regions automatically
+   - **Manual**: Create `BG` and `FG` preview rectangles on reference image
+3. **Select depth strategy**: Doubling, Fibonacci, Logarithmic, or custom depths
+4. **Configure processing**: Optional star removal, STF stretch
+5. **Run analysis**: Script creates integrations and measures SNR at each depth
+6. **Review results**: Multi-filter tabbed dialog with graphs and insights
+
+### 📊 Output Files:
+
+- **`snr_results.csv`** - SNR measurements for spreadsheet analysis
+- **`snr_results.json`** - Structured data with full metadata and insights
+- **`snr_graph.png/jpg/bmp`** - Visual plot of SNR vs integration time
+- **`int_NX.xisf`** - Integration files for each depth (optional)
+- **`ref_master_full.xisf`** - Full-depth reference master
+
+### 🧠 Auto ROI Detection:
+
+The automatic ROI mode uses a 7-step progressive relaxation algorithm:
+
+1. Divide image into tiles (configurable size: 32-256px)
+2. Calculate median and sigma for each tile
+3. Start with strict threshold (2.5σ)
+4. Progressively relax to 1.0σ if needed
+5. Select darkest tile for background
+6. Select brightest tile for foreground
+7. Create preview rectangles automatically
+
+### 📈 Insights Analysis:
+
+- **Diminishing Returns**: Identifies 10% and 5% improvement thresholds
+- **Scaling Exponent**: Compares actual vs theoretical √N behavior
+- **Recommended Range**: Suggests optimal integration time (90-95% of max SNR)
+- **Future Projections**: Estimates SNR gains for 2x/3x additional integration
+- **Anomaly Detection**: Flags unusual SNR behavior or data quality issues
+
+### ⚠️ Important Notes:
+
+- **ROI Selection**: Auto mode works best with clear signal in foreground (nebulae, galaxies)
+- **Star Removal**: Improves SNR measurement accuracy for extended objects
+- **Multi-Filter**: Each filter analyzed independently with separate graphs
+- **Processing Time**: Expect ~1-2 minutes per depth depending on image size
+- **Memory Usage**: Large datasets may require 16GB+ RAM
 
 ---
 
