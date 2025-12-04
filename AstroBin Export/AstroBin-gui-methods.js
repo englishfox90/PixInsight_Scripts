@@ -549,6 +549,19 @@ AstroBinDialog.prototype.updateUI = function()
    this.summaryButton.enabled = (g_analysisData.length > 0);
 };
 
+// Override ok() to save Bortle setting when dialog closes
+AstroBinDialog.prototype.ok = function()
+{
+   // Update CONFIG from UI before saving
+   this.updateConfigFromUI();
+   
+   // Save Bortle scale to settings
+   saveBortleScale(CONFIG.bortle);
+   
+   // Call parent Dialog.ok() to close dialog
+   Dialog.prototype.ok.call(this);
+};
+
 // Convert Bortle Scale to SQM estimate
 AstroBinDialog.prototype.updateSQMFromBortle = function()
 {
@@ -927,13 +940,13 @@ FilterMappingDialog.prototype.applyPersonalToSession = function(){
        if (fName === 'b' || fName.indexOf('blue')>=0) { 
           if (set.B && _astrobinValidFilterId(set.B)) { g_analysisData[i].filterId = set.B; appliedCount++; continue; } 
        }
-       if (fName.indexOf('ha')>=0 || fName.indexOf('h-alpha')>=0 || fName.indexOf('halpha')>=0) { 
+       if (fName === 'h' || fName.indexOf('ha')>=0 || fName.indexOf('h-alpha')>=0 || fName.indexOf('halpha')>=0) { 
           if (set.Ha && _astrobinValidFilterId(set.Ha)) { g_analysisData[i].filterId = set.Ha; appliedCount++; continue; } 
        }
-       if (fName.indexOf('oiii')>=0 || fName.indexOf('oxygen')>=0 || fName.indexOf('o3')>=0) { 
+       if (fName === 'o' || fName.indexOf('oiii')>=0 || fName.indexOf('oxygen')>=0 || fName.indexOf('o3')>=0) { 
           if (set.OIII && _astrobinValidFilterId(set.OIII)) { g_analysisData[i].filterId = set.OIII; appliedCount++; continue; } 
        }
-       if (fName.indexOf('sii')>=0 || fName.indexOf('sulfur')>=0 || fName.indexOf('sulphur')>=0 || fName.indexOf('s2')>=0) { 
+       if (fName === 's' || fName.indexOf('sii')>=0 || fName.indexOf('sulfur')>=0 || fName.indexOf('sulphur')>=0 || fName.indexOf('s2')>=0) { 
           if (set.SII && _astrobinValidFilterId(set.SII)) { g_analysisData[i].filterId = set.SII; appliedCount++; continue; } 
        }
    }

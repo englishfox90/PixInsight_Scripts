@@ -10,16 +10,16 @@
   </description>
 
   <platform os="all" arch="noarch" version="1.8.0:2.0.0">
-    <package fileName="AstroBinExport-3.1.1-20251130.zip"
-             sha1="7450dc526ee2fd61bd5fe278182b22c32ad01360"
+    <package fileName="AstroBinExport-3.2.0-20251203.zip"
+             sha1="2a0301b9d25c1b6d5ec5ba1de1a808d36ca83a03"
              type="script"
-             releaseDate="20251130">
+             releaseDate="20251203">
       <title>
         AstroBin Export
       </title>
       <description>
         <p>
-          AstroBin Export v3.1.1
+          AstroBin Export v3.2.0
         </p>
         <p>
           Generates CSV files compatible with AstroBin&apos;s bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.

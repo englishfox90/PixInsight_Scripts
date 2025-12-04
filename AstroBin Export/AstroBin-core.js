@@ -5,7 +5,7 @@
 
 // Script metadata
 var SCRIPT_NAME = "AstroBin Export";
-var SCRIPT_VERSION = "3.1.1";
+var SCRIPT_VERSION = "3.2.0";
 var SCRIPT_DESCRIPTION = "Generates CSV files compatible with AstroBin's bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.";
 var SCRIPT_DEVELOPER = "Paul Fox-Reeks (englishfox90)";
 
@@ -126,6 +126,8 @@ function saveExportColumnSettings(columns) {
 CONFIG.exportColumns = loadExportColumnSettings();
 // Personal filter set will be loaded lazily on first access
 CONFIG.personalFilterSet = null;
+// Load Bortle scale from settings
+CONFIG.bortle = loadBortleScale();
 
 // Personal Filter Set: L R G B Ha OIII SII
 var DEFAULT_PERSONAL_FILTER_SET = { L: "", R: "", G: "", B: "", Ha: "", OIII: "", SII: "" };
@@ -195,6 +197,35 @@ function savePersonalFilterSet(set) {
     CONFIG.personalFilterSet = set;
   } catch (e) {
     console.criticalln("[AstroBin] Error saving personal filter set: " + e);
+  }
+}
+
+// Bortle Scale Settings
+function loadBortleScale() {
+  try {
+    var bortle = Settings.read(AB_SETTINGS_MODULE + "/bortle", DataType_String);
+    if (Settings.lastReadOK && bortle) {
+      var bortleNum = parseInt(bortle);
+      if (bortleNum >= 1 && bortleNum <= 9) {
+        console.writeln("[AstroBin] Loaded Bortle scale: " + bortle);
+        return bortle;
+      }
+    }
+  } catch (e) {
+    console.warningln("[AstroBin] Failed to load Bortle scale: " + e);
+  }
+  return "4"; // Default to Bortle 4
+}
+
+function saveBortleScale(bortle) {
+  try {
+    var bortleNum = parseInt(bortle);
+    if (bortleNum >= 1 && bortleNum <= 9) {
+      Settings.write(AB_SETTINGS_MODULE + "/bortle", DataType_String, bortle);
+      console.writeln("[AstroBin] Saved Bortle scale: " + bortle);
+    }
+  } catch (e) {
+    console.criticalln("[AstroBin] Error saving Bortle scale: " + e);
   }
 }
 
