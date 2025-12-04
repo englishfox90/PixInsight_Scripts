@@ -252,12 +252,15 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
 function applyAutoSTFForPreview(window) {
    try {
       // Create a duplicate for STF application
+      // For 32-bit images, use float sample type (true), otherwise integer (false)
+      var isFloatSample = (window.mainView.image.bitsPerSample == 32);
+      
       var duplicate = new ImageWindow(
          window.mainView.image.width,
          window.mainView.image.height,
          window.mainView.image.numberOfChannels,
          window.mainView.image.bitsPerSample,
-         window.mainView.image.isFloatSample,
+         isFloatSample,
          window.mainView.image.isColor,
          "stf_preview_temp"
       );
