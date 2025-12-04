@@ -20,7 +20,7 @@ function generateGraph(results, outputDir, filterSuffix, filterName) {
    
    if (results.length < 2) {
       console.warningln("Need at least 2 data points to generate graph");
-      return "";
+      return null;
    }
    
    // Graph dimensions
@@ -158,7 +158,7 @@ function generateGraph(results, outputDir, filterSuffix, filterName) {
    
    // Try to save as PNG first, fallback to JPEG
    var graphSaved = false;
-   var graphPath = "";
+   var graphPath = null;
    
    // Try PNG
    var pngPath = outputDir + "/snr_graph" + filterSuffix + ".png";

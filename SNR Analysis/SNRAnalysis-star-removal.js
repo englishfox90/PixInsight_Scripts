@@ -125,18 +125,36 @@ function removeStarsWithStarX(config, job, imageWindow) {
    }
    
    // Find output window - StarXTerminator creates window with "_starless" suffix
-   var starlessId = imageWindow.mainView.id + "_starless";
-   var starlessWindow = ImageWindow.windowById(starlessId);
+   // Try multiple variations since filter suffix can cause double underscores
+   var baseId = imageWindow.mainView.id;
+   var possibleIds = [
+      baseId + "_starless",                    // Standard: int_N256__Ha__starless
+      baseId.replace(/__/g, "_") + "_starless", // Remove double underscores: int_N256_Ha_starless
+      finalId,                                   // Our target: int_N256_starless__Ha_
+      "int_" + job.label + "_starless"          // Without filter suffix
+   ];
+   
+   var starlessWindow = null;
+   var foundId = null;
+   
+   for (var i = 0; i < possibleIds.length; i++) {
+      starlessWindow = ImageWindow.windowById(possibleIds[i]);
+      if (starlessWindow && !starlessWindow.isNull) {
+         foundId = possibleIds[i];
+         console.writeln("Found StarXTerminator output: " + foundId);
+         break;
+      }
+   }
    
    if (!starlessWindow || starlessWindow.isNull) {
-      // Try direct finalId (in case version creates it differently)
-      starlessWindow = ImageWindow.windowById(finalId);
-      
-      if (!starlessWindow || starlessWindow.isNull) {
-         console.warningln("StarXTerminator output window not found for " + job.label);
-         console.warningln("Expected ID: " + starlessId + " or " + finalId);
-         return null;
+      console.warningln("StarXTerminator output window not found for " + job.label);
+      console.warningln("Tried IDs: " + possibleIds.join(", "));
+      console.warningln("Available windows:");
+      var allWindows = ImageWindow.windows;
+      for (var i = 0; i < allWindows.length; i++) {
+         console.warningln("  - " + allWindows[i].mainView.id);
       }
+      return null;
    }
    
    // Rename to our standard naming if needed
