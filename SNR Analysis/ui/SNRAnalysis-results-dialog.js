@@ -165,7 +165,7 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath) {
    var stackTab = createStackPreviewPanel(
       dialog,
       createStackPreviewEntries(results, outputDir, "", CONFIG.generateStarless),
-      CONFIG.stackMode === "cropped",
+      false,  // Always full-frame mode
       ""
    );
    
@@ -399,7 +399,7 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
       var stackTab = createStackPreviewPanel(
          tabPage,
          createStackPreviewEntries(fr.results, outputDir, filterSuffix, CONFIG.generateStarless),
-         CONFIG.stackMode === "cropped",
+         false,  // Always full-frame mode
          fr.filterName
       );
       

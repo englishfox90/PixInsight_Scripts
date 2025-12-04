@@ -58,11 +58,7 @@
  * Process a single filter group (analysis only, ref_master and ROIs already done)
  * Used in multi-filter mode after all reference frames and ROIs are prepared
  */
-function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, progress, isMultiFilter, subframesForIntegration) {
-   // If no specific subframes provided, use original
-   if (!subframesForIntegration) {
-      subframesForIntegration = subframes;
-   }
+function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, progress, isMultiFilter) {
    var filterLabel = isMultiFilter ? (" (" + filterName + ")") : "";
    var filterSuffix = isMultiFilter ? ("_" + filterName.replace(/[^a-zA-Z0-9]/g, "_")) : "";
    
@@ -377,55 +373,6 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    console.writeln("Foreground ROI: " + formatRect(rois.fg));
    progress.updateElapsed();
    
-   // Step: ROI cropping (if cropped mode enabled)
-   var subframesForIntegration = subframes;  // Default to original full-frame subframes
-   var roiRect = null;
-   var refSize = null;
-   
-   if (CONFIG.stackMode === "cropped") {
-      stepName = isMultiFilter ? ("roi_crop_" + filterName) : "roi_crop";
-      progress.setStatus("Cropping subframes to ROI" + filterLabel + "...");
-      progress.updateStep(stepName, progress.STATE_RUNNING);
-      
-      // Get reference image dimensions
-      var refWindow = ImageWindow.windowById(refImageId);
-      if (refWindow && !refWindow.isNull) {
-         refSize = {
-            width: refWindow.mainView.image.width,
-            height: refWindow.mainView.image.height
-         };
-         
-         // Compute bounding box
-         roiRect = computeRoiBoundingBox(rois.bg, rois.fg, refSize.width, refSize.height, 16);
-         console.writeln("ROI bounding box: " + formatRect(roiRect));
-         
-         // Prepare temp directory
-         var tempRootDir = CONFIG.outputDir + "/_snr_roi_temp";
-         
-         // Attempt cropping
-         var croppedSubs = cropSubframesToRoi(subframes, roiRect, tempRootDir, filterName, refSize);
-         
-         if (croppedSubs && croppedSubs.length === subframes.length) {
-            // Success - use cropped subframes
-            subframesForIntegration = croppedSubs;
-            progress.updateStep(stepName, progress.STATE_SUCCESS, croppedSubs.length + " subs cropped to ROI");
-            console.writeln("Using ROI-cropped subs for integration (" + filterName + ").");
-         } else {
-            // Fallback to full-frame
-            progress.updateStep(stepName, progress.STATE_WARNING, "Disabled (falling back to full-frame subs)");
-            console.writeln("ROI cropping failed or incomplete, falling back to full-frame stacking.");
-         }
-      } else {
-         progress.updateStep(stepName, progress.STATE_WARNING, "Reference window not found");
-         console.warningln("Could not access reference window for ROI cropping.");
-      }
-      progress.updateElapsed();
-   } else {
-      // Full-frame mode - skip cropping
-      stepName = isMultiFilter ? ("roi_crop_" + filterName) : "roi_crop";
-      progress.updateStep(stepName, progress.STATE_SKIPPED, "Full-frame mode – crop skipped");
-   }
-   
    // Step: Generate integration depth list
    progress.setStatus("Planning integration depths" + filterLabel + "...");
    stepName = isMultiFilter ? ("plan_" + filterName) : "plan";
@@ -467,7 +414,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       
       // Integrate
       var intStart = new Date();
-      var imageId = integrateDepth(job, subframesForIntegration, CONFIG.outputDir, filterSuffix);
+      var imageId = integrateDepth(job, subframes, CONFIG.outputDir, filterSuffix);
       job.integrationTime = (new Date() - intStart) / 1000;
       
       if (!imageId) {
@@ -863,56 +810,6 @@ function SNRAnalysisEngine() {
                new MessageBox(msg, "Create ROI Previews", StdIcon_Information, StdButton_Ok).execute();
                return;
             }
-            
-            // Step 3b: ROI cropping (if in cropped mode) - multi-filter
-            if (CONFIG.stackMode === "cropped") {
-               console.writeln("[3b/4] Cropping subframes to ROI regions...");
-               var tempRootDir = CONFIG.outputDir + "/_snr_roi_temp";
-               
-               // Store cropped subframes for each filter
-               var croppedSubframes = {};
-               
-               for (var filterName in filterGroups) {
-                  var subs = filterGroups[filterName];
-                  var rois = allROIs[filterName];
-                  var refId = refMasters[filterName];
-                  
-                  var stepName = "roi_crop_" + filterName;
-                  progress.addStep(stepName, "ROI crop (" + filterName + ")");
-                  progress.updateStep(stepName, progress.STATE_RUNNING);
-                  
-                  // Get reference dimensions
-                  var refWindow = ImageWindow.windowById(refId);
-                  if (refWindow && !refWindow.isNull) {
-                     var refSize = {
-                        width: refWindow.mainView.image.width,
-                        height: refWindow.mainView.image.height
-                     };
-                     
-                     // Compute bounding box
-                     var roiRect = computeRoiBoundingBox(rois.bg, rois.fg, refSize.width, refSize.height, 16);
-                     
-                     // Attempt cropping
-                     var croppedSubs = cropSubframesToRoi(subs, roiRect, tempRootDir, filterName, refSize);
-                     
-                     if (croppedSubs && croppedSubs.length === subs.length) {
-                        croppedSubframes[filterName] = croppedSubs;
-                        progress.updateStep(stepName, progress.STATE_SUCCESS, croppedSubs.length + " subs cropped");
-                     } else {
-                        croppedSubframes[filterName] = null;  // Will fallback to full-frame
-                        progress.updateStep(stepName, progress.STATE_WARNING, "Fallback to full-frame");
-                     }
-                  } else {
-                     croppedSubframes[filterName] = null;
-                     progress.updateStep(stepName, progress.STATE_WARNING, "Ref window not found");
-                  }
-                  
-                  if (progress.isCancelled()) {
-                     progress.close();
-                     return;
-                  }
-               }
-            }
          }
          
          // Step 4: Process each filter group
@@ -923,14 +820,8 @@ function SNRAnalysisEngine() {
             var subs = filterGroups[filterName];
             
             if (isMultiFilter) {
-               // Skip ref_master and roi steps - already done
-               // Use cropped subframes if available, otherwise use original
-               var subsForIntegration = (CONFIG.stackMode === "cropped" && croppedSubframes && croppedSubframes[filterName]) 
-                  ? croppedSubframes[filterName] 
-                  : subs;
-               
                var filterResult = processFilterGroupAnalysis(filterName, subs, refMasters[filterName], 
-                                                            allROIs[filterName], progress, isMultiFilter, subsForIntegration);
+                                                            allROIs[filterName], progress, isMultiFilter);
             } else {
                var filterResult = processFilterGroup(filterName, subs, progress, isMultiFilter);
             }
@@ -953,12 +844,6 @@ function SNRAnalysisEngine() {
          console.writeln("Analysis complete!");
          console.writeln("Results saved to: " + CONFIG.outputDir);
          
-         // Clean up temporary ROI files if not keeping them
-         if (CONFIG.stackMode === "cropped" && !CONFIG.keepTempRoiFiles) {
-            var tempRootDir = CONFIG.outputDir + "/_snr_roi_temp";
-            cleanupTempRoiFiles(tempRootDir);
-         }
-         
          // Mark complete to stop live timer
          progress.markComplete();
          
@@ -975,16 +860,6 @@ function SNRAnalysisEngine() {
          showMultiFilterResultsDialog(allFilterResults, CONFIG.outputDir);
          
       } catch (error) {
-         // Clean up temporary ROI files on error
-         if (CONFIG.stackMode === "cropped" && !CONFIG.keepTempRoiFiles) {
-            try {
-               var tempRootDir = CONFIG.outputDir + "/_snr_roi_temp";
-               cleanupTempRoiFiles(tempRootDir);
-            } catch (cleanupError) {
-               // Ignore cleanup errors
-            }
-         }
-         
          if (progress && !progress.dialog.isNull) {
             progress.markComplete();
             progress.setStatus("Analysis stopped: " + error.message);
