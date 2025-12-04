@@ -127,29 +127,26 @@ function findFilesRecursive(dirPath, extensions) {
  * Extract metadata from a single subframe
  */
 function extractSubframeMetadata(filePath) {
-   // Suppress console output during file operations
-   var savedConsoleLevel = console.abortEnabled;
-   console.abortEnabled = false;
-   
    try {
-      var fileFormat = new FileFormat(File.extractExtension(filePath), true, false);
-      if (fileFormat.isNull) {
-         console.abortEnabled = savedConsoleLevel;
+      // Fast keyword-only reading without loading image data
+      var extension = File.extractExtension(filePath).toLowerCase();
+      
+      // Use ImageWindow.open with keywordsOnly flag for fast metadata reading
+      var keywordsOnly = true;
+      var windows = ImageWindow.open(filePath, "", "", keywordsOnly);
+      
+      if (!windows || windows.length === 0) {
          return null;
       }
       
-      var file = new FileFormatInstance(fileFormat);
-      if (!file.open(filePath, "r")) {
-         console.abortEnabled = savedConsoleLevel;
-         return null;
-      }
+      var window = windows[0];
+      var keywords = window.keywords;
       
-      // Read keywords
-      var keywords = file.keywords;
       var exposure = 0;
       var filter = "";
       var dateObs = "";
       
+      // Extract keywords
       for (var i = 0; i < keywords.length; i++) {
          var key = keywords[i];
          var name = key.name.toUpperCase();
@@ -163,8 +160,8 @@ function extractSubframeMetadata(filePath) {
          }
       }
       
-      file.close();
-      console.abortEnabled = savedConsoleLevel;
+      // Close the window immediately
+      window.forceClose();
       
       // Validate required fields
       if (exposure <= 0) {
@@ -185,7 +182,6 @@ function extractSubframeMetadata(filePath) {
       };
       
    } catch (error) {
-      console.abortEnabled = savedConsoleLevel;
       return null;
    }
 }
