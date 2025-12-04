@@ -194,12 +194,18 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
          previewBox.currentWindow = window;
          
          // Calculate Auto-STF parameters
-         var median = window.mainView.image.median();
-         var avgDev = window.mainView.image.avgDev();
+         var img = window.mainView.image;
+         var median = img.median();
+         var avgDev = img.avgDev();
          var c0 = Math.max(0, median + (-2.8) * avgDev);
          var m = calculateMidtonesBalance(median - c0, 0.5);
          
-         // Apply stretch using HistogramTransformation to actually modify pixels
+         // Create a working copy of the image
+         var stretchedImg = new Image(img.width, img.height, img.numberOfChannels, 
+                                       img.colorSpace, img.bitsPerSample, img.sampleType);
+         stretchedImg.assign(img);
+         
+         // Apply stretch using HistogramTransformation on the copy
          var HT = new HistogramTransformation;
          HT.H = [[0, 0.5, 1.0, 0, 1.0],
                  [0, 0.5, 1.0, 0, 1.0],
@@ -208,7 +214,7 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
                  [0, 0.5, 1.0, 0, 1.0]];
          
          // Set shadows clipping and midtones for all channels
-         if (window.mainView.image.isColor) {
+         if (stretchedImg.isColor) {
             for (var i = 0; i < 3; i++) {
                HT.H[i][0] = c0;  // Shadows clipping
                HT.H[i][1] = m;   // Midtones balance
@@ -218,13 +224,14 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
             HT.H[0][1] = m;   // Midtones balance
          }
          
-         // Apply the stretch to the image
-         window.mainView.beginProcess();
-         HT.executeOn(window.mainView);
-         window.mainView.endProcess();
+         // Apply the stretch to the copied image
+         HT.executeOn(stretchedImg);
          
-         // Now render the stretched image to bitmap
-         var bmp = window.mainView.image.render();
+         // Render the stretched image to bitmap
+         var bmp = stretchedImg.render();
+         
+         // Clean up
+         stretchedImg.free();
          
          previewBox.currentBitmap = bmp;
          previewBox.statusText = "";
