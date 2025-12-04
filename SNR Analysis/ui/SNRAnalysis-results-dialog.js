@@ -14,7 +14,7 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath) {
    var dialog = new Dialog();
    dialog.windowTitle = "SNR Analysis Complete";
    dialog.scaledMinWidth = 800;
-   dialog.scaledMinHeight = 900;
+   dialog.scaledMinHeight = 975;
    
    // Results summary
    var summaryText = new TextBox(dialog);
@@ -433,7 +433,7 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
    dialog.sizer.add(buttonsSizer);
    
    dialog.adjustToContents();
-   dialog.setScaledMinHeight(900);
+   dialog.setScaledMinHeight(975);
    dialog.execute();
 }
 
