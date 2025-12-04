@@ -199,18 +199,31 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
          var c0 = Math.max(0, median + (-2.8) * avgDev);
          var m = calculateMidtonesBalance(median - c0, 0.5);
          
-         // Create STF array
-         var STF = [
-            [c0, m, 1, 0, 1],
-            [c0, m, 1, 0, 1],
-            [c0, m, 1, 0, 1],
-            [c0, m, 1, 0, 1]
-         ];
+         // Apply stretch using HistogramTransformation to actually modify pixels
+         var HT = new HistogramTransformation;
+         HT.H = [[0, 0.5, 1.0, 0, 1.0],
+                 [0, 0.5, 1.0, 0, 1.0],
+                 [0, 0.5, 1.0, 0, 1.0],
+                 [0, 0.5, 1.0, 0, 1.0],
+                 [0, 0.5, 1.0, 0, 1.0]];
          
-         // Set STF on the view
-         window.mainView.stf = STF;
+         // Set shadows clipping and midtones for all channels
+         if (window.mainView.image.isColor) {
+            for (var i = 0; i < 3; i++) {
+               HT.H[i][0] = c0;  // Shadows clipping
+               HT.H[i][1] = m;   // Midtones balance
+            }
+         } else {
+            HT.H[0][0] = c0;  // Shadows clipping
+            HT.H[0][1] = m;   // Midtones balance
+         }
          
-         // Render to bitmap WITH STF applied
+         // Apply the stretch to the image
+         window.mainView.beginProcess();
+         HT.executeOn(window.mainView);
+         window.mainView.endProcess();
+         
+         // Now render the stretched image to bitmap
          var bmp = window.mainView.image.render();
          
          previewBox.currentBitmap = bmp;
