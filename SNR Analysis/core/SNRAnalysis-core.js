@@ -28,10 +28,6 @@ var CONFIG = {
    roiMode: "manual",  // "manual" or "auto" - how to define BG/FG regions
    autoRoiTileSize: 96,  // Tile size for auto ROI detection
    
-   // Stacking mode
-   stackMode: "full",  // "full" or "cropped" - full-frame stacking vs ROI-cropped stacking
-   keepTempRoiFiles: false,  // Keep temporary cropped files for debugging
-   
    // Depth strategy
    depthStrategy: "preset_osc",  // preset_osc, doubling, fibonacci, logarithmic, custom
    customDepths: "",  // comma-separated list for custom mode
@@ -82,13 +78,6 @@ function loadSettings() {
       
       var tileSize = Settings.read(SNR_SETTINGS_MODULE + "/autoRoiTileSize", DataType_UInt32);
       if (Settings.lastReadOK) CONFIG.autoRoiTileSize = tileSize;
-      
-      // Stacking mode
-      var stackMode = Settings.read(SNR_SETTINGS_MODULE + "/stackMode", DataType_String);
-      if (Settings.lastReadOK) CONFIG.stackMode = stackMode;
-      
-      var keepTemp = Settings.read(SNR_SETTINGS_MODULE + "/keepTempRoiFiles", DataType_Boolean);
-      if (Settings.lastReadOK) CONFIG.keepTempRoiFiles = keepTemp;
       
       // Depth strategy
       var strategy = Settings.read(SNR_SETTINGS_MODULE + "/depthStrategy", DataType_String);
@@ -153,10 +142,6 @@ function saveSettings() {
       // ROI Mode
       Settings.write(SNR_SETTINGS_MODULE + "/roiMode", DataType_String, CONFIG.roiMode);
       Settings.write(SNR_SETTINGS_MODULE + "/autoRoiTileSize", DataType_UInt32, CONFIG.autoRoiTileSize);
-      
-      // Stacking mode
-      Settings.write(SNR_SETTINGS_MODULE + "/stackMode", DataType_String, CONFIG.stackMode);
-      Settings.write(SNR_SETTINGS_MODULE + "/keepTempRoiFiles", DataType_Boolean, CONFIG.keepTempRoiFiles);
       
       // Depth strategy
       Settings.write(SNR_SETTINGS_MODULE + "/depthStrategy", DataType_String, CONFIG.depthStrategy);

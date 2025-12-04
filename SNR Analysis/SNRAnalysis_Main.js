@@ -36,7 +36,6 @@
 
 // Processing modules
 #include "processing/SNRAnalysis-integrator.js"
-#include "processing/SNRAnalysis-roi-cropper.js"
 #include "processing/SNRAnalysis-star-removal.js"
 #include "processing/SNRAnalysis-stretch.js"
 #include "processing/SNRAnalysis-snr.js"
