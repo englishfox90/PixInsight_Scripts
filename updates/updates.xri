@@ -5,15 +5,15 @@
       PixInsight Custom Scripts
     </p>
     <p>
-      This repository provides the AstroBin Export tool.
+      This repository provides multiple tools: AstroBin Export, SNR Analysis.
     </p>
   </description>
 
   <platform os="all" arch="noarch" version="1.8.0:2.0.0">
-    <package fileName="AstroBinExport-3.2.0-20251203.zip"
-             sha1="2a0301b9d25c1b6d5ec5ba1de1a808d36ca83a03"
+    <package fileName="AstroBinExport-3.2.0-20251204.zip"
+             sha1="1018fe4561bc577b42fb41ddb108c8e453b81c1f"
              type="script"
-             releaseDate="20251203">
+             releaseDate="20251204">
       <title>
         AstroBin Export
       </title>
@@ -36,6 +36,39 @@
           <li>Raw frame filtering</li>
           <li>Manual filter ID entry</li>
           <li>Bortle scale integration</li>
+        </ul>
+      </description>
+    </package>
+
+    <package fileName="SNRAnalysis-1.5.1-20251204.zip"
+             sha1="729b5809685cb0dc4dd075b4afc5de4f59d8edd6"
+             type="script"
+             releaseDate="20251204">
+      <title>
+        SNR Analysis
+      </title>
+      <description>
+        <p>
+          SNR Analysis v1.5.1
+        </p>
+        <p>
+          Analyzes how SNR improves with integration depth by creating partial integrations from calibrated subframes and measuring SNR in user-defined ROIs. Generates graphs, CSV/JSON output, and provides insights about diminishing returns.
+        </p>
+        <p>
+          <b>Key Features:</b>
+        </p>
+        <ul>
+          <li>Multiple integration depth strategies (OSC preset, doubling, Fibonacci, logarithmic, custom)</li>
+          <li>Full-depth reference integration with ROI selection</li>
+          <li>Per-depth partial integrations</li>
+          <li>Optional starless stack generation (StarNet2/StarXTerminator)</li>
+          <li>Optional STF-based stretching</li>
+          <li>ROI-based SNR measurement</li>
+          <li>Stack preview with auto-stretch in results dialog</li>
+          <li>CSV and JSON output with full metadata</li>
+          <li>SNR vs time graph generation</li>
+          <li>Automated insights (diminishing returns, scaling exponent, recommended ranges)</li>
+          <li>Detailed timing logs</li>
         </ul>
       </description>
     </package>

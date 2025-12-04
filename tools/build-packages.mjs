@@ -309,6 +309,11 @@ function buildProjectPackage(projectKey, projectConfig) {
     const targetPath = path.join(scriptsDir, scriptFile);
     
     if (fs.existsSync(sourcePath)) {
+      // Ensure target directory exists for nested files
+      const targetFileDir = path.dirname(targetPath);
+      if (!fs.existsSync(targetFileDir)) {
+        fs.mkdirSync(targetFileDir, { recursive: true });
+      }
       fs.copyFileSync(sourcePath, targetPath);
       copiedCount++;
       console.log(`      ✓ ${scriptFile}`);

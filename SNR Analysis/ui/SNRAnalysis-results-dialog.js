@@ -433,7 +433,7 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
    dialog.sizer.add(buttonsSizer);
    
    dialog.adjustToContents();
-   dialog.setScaledMinHeight(975);
+   dialog.setScaledMinHeight(1000);
    dialog.execute();
 }
 
