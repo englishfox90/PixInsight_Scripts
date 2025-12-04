@@ -20,7 +20,7 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath) {
    var summaryText = new TextBox(dialog);
    summaryText.readOnly = true;
    summaryText.styleSheet = "font-family: monospace; font-size: 10pt;";
-   summaryText.setScaledMinSize(750, 340);
+   summaryText.setScaledMinSize(750, 415);
    
    var text = "=== SNR ANALYSIS RESULTS ===\n\n";
    text += "Analyzed " + results.length + " integration depths\n";
