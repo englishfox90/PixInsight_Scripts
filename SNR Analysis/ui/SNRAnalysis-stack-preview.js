@@ -200,6 +200,12 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
          var c0 = Math.max(0, median + (-2.8) * avgDev);
          var m = calculateMidtonesBalance(median - c0, 0.5);
          
+         // Calculate highlight expansion - use max to determine range
+         var c1 = 1.0;  // Highlight expansion - map current max to 1.0
+         
+         console.writeln("Image stats - median: " + median + ", avgDev: " + avgDev + ", c0: " + c0 + ", m: " + m);
+         console.writeln("Image min: " + img.minimum() + ", max: " + img.maximum());
+         
          // Create a working copy of the image
          var stretchedImg = new Image(img.width, img.height, img.numberOfChannels, 
                                        img.colorSpace, img.bitsPerSample, img.sampleType);
@@ -207,28 +213,22 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
          
          // Apply stretch using HistogramTransformation on the copy
          var HT = new HistogramTransformation;
-         HT.H = [[0, 0.5, 1.0, 0, 1.0],
-                 [0, 0.5, 1.0, 0, 1.0],
-                 [0, 0.5, 1.0, 0, 1.0],
-                 [0, 0.5, 1.0, 0, 1.0],
-                 [0, 0.5, 1.0, 0, 1.0]];
-         
-         // Set shadows clipping and midtones for all channels
-         if (stretchedImg.isColor) {
-            for (var i = 0; i < 3; i++) {
-               HT.H[i][0] = c0;  // Shadows clipping
-               HT.H[i][1] = m;   // Midtones balance
-            }
-         } else {
-            HT.H[0][0] = c0;  // Shadows clipping
-            HT.H[0][1] = m;   // Midtones balance
-         }
+         HT.H = [[c0, m, c1, 0, 1.0],
+                 [c0, m, c1, 0, 1.0],
+                 [c0, m, c1, 0, 1.0],
+                 [c0, m, c1, 0, 1.0],
+                 [c0, m, c1, 0, 1.0]];
          
          // Apply the stretch to the copied image
          HT.executeOn(stretchedImg);
          
+         console.writeln("After stretch - min: " + stretchedImg.minimum() + ", max: " + stretchedImg.maximum());
+         console.writeln("After stretch - median: " + stretchedImg.median());
+         
          // Render the stretched image to bitmap
          var bmp = stretchedImg.render();
+         
+         console.writeln("Bitmap created: " + bmp.width + "x" + bmp.height);
          
          // Clean up
          stretchedImg.free();
