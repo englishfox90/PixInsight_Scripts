@@ -193,18 +193,23 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
          window.hide();  // Don't show to user
          previewBox.currentWindow = window;
          
-         // Calculate Auto-STF parameters
+         // Calculate Auto-STF parameters (standard PixInsight auto-stretch)
          var img = window.mainView.image;
          var median = img.median();
          var avgDev = img.avgDev();
+         
+         // Shadow clipping point
          var c0 = Math.max(0, median + (-2.8) * avgDev);
-         var m = calculateMidtonesBalance(median - c0, 0.5);
          
-         // Calculate highlight expansion - use max to determine range
-         var c1 = 1.0;  // Highlight expansion - map current max to 1.0
+         // Target background of 0.25 (standard PixInsight auto-STF)
+         var targetBackground = 0.25;
+         var m = calculateMidtonesBalance(median - c0, targetBackground);
          
-         console.writeln("Image stats - median: " + median + ", avgDev: " + avgDev + ", c0: " + c0 + ", m: " + m);
-         console.writeln("Image min: " + img.minimum() + ", max: " + img.maximum());
+         // Highlight point - leave at 1.0 (no clipping)
+         var c1 = 1.0;
+         
+         console.writeln("STF params - c0: " + c0 + ", m: " + m + ", c1: " + c1);
+         console.writeln("Image min: " + img.minimum() + ", median: " + median + ", max: " + img.maximum());
          
          // Create a working copy of the image
          var stretchedImg = new Image(img.width, img.height, img.numberOfChannels, 
@@ -222,8 +227,7 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
          // Apply the stretch to the copied image
          HT.executeOn(stretchedImg);
          
-         console.writeln("After stretch - min: " + stretchedImg.minimum() + ", max: " + stretchedImg.maximum());
-         console.writeln("After stretch - median: " + stretchedImg.median());
+         console.writeln("After stretch - min: " + stretchedImg.minimum() + ", median: " + stretchedImg.median() + ", max: " + stretchedImg.maximum());
          
          // Render the stretched image to bitmap
          var bmp = stretchedImg.render();
