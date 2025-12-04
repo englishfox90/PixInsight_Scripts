@@ -21,6 +21,7 @@
 #include <pjsr/TextAlign.jsh>
 #include <pjsr/StdButton.jsh>
 #include <pjsr/StdIcon.jsh>
+#include <pjsr/StdCursor.jsh>
 #include <pjsr/Color.jsh>
 #include <pjsr/FontFamily.jsh>
 #include <pjsr/DataType.jsh>
