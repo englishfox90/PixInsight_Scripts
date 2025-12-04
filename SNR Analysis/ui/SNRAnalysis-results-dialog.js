@@ -8,8 +8,9 @@
  * @param {Array} results - Array of integration depth result objects
  * @param {number} totalTimeSec - Total analysis runtime in seconds
  * @param {string} outputDir - Output directory path
+ * @param {string} graphPath - Optional path to graph image file
  */
-function showResultsDialog(results, totalTimeSec, outputDir) {
+function showResultsDialog(results, totalTimeSec, outputDir, graphPath) {
    var dialog = new Dialog();
    dialog.windowTitle = "SNR Analysis Complete";
    dialog.scaledMinWidth = 800;
@@ -76,12 +77,22 @@ function showResultsDialog(results, totalTimeSec, outputDir) {
    
    // Graph preview using ScrollBox (based on MasterSignature pattern)
    var graphPreview = null;
-   var graphPath = outputDir + "/snr_graph.png";
-   if (!File.exists(graphPath)) {
-      graphPath = outputDir + "/snr_graph.jpg";
+   
+   // Use provided graphPath if available, otherwise try default locations
+   if (!graphPath) {
+      graphPath = outputDir + "/snr_graph.png";
+      if (!File.exists(graphPath)) {
+         graphPath = outputDir + "/snr_graph.jpg";
+      }
+      if (!File.exists(graphPath)) {
+         graphPath = outputDir + "/snr_graph.bmp";
+      }
    }
    
-   if (File.exists(graphPath)) {
+   console.writeln("Single-filter dialog checking graph: " + graphPath);
+   console.writeln("  File.exists: " + File.exists(graphPath));
+   
+   if (graphPath && File.exists(graphPath)) {
       try {
          var bmp = new Bitmap(graphPath);
          
@@ -165,7 +176,7 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
    // If single filter, use original dialog
    if (allFilterResults.length === 1) {
       var fr = allFilterResults[0];
-      showResultsDialog(fr.results, fr.totalTime, outputDir);
+      showResultsDialog(fr.results, fr.totalTime, outputDir, fr.graphPath);
       return;
    }
    
