@@ -193,17 +193,25 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
          window.hide();  // Don't show to user
          previewBox.currentWindow = window;
          
-         // Apply auto-STF for preview display only
-         var stfWindow = applyAutoSTFForPreview(window);
+         // Calculate Auto-STF parameters
+         var median = window.mainView.image.median();
+         var avgDev = window.mainView.image.avgDev();
+         var c0 = Math.max(0, median + (-2.8) * avgDev);
+         var m = calculateMidtonesBalance(median - c0, 0.5);
          
-         // Render to bitmap
-         var img = stfWindow.mainView.image;
-         var bmp = img.render();
+         // Create STF array
+         var STF = [
+            [c0, m, 1, 0, 1],
+            [c0, m, 1, 0, 1],
+            [c0, m, 1, 0, 1],
+            [c0, m, 1, 0, 1]
+         ];
          
-         // Clean up STF window if it's different from original
-         if (stfWindow !== window) {
-            stfWindow.forceClose();
-         }
+         // Set STF on the view
+         window.mainView.stf = STF;
+         
+         // Render to bitmap WITH STF applied
+         var bmp = window.mainView.image.render();
          
          previewBox.currentBitmap = bmp;
          previewBox.statusText = "";
@@ -214,7 +222,7 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
                              entry.snr.toFixed(2) + " (" + typeStr + ")";
          
          previewBox.viewport.update();
-         console.writeln("Stack preview loaded: " + entry.label + " (" + img.width + "x" + img.height + ")");
+         console.writeln("Stack preview loaded: " + entry.label + " (" + window.mainView.image.width + "x" + window.mainView.image.height + ")");
          
       } catch (e) {
          previewBox.statusText = "Error loading: " + entry.label;
@@ -298,6 +306,9 @@ function applyAutoSTFForPreview(window) {
       
       stf.STF = STF;
       stf.executeOn(duplicate.mainView, false);  // Don't show STF, just apply
+      
+      // Apply the STF to the actual image pixels (not just screen transfer)
+      duplicate.mainView.stf = STF;
       
       return duplicate;
       
