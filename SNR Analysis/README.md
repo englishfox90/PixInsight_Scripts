@@ -7,7 +7,10 @@ A production-ready PixInsight PJSR script that analyzes how Signal-to-Noise Rati
 - ✅ **Multi-Filter Support**: Automatically groups and analyzes multiple filters (Ha, OIII, SII, etc.) separately with tabbed results
 - ✅ **Multiple Depth Strategies**: OSC preset, doubling, Fibonacci, logarithmic, or custom sequences
 - ✅ **Full-Depth Reference**: Creates complete integration for ROI selection
-- ✅ **User-Defined ROIs**: Background and foreground regions for accurate SNR measurement
+- ✅ **Automatic & Manual ROI Modes**: 
+  - **Auto Mode**: Tile-based detection with progressive relaxation (2.5σ → 1.0σ) for background and faint signal regions
+  - **Manual Mode**: Traditional user-defined BG/FG preview workflow
+  - Handles low-contrast narrowband targets (OIII) via multi-pass algorithm
 - ✅ **WBPP-Style Progress Monitor**: Real-time execution tracking with status icons, timing, and cancellation
 - ✅ **Optional Star Removal**: Supports StarNet2 and StarXTerminator
 - ✅ **Optional Stretching**: STF-based histogram transformation per depth
@@ -43,6 +46,7 @@ A production-ready PixInsight PJSR script that analyzes how Signal-to-Noise Rati
 - `SNRAnalysis-star-removal.js`
 - `SNRAnalysis-stretch.js`
 - `SNRAnalysis-snr.js`
+- `SNRAnalysis-roi-auto.js` (automatic ROI detection)
 - `SNRAnalysis-graph.js`
 - `SNRAnalysis-insights.js`
 - `SNRAnalysis-output.js`
@@ -58,12 +62,26 @@ A production-ready PixInsight PJSR script that analyzes how Signal-to-Noise Rati
 2. **Configure Analysis**
    - Select input directory containing calibrated subs
    - Enable "Analyze all filters separately" to auto-group by FILTER header
+   - **Choose ROI Mode**:
+     - **Auto**: Script automatically detects background and faint signal regions using tile-based analysis
+     - **Manual**: Traditional workflow where you create BG/FG previews manually
    - Choose depth strategy (e.g., OSC preset: 12, 24, 48, 96, 192, 384, 720)
    - Enable optional features (starless, stretch)
    - Select output directory
 
 3. **Define ROIs**
    - Script creates full-depth reference master for each filter (tracked in progress monitor)
+   
+   **Auto Mode (Recommended)**:
+   - Script automatically analyzes the reference master using tile-based detection
+   - Finds background tiles (low median, low noise)
+   - Finds foreground tiles (faint signal above background, avoiding bright stars)
+   - Uses progressive relaxation for low-contrast targets (2.5σ → 2.0σ → 1.5σ → 1.0σ thresholds)
+   - Creates BG and FG previews automatically
+   - If auto-detection fails, falls back to manual mode with helpful error message
+   - Configure tile size in UI (default: 96 pixels)
+   
+   **Manual Mode**:
    - If ROI previews don't exist, script will prompt you:
      - Keep the reference master window open
      - Create two previews using `Preview → New Preview` (or Ctrl+N on selection):
@@ -143,7 +161,24 @@ ANOMALIES DETECTED:
 ### Input
 - **Input Directory**: Folder containing calibrated subframes
 - **File Pattern**: File extensions to scan (default: `*.xisf;*.fits`)
-- **Filter Keyword**: Optional FILTER header match (e.g., "Ha", "OIII")
+- **Analyze All Filters**: Group subframes by FILTER header for independent analysis
+
+### ROI Mode
+- **BG/FG Detection**:
+  - **Manual**: Create BG/FG previews yourself (traditional workflow)
+  - **Auto**: Script automatically detects regions using tile-based analysis
+- **Auto Tile Size**: Size of tiles for auto-detection (32-256 pixels, default: 96)
+  - Larger tiles: More stable statistics, less granular
+  - Smaller tiles: More precise region selection, may be noisier
+
+### Depth Strategy
+
+### Depth Strategy
+- **Preset OSC**: 12, 24, 48, 96, 192, 384, 720 (optimized for OSC imaging)
+- **Doubling**: Powers of 2 (8, 16, 32, 64, ...)
+- **Fibonacci**: Fibonacci sequence (8, 13, 21, 34, ...)
+- **Logarithmic**: Exponentially spaced (7-8 steps)
+- **Custom**: User-defined comma-separated list
 
 ### Processing
 - **Generate Starless**: Create star-removed versions for SNR measurement
@@ -189,7 +224,8 @@ SNR = (FG_median - BG_median) / FG_sigma
 | Issue | Solution |
 |-------|----------|
 | No subframes found | Check file pattern and directory path |
-| Missing ROI previews | Script will keep reference master open and prompt you to create `BG` and `FG` previews, then re-run |
+| Auto ROI detection fails | Try manual mode or adjust tile size; low-contrast targets may need manual ROI selection |
+| Missing ROI previews (manual) | Script will keep reference master open and prompt you to create `BG` and `FG` previews, then re-run |
 | Star removal fails | Ensure StarNet2/StarXTerminator is installed via Process → All Processes |
 | Integration errors | Verify subs are calibrated and properly formatted |
 | Scaling exponent <<0.5 | Investigate systematic issues (tracking, calibration) |
@@ -200,18 +236,32 @@ SNR = (FG_median - BG_median) / FG_sigma
 
 ### Module Architecture
 - **SNRAnalysis_Main.js**: Entry point, orchestration with progress tracking
-- **-core.js**: Configuration, Settings persistence
-- **-ui.js**: Dialog interface with header, info section, results preview
-- **-progress.js**: WBPP-style progress monitor with TreeBox, timing, cancellation
+- **-core.js**: Configuration, Settings persistence (including ROI mode)
+- **-ui.js**: Dialog interface with header, info section, ROI mode controls, results preview
+- **-progress.js**: Custom progress monitor with Control+Label progress bar
 - **-subframe-scanner.js**: File discovery, metadata extraction
 - **-depth-planner.js**: Depth sequence generation
 - **-integrator.js**: ImageIntegration wrapper
-- **-star-removal.js**: StarNet2/StarXTerminator interface
+- **-star-removal.js**: StarNet2/StarXTerminator interface with version-safe window detection
 - **-stretch.js**: STF → HistogramTransformation
-- **-snr.js**: ROI extraction, SNR calculation, preview workflow
+- **-snr.js**: ROI extraction, SNR calculation, preview workflow, manual prompts
+- **-roi-auto.js**: Automatic ROI detection with tile-based analysis and progressive relaxation
 - **-graph.js**: Plot generation with VectorGraphics → Bitmap
 - **-insights.js**: Analysis and recommendations
 - **-output.js**: CSV/JSON writing
+
+### Auto ROI Detection Algorithm
+1. **Tile the image**: Divide into non-overlapping regions (configurable size)
+2. **Measure statistics**: Calculate median, sigma, max per tile
+3. **Estimate background**: 25th percentile of tile medians
+4. **Select BG tile**: Closest to background, low noise, no bright stars
+5. **Select FG tile**: Progressive relaxation with 4 passes:
+   - **Conservative** (2.5σ threshold, 4.0σ noise limit)
+   - **Moderate** (2.0σ threshold, 5.0σ noise limit)
+   - **Relaxed** (1.5σ threshold, 6.0σ noise limit)
+   - **Aggressive** (1.0σ threshold, 8.0σ noise limit)
+6. **Create previews**: Automatically generate BG/FG previews for analysis
+7. **Fallback**: If detection fails, switches to manual mode with contextual error message
 
 ### Settings Persistence
 Settings are stored via PixInsight's Settings API (module ID: `SNRAnalysisSettings`) and persist between sessions.
