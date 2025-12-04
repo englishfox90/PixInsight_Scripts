@@ -75,7 +75,16 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath) {
    
    summaryText.text = text;
    
-   // Graph preview using ScrollBox (based on MasterSignature pattern)
+   // Create preview TabBox to hold Graph and Stack preview
+   var previewTabBox = new TabBox(dialog);
+   
+   // Tab 1: Graph Preview (existing functionality preserved)
+   var graphTab = new Control(dialog);
+   graphTab.sizer = new VerticalSizer;
+   graphTab.sizer.margin = 4;
+   graphTab.sizer.spacing = 4;
+   
+   // Graph preview using ScrollBox (existing code preserved)
    var graphPreview = null;
    
    // Use provided graphPath if available, otherwise try default locations
@@ -96,7 +105,7 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath) {
       try {
          var bmp = new Bitmap(graphPath);
          
-         graphPreview = new ScrollBox(dialog);
+         graphPreview = new ScrollBox(graphTab);
          graphPreview.autoScroll = true;
          graphPreview.setScaledMinSize(780, 420);
          graphPreview.setScaledMaxSize(780, 420);
@@ -141,6 +150,30 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath) {
       }
    }
    
+   if (graphPreview) {
+      graphTab.sizer.add(graphPreview);
+   } else {
+      var noGraphLabel = new Label(graphTab);
+      noGraphLabel.text = "Graph not available";
+      noGraphLabel.textAlignment = TextAlign_Center | TextAlign_VertCenter;
+      graphTab.sizer.add(noGraphLabel);
+   }
+   
+   previewTabBox.addPage(graphTab, "Graph");
+   
+   // Tab 2: Stack Preview
+   var stackTab = createStackPreviewPanel(
+      dialog,
+      createStackPreviewEntries(results, outputDir, "", CONFIG.generateStarless),
+      CONFIG.stackMode === "cropped",
+      ""
+   );
+   
+   previewTabBox.addPage(stackTab, "Stack Preview");
+   
+   // Default to Graph tab
+   previewTabBox.currentPageIndex = 0;
+   
    // Buttons
    var buttonSizer = new HorizontalSizer;
    buttonSizer.spacing = 6;
@@ -159,9 +192,7 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath) {
    dialog.sizer.margin = 8;
    dialog.sizer.spacing = 6;
    dialog.sizer.add(summaryText);
-   if (graphPreview) {
-      dialog.sizer.add(graphPreview);
-   }
+   dialog.sizer.add(previewTabBox);
    dialog.sizer.add(buttonSizer);
    
    dialog.execute();
@@ -282,6 +313,15 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
       summaryText.text = summaryContent;
       tabPage.sizer.add(summaryText);
       
+      // Create preview TabBox for Graph and Stack preview
+      var previewTabBox = new TabBox(tabPage);
+      
+      // Tab 1: Graph Preview (existing functionality)
+      var graphTab = new Control(tabPage);
+      graphTab.sizer = new VerticalSizer;
+      graphTab.sizer.margin = 4;
+      graphTab.sizer.spacing = 4;
+      
       // Graph preview
       console.writeln("Filter " + fr.filterName + " - graphPath: " + (fr.graphPath ? fr.graphPath : "NULL"));
       if (fr.graphPath) {
@@ -290,13 +330,7 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
       
       if (fr.graphPath && File.exists(fr.graphPath)) {
          try {
-            var graphGroupBox = new GroupBox(tabPage);
-            graphGroupBox.title = "Graph Preview";
-            graphGroupBox.sizer = new VerticalSizer;
-            graphGroupBox.sizer.margin = 6;
-            graphGroupBox.sizer.spacing = 4;
-            
-            var scrollBox = new ScrollBox(graphGroupBox);
+            var scrollBox = new ScrollBox(graphTab);
             scrollBox.setScaledMinSize(780, 420);
             scrollBox.autoScroll = true;
             scrollBox.tracking = true;
@@ -341,15 +375,40 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
                g.end();
             };
             
-            graphGroupBox.sizer.add(scrollBox);
-            tabPage.sizer.add(graphGroupBox);
+            graphTab.sizer.add(scrollBox);
             console.writeln("Graph preview added to tab for " + fr.filterName);
          } catch (e) {
             console.warningln("Failed to load graph for " + fr.filterName + ": " + e.message);
+            var noGraphLabel = new Label(graphTab);
+            noGraphLabel.text = "Graph load failed: " + e.message;
+            noGraphLabel.textAlignment = TextAlign_Center | TextAlign_VertCenter;
+            graphTab.sizer.add(noGraphLabel);
          }
       } else {
          console.writeln("Skipping graph preview for " + fr.filterName + " - no valid path");
+         var noGraphLabel = new Label(graphTab);
+         noGraphLabel.text = "Graph not available";
+         noGraphLabel.textAlignment = TextAlign_Center | TextAlign_VertCenter;
+         graphTab.sizer.add(noGraphLabel);
       }
+      
+      previewTabBox.addPage(graphTab, "Graph");
+      
+      // Tab 2: Stack Preview
+      var filterSuffix = "_" + fr.filterName.replace(/[^a-zA-Z0-9]/g, "_");
+      var stackTab = createStackPreviewPanel(
+         tabPage,
+         createStackPreviewEntries(fr.results, outputDir, filterSuffix, CONFIG.generateStarless),
+         CONFIG.stackMode === "cropped",
+         fr.filterName
+      );
+      
+      previewTabBox.addPage(stackTab, "Stack Preview");
+      
+      // Default to Graph tab
+      previewTabBox.currentPageIndex = 0;
+      
+      tabPage.sizer.add(previewTabBox);
       
       tabBox.addPage(tabPage, fr.filterName);
    }

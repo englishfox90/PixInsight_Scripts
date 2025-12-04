@@ -52,6 +52,7 @@
 #include "ui/SNRAnalysis-ui-sections.js"
 #include "ui/SNRAnalysis-ui.js"
 #include "ui/SNRAnalysis-progress.js"
+#include "ui/SNRAnalysis-stack-preview.js"
 #include "ui/SNRAnalysis-results-dialog.js"
 
 /**

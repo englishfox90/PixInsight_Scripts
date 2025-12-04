@@ -1,8 +1,8 @@
 SNR Analysis - Module Organization
 ===================================
 
-Total Modules: 18 files (all under 500 lines)
-Main Entry: SNRAnalysis_Main.js (967 lines)
+Total Modules: 19 files (all under 500 lines)
+Main Entry: SNRAnalysis_Main.js (1023 lines)
 
 Module Structure:
 -----------------
@@ -69,10 +69,15 @@ ui/ - User interface components
   SNRAnalysis-progress.js (318 lines)
     - Custom progress monitor dialog with STATE_SKIPPED support
     - Live timer, step tracking, cancellation
-  SNRAnalysis-results-dialog.js (415 lines)
+  SNRAnalysis-stack-preview.js (319 lines)
+    - Stack preview panel for viewing integrated images
+    - Auto-STF application for preview display
+    - Depth selector and image loading
+  SNRAnalysis-results-dialog.js (456 lines)
     - Single and multi-filter results presentation
     - Tabbed view for filter groups
-    - Graph preview with ScrollBox
+    - Graph and Stack preview tabs with TabBox
+    - Preserved graph preview functionality
 
 All #include directives use relative paths from SNRAnalysis_Main.js
 Example: #include "core/SNRAnalysis-core.js"
