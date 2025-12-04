@@ -33,6 +33,7 @@ function ProgressMonitor() {
    this.STATE_SUCCESS = 2;
    this.STATE_WARNING = 3;
    this.STATE_ERROR = 4;
+   this.STATE_SKIPPED = 5;
    
    /**
     * Initialize and show the progress dialog
@@ -196,6 +197,10 @@ function ProgressMonitor() {
                   var elapsed = (step.endTime - step.startTime) / 1000;
                   step.node.setText(3, elapsed.toFixed(1) + "s");
                }
+            } else if (state === this.STATE_SKIPPED) {
+               step.node.setText(1, "Skipped");
+               step.node.setIcon(1, this.dialog.scaledResource(":/bullets/bullet-ball-glass-grey.png"));
+               step.node.setText(3, "-");
             }
             
             if (details) {
@@ -221,7 +226,8 @@ function ProgressMonitor() {
       for (var i = 0; i < this.steps.length; i++) {
          if (this.steps[i].state === this.STATE_SUCCESS || 
              this.steps[i].state === this.STATE_WARNING ||
-             this.steps[i].state === this.STATE_ERROR) {
+             this.steps[i].state === this.STATE_ERROR ||
+             this.steps[i].state === this.STATE_SKIPPED) {
             completedCount++;
          }
       }

@@ -20,6 +20,7 @@ function SNRAnalysisDialog() {
    var infoSection = buildInfoSection(this);
    var inputSection = buildInputSection(this);
    var roiSection = buildRoiModeSection(this);
+   var stackingSection = buildStackingModeSection(this);
    var depthSection = buildDepthStrategySection(this);
    var processingSection = buildProcessingSection(this);
    var outputSection = buildOutputSection(this);
@@ -75,6 +76,7 @@ function SNRAnalysisDialog() {
    this.sizer.add(infoSection);
    this.sizer.add(inputSection);
    this.sizer.add(roiSection);
+   this.sizer.add(stackingSection);
    this.sizer.add(depthSection);
    this.sizer.add(processingSection);
    this.sizer.add(outputSection);

@@ -135,6 +135,59 @@ function buildRoiModeSection(dialog) {
 }
 
 /**
+ * Build stacking mode section
+ */
+function buildStackingModeSection(dialog) {
+   var stackGroupBox = new GroupBox(dialog);
+   stackGroupBox.title = "Stacking Mode";
+   stackGroupBox.sizer = new VerticalSizer;
+   stackGroupBox.sizer.margin = 6;
+   stackGroupBox.sizer.spacing = 4;
+   
+   var stackModeLabel = new Label(dialog);
+   stackModeLabel.text = "Integration Method:";
+   stackModeLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   stackModeLabel.minWidth = 120;
+   
+   // Full-frame radio button
+   var fullRadio = new RadioButton(dialog);
+   fullRadio.text = "Full-frame stacking (slower, most like standard processing)";
+   fullRadio.toolTip = "Integrate full images at each depth. Slowest but matches standard PixInsight workflows exactly.";
+   fullRadio.checked = (CONFIG.stackMode === "full");
+   fullRadio.onCheck = function(checked) {
+      if (checked) {
+         CONFIG.stackMode = "full";
+         croppedRadio.checked = false;
+      }
+   };
+   
+   // Cropped-ROI radio button
+   var croppedRadio = new RadioButton(dialog);
+   croppedRadio.text = "Cropped-ROI stacking (faster – integrate only the BG/FG region)";
+   croppedRadio.toolTip = "Integrate only the smallest rectangle that contains the BG and FG ROIs. Much faster for SNR analysis, with equivalent SNR values for those regions.";
+   croppedRadio.checked = (CONFIG.stackMode === "cropped");
+   croppedRadio.onCheck = function(checked) {
+      if (checked) {
+         CONFIG.stackMode = "cropped";
+         fullRadio.checked = false;
+      }
+   };
+   
+   var infoLabel = new Label(dialog);
+   infoLabel.text = "Note: Star removal (if enabled) works in both modes but is comparatively slow.";
+   infoLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   infoLabel.styleSheet = "font-style: italic; color: #808080;";
+   
+   stackGroupBox.sizer.add(stackModeLabel);
+   stackGroupBox.sizer.add(fullRadio);
+   stackGroupBox.sizer.add(croppedRadio);
+   stackGroupBox.sizer.addSpacing(4);
+   stackGroupBox.sizer.add(infoLabel);
+   
+   return stackGroupBox;
+}
+
+/**
  * Build depth strategy section
  */
 function buildDepthStrategySection(dialog) {

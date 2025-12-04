@@ -1,15 +1,16 @@
 SNR Analysis - Module Organization
 ===================================
 
-Total Modules: 17 files (all under 500 lines)
-Main Entry: SNRAnalysis_Main.js (882 lines)
+Total Modules: 18 files (all under 500 lines)
+Main Entry: SNRAnalysis_Main.js (967 lines)
 
 Module Structure:
 -----------------
 
 core/ - Core configuration and planning
-  SNRAnalysis-core.js (235 lines)
-    - CONFIG object, settings persistence, version info
+  SNRAnalysis-core.js (251 lines)
+    - CONFIG object with stackMode and keepTempRoiFiles settings
+    - Settings persistence, version info
     - File operations, time formatting, window management
   SNRAnalysis-depth-planner.js (199 lines)
     - Integration depth strategies (doubling, fibonacci, logarithmic, custom)
@@ -24,6 +25,10 @@ processing/ - Image processing pipeline
   SNRAnalysis-integrator.js (241 lines)
     - ImageIntegration wrapper for partial stacks
     - Full integration for reference masters
+  SNRAnalysis-roi-cropper.js (226 lines)
+    - ROI-based subframe cropping for faster stacking
+    - Bounding box computation with padding
+    - Temporary file management and cleanup
   SNRAnalysis-star-removal.js (295 lines)
     - StarXTerminator and StarNet2 wrappers
     - Automatic tool detection, in-place modification support
@@ -36,9 +41,9 @@ processing/ - Image processing pipeline
 analysis/ - Data analysis and output
   SNRAnalysis-roi-auto.js (329 lines)
     - Automatic background/foreground ROI detection
-    - Progressive relaxation algorithm (2.5s  1.0s)
+    - Progressive relaxation algorithm (2.5s → 1.0s)
   SNRAnalysis-graph.js (210 lines)
-    - SNR vs time graph generation (VectorGraphics  Bitmap)
+    - SNR vs time graph generation (VectorGraphics → Bitmap)
     - PNG/JPG export with fallback
   SNRAnalysis-insights.js (297 lines)
     - Diminishing returns analysis (10%, 5% thresholds)
@@ -52,21 +57,22 @@ ui/ - User interface components
   SNRAnalysis-ui-header.js (70 lines)
     - Header, title, author info
     - Tool description and benefits
-  SNRAnalysis-ui-sections.js (365 lines)
+  SNRAnalysis-ui-sections.js (425 lines)
     - Input/output directory selectors
     - ROI mode controls (auto/manual)
+    - Stacking mode selector (full-frame vs cropped-ROI)
     - Depth strategy selection
     - Processing and output options
-  SNRAnalysis-ui.js (86 lines)
+  SNRAnalysis-ui.js (87 lines)
     - Main dialog constructor using UI builders
     - Validation and settings save/load
-  SNRAnalysis-progress.js (308 lines)
-    - Custom progress monitor dialog
+  SNRAnalysis-progress.js (318 lines)
+    - Custom progress monitor dialog with STATE_SKIPPED support
     - Live timer, step tracking, cancellation
-  SNRAnalysis-results-dialog.js (354 lines)
+  SNRAnalysis-results-dialog.js (415 lines)
     - Single and multi-filter results presentation
     - Tabbed view for filter groups
     - Graph preview with ScrollBox
 
 All #include directives use relative paths from SNRAnalysis_Main.js
-Example: #include \"core/SNRAnalysis-core.js\"
+Example: #include "core/SNRAnalysis-core.js"
