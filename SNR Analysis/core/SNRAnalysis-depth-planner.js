@@ -9,9 +9,10 @@
  * @param {string} strategy - Strategy name
  * @param {number} maxSubs - Maximum number of available subs
  * @param {string} customList - Comma-separated custom depths (for custom strategy)
+ * @param {boolean} includeFullDepth - If true, ensure a final depth with all subs
  * @returns {Array} Array of job objects with depth and calculated exposure
  */
-function planIntegrationDepths(strategy, maxSubs, customList) {
+function planIntegrationDepths(strategy, maxSubs, customList, includeFullDepth) {
    var depths = [];
    
    switch (strategy) {
@@ -33,6 +34,20 @@ function planIntegrationDepths(strategy, maxSubs, customList) {
       default:
          throw new Error("Unknown depth strategy: " + strategy);
    }
+   
+    // Optionally append a full-depth stack using all subs
+    if (includeFullDepth && maxSubs > 0) {
+      var found = false;
+      for (var d = 0; d < depths.length; d++) {
+         if (depths[d] === maxSubs) { found = true; break; }
+      }
+      if (!found) {
+         depths.push(maxSubs);
+      }
+    }
+   
+    // Ensure ascending order after possible append
+    depths.sort(function(a, b) { return a - b; });
    
    // Create job objects
    var jobs = [];

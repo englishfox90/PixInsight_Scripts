@@ -13,6 +13,8 @@
  */
 function scanSubframes(dirPath, pattern, groupByFilter) {
    var subframes = [];
+   var skippedNonLight = 0;
+   var skippedInvalid = 0;
    
    // Parse file pattern into extensions
    var patterns = pattern.split(";");
@@ -45,6 +47,13 @@ function scanSubframes(dirPath, pattern, groupByFilter) {
          
          if (!metadata) {
             console.warningln("Skipping " + File.extractName(files[i]) + " (failed to read metadata)");
+            skippedInvalid++;
+            continue;
+         }
+         
+         if (!metadata.isLight) {
+            console.warningln("Skipping " + File.extractName(files[i]) + " (IMAGETYP='" + metadata.imageType + "')");
+            skippedNonLight++;
             continue;
          }
          
@@ -52,11 +61,14 @@ function scanSubframes(dirPath, pattern, groupByFilter) {
          
       } catch (error) {
          console.warningln("Error processing " + files[i] + ": " + error.message);
+         skippedInvalid++;
       }
    }
    
    console.writeln("  Progress: 100%");
    console.writeln("Found " + subframes.length + " subframes");
+   if (skippedNonLight > 0) console.writeln("Skipped " + skippedNonLight + " non-light frames");
+   if (skippedInvalid > 0) console.writeln("Skipped " + skippedInvalid + " unreadable frames");
    
    // Sort by date-obs
    subframes.sort(function(a, b) {
@@ -145,6 +157,7 @@ function extractSubframeMetadata(filePath) {
       var exposure = 0;
       var filter = "";
       var dateObs = "";
+      var imageType = "";
       
       // Extract keywords
       for (var i = 0; i < keywords.length; i++) {
@@ -157,6 +170,8 @@ function extractSubframeMetadata(filePath) {
             filter = key.value.trim();
          } else if (name === "DATE-OBS") {
             dateObs = key.value.trim();
+         } else if (name === "IMAGETYP" || name === "IMAGETYPE" || name === "FRAME") {
+            imageType = key.value.trim();
          }
       }
       
@@ -173,12 +188,29 @@ function extractSubframeMetadata(filePath) {
          var fileInfo = new FileInfo(filePath);
          dateObs = fileInfo.lastModified.toString();
       }
+   
+      var imageTypeUpper = imageType.toUpperCase();
+      var isLight = (imageTypeUpper.indexOf("LIGHT") !== -1);
+   
+      if (!isLight) {
+         // Not a light frame; return metadata with flag so caller can decide
+         return {
+            path: filePath,
+            exposure: exposure,
+            filter: filter,
+            dateObs: dateObs,
+            imageType: imageType,
+            isLight: false
+         };
+      }
       
       return {
          path: filePath,
          exposure: exposure,
          filter: filter,
-         dateObs: dateObs
+         dateObs: dateObs,
+         imageType: imageType || "",
+         isLight: true
       };
       
    } catch (error) {

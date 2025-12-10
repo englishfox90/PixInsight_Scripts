@@ -73,7 +73,7 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
    var stepName = isMultiFilter ? ("plan_" + filterName) : "plan";
    progress.updateStep(stepName, progress.STATE_RUNNING);
    console.writeln("Planning integration depths" + filterLabel + "...");
-   var depthJobs = planIntegrationDepths(CONFIG.depthStrategy, subframes.length, CONFIG.customDepths);
+   var depthJobs = planIntegrationDepths(CONFIG.depthStrategy, subframes.length, CONFIG.customDepths, CONFIG.includeFullDepth);
    
    // Calculate total exposure for each depth
    calculateJobExposures(depthJobs, subframes);
@@ -378,7 +378,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    stepName = isMultiFilter ? ("plan_" + filterName) : "plan";
    progress.updateStep(stepName, progress.STATE_RUNNING);
    console.writeln("Planning integration depths" + filterLabel + "...");
-   var depthJobs = planIntegrationDepths(CONFIG.depthStrategy, subframes.length, CONFIG.customDepths);
+   var depthJobs = planIntegrationDepths(CONFIG.depthStrategy, subframes.length, CONFIG.customDepths, CONFIG.includeFullDepth);
    
    // Calculate total exposure for each depth
    calculateJobExposures(depthJobs, subframes);
@@ -639,7 +639,15 @@ function SNRAnalysisEngine() {
             filterGroups["All"] = subframes;
          }
          
-         progress.updateStep("scan", progress.STATE_SUCCESS, "Scan complete");
+         var summaryParts = [];
+         var totalSubs = 0;
+         for (var fg in filterGroups) {
+            var count = filterGroups[fg].length;
+            totalSubs += count;
+            summaryParts.push(fg + ": " + count);
+         }
+         var summaryText = summaryParts.join(" | ");
+         progress.updateStep("scan", progress.STATE_SUCCESS, summaryText + " (Total: " + totalSubs + ")");
          progress.updateElapsed();
          
          // Add steps for each filter
@@ -652,7 +660,7 @@ function SNRAnalysisEngine() {
                progress.addStep("roi_" + filterName, "ROI definition (" + filterName + ")");
                progress.addStep("plan_" + filterName, "Planning (" + filterName + ")");
                
-               var depthJobs = planIntegrationDepths(CONFIG.depthStrategy, subs.length, CONFIG.customDepths);
+               var depthJobs = planIntegrationDepths(CONFIG.depthStrategy, subs.length, CONFIG.customDepths, CONFIG.includeFullDepth);
                for (var i = 0; i < depthJobs.length; i++) {
                   progress.addStep("depth_" + filterName + "_" + i, depthJobs[i].label + " (" + filterName + ")");
                }
@@ -665,7 +673,7 @@ function SNRAnalysisEngine() {
                progress.addStep("roi", "Defining ROI regions");
                progress.addStep("plan", "Planning integration depths");
                
-               var depthJobs = planIntegrationDepths(CONFIG.depthStrategy, subs.length, CONFIG.customDepths);
+               var depthJobs = planIntegrationDepths(CONFIG.depthStrategy, subs.length, CONFIG.customDepths, CONFIG.includeFullDepth);
                for (var i = 0; i < depthJobs.length; i++) {
                   progress.addStep("depth_" + i, "Processing " + depthJobs[i].label);
                }

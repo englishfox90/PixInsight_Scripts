@@ -199,9 +199,19 @@ function buildDepthStrategySection(dialog) {
    customSizer.spacing = 4;
    customSizer.add(customLabel);
    customSizer.add(customDepthsEdit, 100);
+
+   // Include full-depth stack
+   var fullDepthCheck = new CheckBox(dialog);
+   fullDepthCheck.text = "Include full stack (all subframes)";
+   fullDepthCheck.toolTip = "Always add a final integration using every available subframe.";
+   fullDepthCheck.checked = CONFIG.includeFullDepth;
+   fullDepthCheck.onCheck = function(checked) {
+      CONFIG.includeFullDepth = checked;
+   };
    
    depthGroupBox.sizer.add(strategySizer);
    depthGroupBox.sizer.add(customSizer);
+   depthGroupBox.sizer.add(fullDepthCheck);
    
    return depthGroupBox;
 }

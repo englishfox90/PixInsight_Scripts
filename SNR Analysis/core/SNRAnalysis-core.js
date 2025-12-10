@@ -31,6 +31,7 @@ var CONFIG = {
    // Depth strategy
    depthStrategy: "preset_osc",  // preset_osc, doubling, fibonacci, logarithmic, custom
    customDepths: "",  // comma-separated list for custom mode
+   includeFullDepth: true, // Always add a full-depth stack (all subs)
    
    // Star removal
    generateStarless: false,
@@ -85,6 +86,9 @@ function loadSettings() {
       
       var custom = Settings.read(SNR_SETTINGS_MODULE + "/customDepths", DataType_String);
       if (Settings.lastReadOK) CONFIG.customDepths = custom;
+      
+      var includeFullDepth = Settings.read(SNR_SETTINGS_MODULE + "/includeFullDepth", DataType_Boolean);
+      if (Settings.lastReadOK) CONFIG.includeFullDepth = includeFullDepth;
       
       // Star removal
       var starless = Settings.read(SNR_SETTINGS_MODULE + "/generateStarless", DataType_Boolean);
@@ -146,6 +150,7 @@ function saveSettings() {
       // Depth strategy
       Settings.write(SNR_SETTINGS_MODULE + "/depthStrategy", DataType_String, CONFIG.depthStrategy);
       Settings.write(SNR_SETTINGS_MODULE + "/customDepths", DataType_String, CONFIG.customDepths);
+      Settings.write(SNR_SETTINGS_MODULE + "/includeFullDepth", DataType_Boolean, CONFIG.includeFullDepth);
       
       // Star removal
       Settings.write(SNR_SETTINGS_MODULE + "/generateStarless", DataType_Boolean, CONFIG.generateStarless);
