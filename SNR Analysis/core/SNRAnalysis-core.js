@@ -4,7 +4,7 @@
  */
 
 var SCRIPT_NAME = "SNR Analysis";
-var SCRIPT_VERSION = "1.5.1";
+var SCRIPT_VERSION = "1.5.2";
 var SCRIPT_DESCRIPTION = "Analyzes how SNR improves with integration depth by creating partial integrations and measuring SNR in user-defined ROIs.";
 
 // Settings module ID (unique to avoid conflicts with other tools)
@@ -33,8 +33,8 @@ var CONFIG = {
    customDepths: "",  // comma-separated list for custom mode
    includeFullDepth: true, // Always add a full-depth stack (all subs)
    
-   // Star removal
-   generateStarless: false,
+   // Star removal (required)
+   generateStarless: true,
    starRemovalMethod: "StarNet2",  // StarNet2, StarXTerminator
    starRemovalLinear: true,  // Assume linear data (true for integrated stacks)
    starRemovalStrength: 0.70,  // Strength parameter (0.0-1.0) for StarXTerminator unscreen_correction
@@ -93,6 +93,8 @@ function loadSettings() {
       // Star removal
       var starless = Settings.read(SNR_SETTINGS_MODULE + "/generateStarless", DataType_Boolean);
       if (Settings.lastReadOK) CONFIG.generateStarless = starless;
+      // Enforce starless processing for SNR fidelity
+      CONFIG.generateStarless = true;
       
       var method = Settings.read(SNR_SETTINGS_MODULE + "/starRemovalMethod", DataType_String);
       if (Settings.lastReadOK) CONFIG.starRemovalMethod = method;
