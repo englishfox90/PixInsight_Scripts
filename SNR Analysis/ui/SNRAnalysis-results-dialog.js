@@ -238,13 +238,6 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath, insights
  * @param {string} outputDir - Output directory
  */
 function showMultiFilterResultsDialog(allFilterResults, outputDir) {
-   // If single filter, use original dialog
-   if (allFilterResults.length === 1) {
-      var fr = allFilterResults[0];
-      showResultsDialog(fr.results, fr.totalTime, outputDir, fr.graphPath, fr.insights);
-      return;
-   }
-   
    // Multi-filter tabbed dialog
    var dialog = new Dialog();
    dialog.windowTitle = "SNR Analysis Complete - Multiple Filters";
