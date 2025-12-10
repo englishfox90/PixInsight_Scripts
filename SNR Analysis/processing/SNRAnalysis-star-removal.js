@@ -35,9 +35,14 @@ function isStarRemovalAvailable(method) {
  * @param {ImageWindow} imageWindow - Integrated stack window
  * @returns {Object|null} {id, window, path, elapsedSec} or null on failure
  */
-function runStarRemoval(method, config, job, imageWindow) {
+function runStarRemoval(method, config, job, imageWindow, filterSuffix) {
+   filterSuffix = filterSuffix || "";
    if (!config.generateStarless) {
       return null;
+   }
+
+   if (!isStarRemovalAvailable(method)) {
+      throw new Error("Star removal tool not available: " + method + ". Install StarNet2 or StarXTerminator.");
    }
    
    if (!imageWindow || imageWindow.isNull) {
@@ -48,9 +53,9 @@ function runStarRemoval(method, config, job, imageWindow) {
    console.writeln("Removing stars using " + method + "...");
    
    if (method === "StarXTerminator") {
-      return removeStarsWithStarX(config, job, imageWindow);
+      return removeStarsWithStarX(config, job, imageWindow, filterSuffix);
    } else if (method === "StarNet2") {
-      return removeStarsWithStarNet(config, job, imageWindow);
+      return removeStarsWithStarNet(config, job, imageWindow, filterSuffix);
    } else {
       console.warningln("Unknown star removal method: " + method);
       return null;
@@ -65,7 +70,8 @@ function runStarRemoval(method, config, job, imageWindow) {
  * @param {ImageWindow} imageWindow - Source window
  * @returns {Object|null} {id, window, path, elapsedSec} or null
  */
-function removeStarsWithStarX(config, job, imageWindow) {
+function removeStarsWithStarX(config, job, imageWindow, filterSuffix) {
+   filterSuffix = filterSuffix || "";
    // Check availability by trying to instantiate
    var P;
    try {
@@ -81,7 +87,7 @@ function removeStarsWithStarX(config, job, imageWindow) {
                       P.createStarlessImage !== undefined);
    var hasOldStyle = (P.hasOwnProperty("stars") || P.stars !== undefined);
    
-   var finalId = "int_" + job.label + "_starless";
+   var finalId = "int_" + job.label + filterSuffix + "_starless";
    
    // Configure parameters (version-safe)
    if (hasNewStyle) {
@@ -130,10 +136,11 @@ function removeStarsWithStarX(config, job, imageWindow) {
    // Try multiple variations since filter suffix can cause double underscores
    var baseId = imageWindow.mainView.id;
    var possibleIds = [
-      baseId + "_starless",                    // Standard: int_N256__Ha__starless
-      baseId.replace(/__/g, "_") + "_starless", // Remove double underscores: int_N256_Ha_starless
-      finalId,                                   // Our target: int_N256_starless__Ha_
-      "int_" + job.label + "_starless"          // Without filter suffix
+      baseId + "_starless",                         // Standard: int_N256__Ha__starless
+      baseId.replace(/__/g, "_") + "_starless",   // Remove double underscores
+      finalId,                                        // Our target with suffix
+      ("int_" + job.label + "_starless"),          // Without filter suffix
+      ("int_" + job.label + filterSuffix).replace(/__/g, "_") + "_starless" // Normalized suffix
    ];
    
    var starlessWindow = null;
@@ -148,6 +155,24 @@ function removeStarsWithStarX(config, job, imageWindow) {
       }
    }
    
+   if (!starlessWindow || starlessWindow.isNull) {
+      // Fuzzy search for any window that includes both the base id and the word "starless"
+      var baseNormalized = baseId.replace(/__/g, "_").toLowerCase();
+      var labelNormalized = ("int_" + job.label + filterSuffix).replace(/__/g, "_").toLowerCase();
+      var allWindows = ImageWindow.windows;
+      for (var j = 0; j < allWindows.length; j++) {
+         var candidateId = allWindows[j].mainView.id;
+         var candidateLower = candidateId.toLowerCase();
+         if (candidateLower.indexOf("starless") !== -1 &&
+             (candidateLower.indexOf(baseNormalized) !== -1 || candidateLower.indexOf(labelNormalized) !== -1)) {
+            starlessWindow = allWindows[j];
+            foundId = candidateId;
+            console.writeln("Found StarXTerminator output (fuzzy match): " + foundId);
+            break;
+         }
+      }
+   }
+
    if (!starlessWindow || starlessWindow.isNull) {
       // Check if StarXTerminator modified the original image in-place (newer versions)
       // Original window should still exist and now contains the starless image
@@ -195,7 +220,8 @@ function removeStarsWithStarX(config, job, imageWindow) {
  * @param {ImageWindow} imageWindow - Source window
  * @returns {Object|null} {id, window, path, elapsedSec} or null
  */
-function removeStarsWithStarNet(config, job, imageWindow) {
+function removeStarsWithStarNet(config, job, imageWindow, filterSuffix) {
+   filterSuffix = filterSuffix || "";
    // Try to instantiate StarNet
    var P;
    try {
@@ -206,7 +232,7 @@ function removeStarsWithStarNet(config, job, imageWindow) {
       return null;
    }
    
-   var finalId = "int_" + job.label + "_starless";
+   var finalId = "int_" + job.label + filterSuffix + "_starless";
    
    // Configure parameters (version-safe)
    if (P.hasOwnProperty("stride")) {
@@ -295,6 +321,6 @@ function removeStars(imageId, label, method, outputDir) {
    
    var fakeJob = { label: label };
    
-   var result = runStarRemoval(method, fakeConfig, fakeJob, window);
+   var result = runStarRemoval(method, fakeConfig, fakeJob, window, "");
    return result ? result.id : null;
 }

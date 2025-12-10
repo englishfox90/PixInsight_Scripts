@@ -226,16 +226,13 @@ function buildProcessingSection(dialog) {
    processingGroupBox.sizer.margin = 6;
    processingGroupBox.sizer.spacing = 4;
    
-   // Star removal checkbox
-   var starlessCheck = new CheckBox(dialog);
-   starlessCheck.text = "Generate starless stacks";
-   starlessCheck.checked = CONFIG.generateStarless;
-   
-   // Star removal method
+   // Star removal (required)
+   CONFIG.generateStarless = true;
+
    var starMethodLabel = new Label(dialog);
-   starMethodLabel.text = "Method:";
+   starMethodLabel.text = "Star removal (required):";
    starMethodLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
-   starMethodLabel.minWidth = 100;
+   starMethodLabel.minWidth = 180;
    
    var starMethodCombo = new ComboBox(dialog);
    
@@ -252,7 +249,6 @@ function buildProcessingSection(dialog) {
    } else if (CONFIG.starRemovalMethod === "StarXTerminator" && sxtAvailable) {
       starMethodCombo.currentItem = 1;
    } else {
-      // Default to first available method
       if (starNetAvailable) {
          starMethodCombo.currentItem = 0;
          CONFIG.starRemovalMethod = "StarNet2";
@@ -261,32 +257,24 @@ function buildProcessingSection(dialog) {
          CONFIG.starRemovalMethod = "StarXTerminator";
       } else {
          starMethodCombo.currentItem = 0;
-         CONFIG.generateStarless = false;  // Disable if nothing available
-         starlessCheck.checked = false;
       }
    }
    
-   starMethodCombo.enabled = CONFIG.generateStarless;
+   starMethodCombo.enabled = starNetAvailable || sxtAvailable;
    starMethodCombo.onItemSelected = function(index) {
       CONFIG.starRemovalMethod = (index === 0) ? "StarNet2" : "StarXTerminator";
    };
    
    // Add tooltip if neither is available
    if (!starNetAvailable && !sxtAvailable) {
-      starMethodCombo.toolTip = "No star removal tools installed. Install StarNet2 or StarXTerminator from Process > All Processes.";
+      starMethodCombo.toolTip = "No star removal tools installed. Install StarNet2 or StarXTerminator from Process > All Processes (required).";
    }
-   
-   starlessCheck.onCheck = function(checked) {
-      CONFIG.generateStarless = checked;
-      starMethodCombo.enabled = checked;
-   };
-   
    var starMethodSizer = new HorizontalSizer;
    starMethodSizer.spacing = 4;
    starMethodSizer.addSpacing(20);
    starMethodSizer.add(starMethodLabel);
    starMethodSizer.add(starMethodCombo, 100);
-   
+
    // Stretch checkbox
    var stretchCheck = new CheckBox(dialog);
    stretchCheck.text = "Apply STF-based stretch to each integration";
@@ -295,7 +283,6 @@ function buildProcessingSection(dialog) {
       CONFIG.applyStretch = checked;
    };
    
-   processingGroupBox.sizer.add(starlessCheck);
    processingGroupBox.sizer.add(starMethodSizer);
    processingGroupBox.sizer.add(stretchCheck);
    

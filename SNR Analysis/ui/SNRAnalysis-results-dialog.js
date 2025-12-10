@@ -10,7 +10,7 @@
  * @param {string} outputDir - Output directory path
  * @param {string} graphPath - Optional path to graph image file
  */
-function showResultsDialog(results, totalTimeSec, outputDir, graphPath) {
+function showResultsDialog(results, totalTimeSec, outputDir, graphPath, insights) {
    var dialog = new Dialog();
    dialog.windowTitle = "SNR Analysis Complete";
    dialog.scaledMinWidth = 800;
@@ -26,8 +26,8 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath) {
    text += "Analyzed " + results.length + " integration depths\n";
    text += "Total runtime: " + formatTime(totalTimeSec) + "\n\n";
    
-   text += "Label        N Subs    Total Exp        SNR      \u0394 SNR\n";
-   text += "--------------------------------------------------------\n";
+   text += "Label        N Subs    Total Exp               SNR         \u0394 SNR\n";
+   text += "--------------------------------------------------------------------\n";
    
    for (var i = 0; i < results.length; i++) {
       var r = results[i];
@@ -39,31 +39,65 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath) {
       }
       
       var line = padRight(r.label, 12) + " " + 
-                 padLeft(r.depth.toString(), 6) + "    " +
-                 padLeft(formatTime(r.totalExposure), 12) + "  " +
-                 padLeft(r.snr.toFixed(2), 6) + "    " +
-                 padLeft(deltaSNR, 8) + "\n";
+              padLeft(r.depth.toString(), 6) + "    " +
+              padLeft(formatTime(r.totalExposure), 20) + "    " +
+              padLeft(r.snr.toFixed(2), 6) + "    " +
+              padLeft(deltaSNR, 8) + "\n";
       text += line;
    }
    
    text += "\n=== INSIGHTS ===\n\n";
    
-   // Find diminishing returns points
-   var thresh10 = -1, thresh5 = -1;
-   for (var i = 1; i < results.length; i++) {
-      var improvement = ((results[i].snr - results[i-1].snr) / results[i-1].snr) * 100;
-      if (improvement < 10 && thresh10 === -1) thresh10 = i;
-      if (improvement < 5 && thresh5 === -1) thresh5 = i;
-   }
-   
-   if (thresh10 > 0) {
-      text += "\u2022 SNR improvements drop below 10% after " + results[thresh10].label;
-      text += " (" + formatTime(results[thresh10].totalExposure) + ")\n";
-   }
-   
-   if (thresh5 > 0) {
-      text += "\u2022 SNR improvements drop below 5% after " + results[thresh5].label;
-      text += " (" + formatTime(results[thresh5].totalExposure) + ")\n";
+   if (insights) {
+      if (insights.diminishingReturns10pct) {
+         var idx10 = findResultIndex(results, insights.diminishingReturns10pct);
+         text += "• SNR improvements drop below 10% after " + insights.diminishingReturns10pct +
+                 " (" + formatTime(results[idx10].totalExposure) + ")\n";
+      }
+      if (insights.diminishingReturns5pct) {
+         var idx5 = findResultIndex(results, insights.diminishingReturns5pct);
+         text += "• SNR improvements drop below 5% after " + insights.diminishingReturns5pct +
+                 " (" + formatTime(results[idx5].totalExposure) + ")\n";
+      }
+      if (insights.recommendedRange) {
+         text += "• Recommended integration range: " +
+                 formatTime(insights.recommendedRange.minExposure) + " - " +
+                 formatTime(insights.recommendedRange.maxExposure) + "\n";
+      }
+      if (insights.scalingExponent !== null) {
+         text += "• Scaling exponent: " + insights.scalingExponent.toFixed(2) + " (ideal √N = 0.50)\n";
+      }
+      if (insights.projectedGains) {
+         var proj = insights.projectedGains;
+         if (proj.category === "strong") {
+            text += "\nADDITIONAL INTEGRATION RECOMMENDED:\n";
+            text += "Current: " + proj.currentDepth + " subs, SNR = " + proj.currentSNR.toFixed(2) + "\n";
+            text += "Doubling integration (" + formatTime(proj.projection2x.totalTime) + " total):\n";
+            text += "  → Projected SNR: " + proj.projection2x.snr.toFixed(2) + " (+" + proj.projection2x.gain.toFixed(1) + "% gain)\n";
+            text += "  → Additional time needed: " + formatTime(proj.projection2x.additionalTime) + "\n";
+            text += "Tripling integration (" + formatTime(proj.projection3x.totalTime) + " total):\n";
+            text += "  → Projected SNR: " + proj.projection3x.snr.toFixed(2) + " (+" + proj.projection3x.gain.toFixed(1) + "% gain)\n";
+            text += "  → Additional time needed: " + formatTime(proj.projection3x.additionalTime) + "\n";
+         } else if (proj.category === "modest") {
+            text += "\nMODEST GAINS POSSIBLE:\n";
+            text += "Last step gain: " + proj.lastImprovementPct.toFixed(1) + "%\n";
+            text += "Doubling integration (" + formatTime(proj.projection2x.totalTime) + " total):\n";
+            text += "  → Projected SNR: " + proj.projection2x.snr.toFixed(2) + " (+" + proj.projection2x.gain.toFixed(1) + "% gain)\n";
+            text += "  → Additional time needed: " + formatTime(proj.projection2x.additionalTime) + "\n";
+            text += "Tripling integration (" + formatTime(proj.projection3x.totalTime) + " total):\n";
+            text += "  → Projected SNR: " + proj.projection3x.snr.toFixed(2) + " (+" + proj.projection3x.gain.toFixed(1) + "% gain)\n";
+            text += "  → Additional time needed: " + formatTime(proj.projection3x.additionalTime) + "\n";
+         } else {
+            text += "\nINTEGRATION STATUS:\n";
+            text += "• Diminishing returns reached - additional integration may not be cost-effective\n";
+         }
+      }
+      if (insights.anomalies && insights.anomalies.length > 0) {
+         text += "\nANOMALIES DETECTED:\n";
+         for (var a = 0; a < insights.anomalies.length; a++) {
+            text += "  - " + insights.anomalies[a].label + ": " + insights.anomalies[a].issue + "\n";
+         }
+      }
    }
    
    text += "\n=== OUTPUT FILES ===\n\n";
@@ -207,7 +241,7 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
    // If single filter, use original dialog
    if (allFilterResults.length === 1) {
       var fr = allFilterResults[0];
-      showResultsDialog(fr.results, fr.totalTime, outputDir, fr.graphPath);
+      showResultsDialog(fr.results, fr.totalTime, outputDir, fr.graphPath, fr.insights);
       return;
    }
    
@@ -267,6 +301,30 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
             summaryContent += "Scaling Exponent: " + fr.insights.scalingExponent.toFixed(3) + 
                             " (ideal √N = 0.500)\n";
          }
+
+         // Quick gain highlights
+         if (fr.insights.improvements && fr.insights.improvements.length > 0) {
+            var lastGain = fr.insights.improvements[fr.insights.improvements.length - 1];
+            var bestGain = fr.insights.improvements[0];
+            for (var g = 1; g < fr.insights.improvements.length; g++) {
+               if (fr.insights.improvements[g].improvementPct > bestGain.improvementPct) {
+                  bestGain = fr.insights.improvements[g];
+               }
+            }
+            summaryContent += "Last Step Gain: " + lastGain.improvementPct.toFixed(1) + "% (" + lastGain.fromLabel + " → " + lastGain.toLabel + ")\n";
+            summaryContent += "Best Step Gain: " + bestGain.improvementPct.toFixed(1) + "% (" + bestGain.fromLabel + " → " + bestGain.toLabel + ")\n";
+         }
+         
+         // Peak SNR
+         if (fr.results && fr.results.length > 0) {
+            var peak = fr.results[0];
+            for (var p = 1; p < fr.results.length; p++) {
+               if (fr.results[p].snr > peak.snr) {
+                  peak = fr.results[p];
+               }
+            }
+            summaryContent += "Peak SNR: " + peak.snr.toFixed(2) + " at " + peak.label + " (" + formatTime(peak.totalExposure) + ")\n";
+         }
          
          if (fr.insights.diminishingReturns10pct) {
             summaryContent += "Diminishing Returns (< 10% gain): " + fr.insights.diminishingReturns10pct + "\n";
@@ -283,7 +341,7 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
          }
          
          // Future projections if available
-         if (fr.insights.needsMoreData && fr.insights.projectedGains) {
+         if (fr.insights.projectedGains && fr.insights.projectedGains.category === "strong") {
             summaryContent += "\nADDITIONAL INTEGRATION RECOMMENDED:\n";
             var proj = fr.insights.projectedGains;
             
@@ -297,7 +355,19 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
             summaryContent += "  → Projected SNR: " + proj.projection3x.snr.toFixed(2) + 
                             " (+" + proj.projection3x.gain.toFixed(1) + "% gain)\n";
             summaryContent += "  → Additional time needed: " + formatTime(proj.projection3x.additionalTime) + "\n";
-         } else if (!fr.insights.needsMoreData) {
+         } else if (fr.insights.projectedGains && fr.insights.projectedGains.category === "modest") {
+            summaryContent += "\nMODEST GAINS POSSIBLE:\n";
+            var projm = fr.insights.projectedGains;
+            summaryContent += "Last step gain: " + projm.lastImprovementPct.toFixed(1) + "%\n";
+            summaryContent += "Doubling integration (" + formatTime(projm.projection2x.totalTime) + " total):\n";
+            summaryContent += "  → Projected SNR: " + projm.projection2x.snr.toFixed(2) + 
+                            " (+" + projm.projection2x.gain.toFixed(1) + "% gain)\n";
+            summaryContent += "  → Additional time needed: " + formatTime(projm.projection2x.additionalTime) + "\n";
+            summaryContent += "Tripling integration (" + formatTime(projm.projection3x.totalTime) + " total):\n";
+            summaryContent += "  → Projected SNR: " + projm.projection3x.snr.toFixed(2) + 
+                            " (+" + projm.projection3x.gain.toFixed(1) + "% gain)\n";
+            summaryContent += "  → Additional time needed: " + formatTime(projm.projection3x.additionalTime) + "\n";
+         } else {
             summaryContent += "\nINTEGRATION STATUS:\n";
             summaryContent += "Diminishing returns reached - additional integration may not be cost-effective\n";
          }
@@ -305,7 +375,10 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
          if (fr.insights.anomalies && fr.insights.anomalies.length > 0) {
             summaryContent += "\nAnomalies Detected:\n";
             for (var k = 0; k < fr.insights.anomalies.length; k++) {
-               summaryContent += "  - " + fr.insights.anomalies[k] + "\n";
+               var a = fr.insights.anomalies[k];
+               var label = a.label ? a.label : "Depth";
+               var issue = a.issue ? a.issue : a.toString();
+               summaryContent += "  - " + label + ": " + issue + "\n";
             }
          }
       }

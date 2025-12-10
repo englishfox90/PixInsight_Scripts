@@ -4,22 +4,14 @@ A production-ready PixInsight PJSR script that analyzes how Signal-to-Noise Rati
 
 ## Features
 
-- ✅ **Multi-Filter Support**: Automatically groups and analyzes multiple filters (Ha, OIII, SII, etc.) separately with tabbed results
+- ✅ **Multi-Filter Support**: Auto-group by FILTER header with per-filter tabs
 - ✅ **Multiple Depth Strategies**: OSC preset, doubling, Fibonacci, logarithmic, or custom sequences
 - ✅ **Full-Depth Reference**: Creates complete integration for ROI selection
-- ✅ **Automatic & Manual ROI Modes**: 
-  - **Auto Mode**: Tile-based detection with progressive relaxation (2.5σ → 1.0σ) for background and faint signal regions
-  - **Manual Mode**: Traditional user-defined BG/FG preview workflow
-  - Handles low-contrast narrowband targets (OIII) via multi-pass algorithm
-- ✅ **WBPP-Style Progress Monitor**: Real-time execution tracking with status icons, timing, and cancellation
-- ✅ **Optional Star Removal**: Supports StarNet2 and StarXTerminator
-- ✅ **Optional Stretching**: STF-based histogram transformation per depth
-- ✅ **Comprehensive Output**: CSV, JSON with metadata, graph image with preview
+- ✅ **Automatic & Manual ROI Modes**: Auto tile-based BG/FG detection with progressive relaxation; manual BG/FG previews supported
+- ✅ **Star Removal Required**: Enforces starless stacks via StarNet2 or StarXTerminator for consistent SNR
+- ✅ **Optional Stretching**: STF-based histogram transform per depth
+- ✅ **Comprehensive Output**: CSV, JSON with metadata, graph image + preview
 - ✅ **Automated Insights**: Diminishing returns detection, scaling exponent, recommended ranges
-- ✅ **Detailed Timing**: Track integration, star removal, and stretch times per depth
-- ✅ **Enhanced Results Dialog**: Interactive graph preview, formatted summary, detailed metrics per filter
-
-## Installation
 
 ### Option A: PixInsight Update Repository (Recommended - when available)
 
@@ -66,7 +58,7 @@ A production-ready PixInsight PJSR script that analyzes how Signal-to-Noise Rati
      - **Auto**: Script automatically detects background and faint signal regions using tile-based analysis
      - **Manual**: Traditional workflow where you create BG/FG previews manually
    - Choose depth strategy (e.g., OSC preset: 12, 24, 48, 96, 192, 384, 720)
-   - Enable optional features (starless, stretch)
+  - Star removal is enforced; optionally enable stretch
    - Select output directory
 
 3. **Define ROIs**
@@ -131,7 +123,7 @@ A production-ready PixInsight PJSR script that analyzes how Signal-to-Noise Rati
 
 **snr_results.csv**
 ```csv
-label,nSubs,totalExposure_s,intTime_s,starRemovalTime_s,stretchTime_s,bgMedian,fgMedian,fgSigma,snr
+label,nSubs,totalExposure_s,intTime_s,starRemovalTime_s,stretchTime_s,bgMean,bgSigma,fgMean,snr
 N12,12,3600.0,45.23,0.00,0.00,0.00012345,0.00023456,0.00001234,9.01
 N24,24,7200.0,52.18,0.00,0.00,0.00012340,0.00032145,0.00001120,12.74
 ...
@@ -205,7 +197,7 @@ ANOMALIES DETECTED:
 
 ### SNR Formula
 ```
-SNR = (FG_median - BG_median) / FG_sigma
+SNR = (FG_mean - BG_mean) / BG_sigma   // measured on starless stacks
 ```
 - Higher SNR = better signal detection
 - Ideal scaling: SNR ∝ √N (exponent ≈ 0.5)

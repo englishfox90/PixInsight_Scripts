@@ -11,7 +11,7 @@ function writeCSV(results, outputDir, filterSuffix) {
    var lines = [];
    
    // Header
-   lines.push("label,nSubs,totalExposure_s,intTime_s,starRemovalTime_s,stretchTime_s,bgMedian,fgMedian,fgSigma,snr");
+   lines.push("label,nSubs,totalExposure_s,intTime_s,starRemovalTime_s,stretchTime_s,bgMean,bgSigma,fgMean,snr");
    
    // Data rows
    for (var i = 0; i < results.length; i++) {
@@ -23,9 +23,9 @@ function writeCSV(results, outputDir, filterSuffix) {
          r.integrationTime.toFixed(2),
          r.starRemovalTime.toFixed(2),
          r.stretchTime.toFixed(2),
-         r.bgMedian.toFixed(8),
-         r.fgMedian.toFixed(8),
-         r.fgSigma.toFixed(8),
+         r.bgMean.toFixed(8),
+         r.bgSigma.toFixed(8),
+         r.fgMean.toFixed(8),
          r.snr.toFixed(4)
       ].join(","));
    }
@@ -98,18 +98,23 @@ function format(template) {
    var args = Array.prototype.slice.call(arguments, 1);
    var argIndex = 0;
    
-   return template.replace(/%(-?)(\d*)([sd])/g, function(match, leftAlign, width, type) {
+   return template.replace(/%(-?)(\d*)(?:\.(\d+))?([sdf])/g, function(match, leftAlign, width, precision, type) {
       if (argIndex >= args.length) return match;
-      
       var value = args[argIndex++];
-      var str = type === 'd' ? Math.floor(value).toString() : value.toString();
-      
+      var str;
+      if (type === 'd') {
+         str = Math.floor(value).toString();
+      } else if (type === 'f') {
+         var p = precision ? parseInt(precision, 10) : 0;
+         str = Number(value).toFixed(p);
+      } else {
+         str = value.toString();
+      }
       width = parseInt(width, 10) || 0;
       if (width > str.length) {
          var padding = new Array(width - str.length + 1).join(' ');
          str = leftAlign ? str + padding : padding + str;
       }
-      
       return str;
    });
 }

@@ -130,22 +130,34 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
       }
       
       // Star removal (optional)
-      var starResult = runStarRemoval(CONFIG.starRemovalMethod, CONFIG, job, imageWindow);
+      var starResult = runStarRemoval(CONFIG.starRemovalMethod, CONFIG, job, imageWindow, filterSuffix);
       
       if (starResult) {
          // Use starless image for SNR measurement
          closeImageWindow(imageId);
          imageId = starResult.id;
          imageWindow = starResult.window;
+         job.starRemovalTime = job.starRemovalTimeSec;
          progress.updateStep(stepName, progress.STATE_RUNNING, "Stars removed (" + 
                            formatTime(job.starRemovalTimeSec) + ")");
       } else {
          // Continue with original starry image
          job.starRemovalTimeSec = 0;
+         job.starRemovalTime = 0;
       }
       progress.updateElapsed();
       
-      // STF stretch (optional)
+      // Measure SNR on linear starless stack before any stretch
+      var snrMetrics = measureSNR(imageId, rois.bg, rois.fg);
+      job.bgMean = snrMetrics.bgMean;
+      job.bgMedian = snrMetrics.bgMedian;
+      job.bgSigma = snrMetrics.bgSigma;
+      job.fgMean = snrMetrics.fgMean;
+      job.fgMedian = snrMetrics.fgMedian;
+      job.fgSigma = snrMetrics.fgSigma;
+      job.snr = snrMetrics.snr;
+
+      // STF stretch (optional) after measuring SNR
       if (CONFIG.applyStretch) {
          var stretchStart = new Date();
          applySTFStretch(imageId);
@@ -154,14 +166,6 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
       } else {
          job.stretchTime = 0;
       }
-      progress.updateElapsed();
-      
-      // Measure SNR
-      var snrMetrics = measureSNR(imageId, rois.bg, rois.fg);
-      job.bgMedian = snrMetrics.bgMedian;
-      job.fgMedian = snrMetrics.fgMedian;
-      job.fgSigma = snrMetrics.fgSigma;
-      job.snr = snrMetrics.snr;
       
       results.push(job);
       
@@ -173,8 +177,8 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
       progress.updateStep(stepName, progress.STATE_SUCCESS, "SNR: " + job.snr.toFixed(2));
       progress.updateElapsed();
       
-      console.writeln("SNR: " + job.snr.toFixed(2) + " (bg: " + job.bgMedian.toFixed(6) + 
-                    ", fg: " + job.fgMedian.toFixed(6) + ", σ: " + job.fgSigma.toFixed(6) + ")");
+      console.writeln("SNR: " + job.snr.toFixed(2) + " (bgμ: " + job.bgMean.toFixed(6) + 
+              ", fgμ: " + job.fgMean.toFixed(6) + ", σ_bg: " + job.bgSigma.toFixed(6) + ")");
    }
    
    var totalTime = (new Date() - startTime) / 1000;
@@ -359,7 +363,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    if (!rois) {
       console.writeln("Waiting for user to define ROI previews" + filterLabel + "...");
       var autoFailed = (CONFIG.roiMode === "auto");
-      rois = promptForROIs(refImageId, autoFailed);
+      rois = promptForROIs(refImageId, autoFailed, filterName);
    }
    
    if (progress.isCancelled() || !rois) {
@@ -432,22 +436,34 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       }
       
       // Star removal (optional)
-      var starResult = runStarRemoval(CONFIG.starRemovalMethod, CONFIG, job, imageWindow);
+      var starResult = runStarRemoval(CONFIG.starRemovalMethod, CONFIG, job, imageWindow, filterSuffix);
       
       if (starResult) {
          // Use starless image for SNR measurement
          closeImageWindow(imageId);
          imageId = starResult.id;
          imageWindow = starResult.window;
+         job.starRemovalTime = job.starRemovalTimeSec;
          progress.updateStep(stepName, progress.STATE_RUNNING, "Stars removed (" + 
                            formatTime(job.starRemovalTimeSec) + ")");
       } else {
          // Continue with original starry image
          job.starRemovalTimeSec = 0;
+         job.starRemovalTime = 0;
       }
       progress.updateElapsed();
       
-      // STF stretch (optional)
+      // Measure SNR on linear starless stack before any stretch
+      var snrMetrics = measureSNR(imageId, rois.bg, rois.fg);
+      job.bgMean = snrMetrics.bgMean;
+      job.bgMedian = snrMetrics.bgMedian;
+      job.bgSigma = snrMetrics.bgSigma;
+      job.fgMean = snrMetrics.fgMean;
+      job.fgMedian = snrMetrics.fgMedian;
+      job.fgSigma = snrMetrics.fgSigma;
+      job.snr = snrMetrics.snr;
+
+      // STF stretch (optional) after measuring SNR
       if (CONFIG.applyStretch) {
          var stretchStart = new Date();
          applySTFStretch(imageId);
@@ -456,14 +472,6 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       } else {
          job.stretchTime = 0;
       }
-      progress.updateElapsed();
-      
-      // Measure SNR
-      var snrMetrics = measureSNR(imageId, rois.bg, rois.fg);
-      job.bgMedian = snrMetrics.bgMedian;
-      job.fgMedian = snrMetrics.fgMedian;
-      job.fgSigma = snrMetrics.fgSigma;
-      job.snr = snrMetrics.snr;
       
       results.push(job);
       
@@ -475,8 +483,8 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       progress.updateStep(stepName, progress.STATE_SUCCESS, "SNR: " + job.snr.toFixed(2));
       progress.updateElapsed();
       
-      console.writeln("SNR: " + job.snr.toFixed(2) + " (bg: " + job.bgMedian.toFixed(6) + 
-                    ", fg: " + job.fgMedian.toFixed(6) + ", σ: " + job.fgSigma.toFixed(6) + ")");
+      console.writeln("SNR: " + job.snr.toFixed(2) + " (bgμ: " + job.bgMean.toFixed(6) + 
+              ", fgμ: " + job.fgMean.toFixed(6) + ", σ_bg: " + job.bgSigma.toFixed(6) + ")");
    }
    
    var totalTime = (new Date() - startTime) / 1000;
@@ -774,7 +782,7 @@ function SNRAnalysisEngine() {
                   // If auto mode failed or manual mode selected, use manual ROI
                   if (!rois) {
                      var autoFailed = (CONFIG.roiMode === "auto");
-                     rois = promptForROIs(refId, autoFailed);
+                     rois = promptForROIs(refId, autoFailed, filterName);
                   }
                   
                   allROIs[filterName] = rois;

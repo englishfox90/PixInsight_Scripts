@@ -49,6 +49,19 @@ function SNRAnalysisDialog() {
             return;
          }
       }
+
+      // Require star removal tool availability
+      var hasStarNet = isStarRemovalAvailable("StarNet2");
+      var hasSXT = isStarRemovalAvailable("StarXTerminator");
+      if (!hasStarNet && !hasSXT) {
+         new MessageBox(
+            "Star removal is required. Install StarNet2 or StarXTerminator (Process > All Processes) before running.",
+            "Star Removal Required",
+            StdIcon_Error,
+            StdButton_Ok
+         ).execute();
+         return;
+      }
       
       // Save settings
       saveSettings();

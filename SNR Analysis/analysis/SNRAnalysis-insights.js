@@ -117,49 +117,50 @@ function projectFutureGains(results, insights) {
    
    var lastResult = results[results.length - 1];
    var lastImprovement = insights.improvements[insights.improvements.length - 1];
+   var lastPct = lastImprovement.improvementPct;
    
-   // Check if we're still seeing good gains (>10% improvement in last step)
-   if (lastImprovement.improvementPct >= 10) {
+   var currentDepth = lastResult.depth;
+   var currentSNR = lastResult.snr;
+   var exponent = insights.scalingExponent;
+   
+   var depth2x = currentDepth * 2;
+   var depth3x = currentDepth * 3;
+   
+   var snr2x = currentSNR * Math.pow(2, exponent);
+   var snr3x = currentSNR * Math.pow(3, exponent);
+   
+   var gain2x = ((snr2x - currentSNR) / currentSNR) * 100;
+   var gain3x = ((snr3x - currentSNR) / currentSNR) * 100;
+   
+   var time2x = lastResult.totalExposure * 2;
+   var time3x = lastResult.totalExposure * 3;
+   
+   // Flag strong or modest depending on last step gain
+   var category = (lastPct >= 10) ? "strong" : (lastPct >= 2 ? "modest" : "weak");
+   if (category === "strong") {
       insights.needsMoreData = true;
-      
-      // Project SNR at 2x and 3x current depth using scaling exponent
-      var currentDepth = lastResult.depth;
-      var currentSNR = lastResult.snr;
-      var exponent = insights.scalingExponent;
-      
-      var depth2x = currentDepth * 2;
-      var depth3x = currentDepth * 3;
-      
-      var snr2x = currentSNR * Math.pow(2, exponent);
-      var snr3x = currentSNR * Math.pow(3, exponent);
-      
-      var gain2x = ((snr2x - currentSNR) / currentSNR) * 100;
-      var gain3x = ((snr3x - currentSNR) / currentSNR) * 100;
-      
-      var time2x = lastResult.totalExposure * 2;
-      var time3x = lastResult.totalExposure * 3;
-      
-      return {
-         currentDepth: currentDepth,
-         currentSNR: currentSNR,
-         projection2x: {
-            depth: depth2x,
-            snr: snr2x,
-            gain: gain2x,
-            totalTime: time2x,
-            additionalTime: lastResult.totalExposure
-         },
-         projection3x: {
-            depth: depth3x,
-            snr: snr3x,
-            gain: gain3x,
-            totalTime: time3x,
-            additionalTime: lastResult.totalExposure * 2
-         }
-      };
    }
    
-   return null;
+   return {
+      category: category,
+      lastImprovementPct: lastPct,
+      currentDepth: currentDepth,
+      currentSNR: currentSNR,
+      projection2x: {
+         depth: depth2x,
+         snr: snr2x,
+         gain: gain2x,
+         totalTime: time2x,
+         additionalTime: lastResult.totalExposure
+      },
+      projection3x: {
+         depth: depth3x,
+         snr: snr3x,
+         gain: gain3x,
+         totalTime: time3x,
+         additionalTime: lastResult.totalExposure * 2
+      }
+   };
 }
 
 /**
@@ -245,7 +246,7 @@ function generateInsightsSummary(results, insights) {
    }
    
    // Future projections if more data would be beneficial
-   if (insights.needsMoreData && insights.projectedGains) {
+   if (insights.projectedGains && insights.projectedGains.category === "strong") {
       lines.push("");
       lines.push("ADDITIONAL INTEGRATION RECOMMENDED:");
       var proj = insights.projectedGains;
@@ -264,7 +265,20 @@ function generateInsightsSummary(results, insights) {
       lines.push("");
       lines.push("  Note: Last depth showed " + insights.improvements[insights.improvements.length - 1].improvementPct.toFixed(1) + 
                  "% improvement - more data recommended");
-   } else if (!insights.needsMoreData) {
+   } else if (insights.projectedGains && insights.projectedGains.category === "modest") {
+      lines.push("");
+      lines.push("MODEST GAINS POSSIBLE:");
+      var proj = insights.projectedGains;
+      lines.push("• Last step gain: " + proj.lastImprovementPct.toFixed(1) + "%");
+      lines.push("• Doubling integration (" + formatTime(proj.projection2x.totalTime) + " total):");
+      lines.push("    → Projected SNR: " + proj.projection2x.snr.toFixed(2) + 
+                 " (" + proj.projection2x.gain.toFixed(1) + "% gain)");
+      lines.push("    → Additional time needed: " + formatTime(proj.projection2x.additionalTime));
+      lines.push("• Tripling integration (" + formatTime(proj.projection3x.totalTime) + " total):");
+      lines.push("    → Projected SNR: " + proj.projection3x.snr.toFixed(2) + 
+                 " (" + proj.projection3x.gain.toFixed(1) + "% gain)");
+      lines.push("    → Additional time needed: " + formatTime(proj.projection3x.additionalTime));
+   } else {
       lines.push("");
       lines.push("INTEGRATION STATUS:");
       lines.push("• Diminishing returns reached - additional integration may not be cost-effective");

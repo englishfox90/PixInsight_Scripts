@@ -58,7 +58,7 @@ function readExistingROIs(refImageId) {
  * @param {boolean} autoModeFailed - Optional flag indicating auto ROI detection failed
  * @returns {Object} Object with bg and fg rectangle objects, or null if cancelled
  */
-function promptForROIs(refImageId, autoModeFailed) {
+function promptForROIs(refImageId, autoModeFailed, filterName) {
    var window = ImageWindow.windowById(refImageId);
    if (!window || window.isNull) {
       throw new Error("Reference image window not found");
@@ -87,14 +87,15 @@ function promptForROIs(refImageId, autoModeFailed) {
       var bgRect = window.previewRect(bgPreview);
       var fgRect = window.previewRect(fgPreview);
       
+      var filterLabel = filterName ? (" (" + filterName + ")") : "";
       var confirmMsg = new MessageBox(
-         "Found existing ROI previews:\n\n" +
+         "Found existing ROI previews" + filterLabel + ":\n\n" +
          "   BG: " + formatRect({x0: bgRect.x0, y0: bgRect.y0, 
                                  x1: bgRect.x1, y1: bgRect.y1}) + "\n" +
          "   FG: " + formatRect({x0: fgRect.x0, y0: fgRect.y0, 
                                  x1: fgRect.x1, y1: fgRect.y1}) + "\n\n" +
          "Use these previews for analysis?",
-         "Confirm ROI Previews",
+         "Confirm ROI Previews" + filterLabel,
          StdIcon_Question,
          StdButton_Yes,
          StdButton_No
@@ -178,13 +179,14 @@ function measureSNR(imageId, bgRect, fgRect) {
    var bgStats = measureROI(image, bgRect);
    var fgStats = measureROI(image, fgRect);
    
-   // Compute SNR = (signal - background) / noise
-   // signal = fgMedian, background = bgMedian, noise = fgSigma
-   var snr = (fgStats.median - bgStats.median) / fgStats.sigma;
+   // Compute SNR = (signal - background) / noise using background noise
+   var snr = (fgStats.mean - bgStats.mean) / bgStats.sigma;
    
    return {
+      bgMean: bgStats.mean,
       bgMedian: bgStats.median,
       bgSigma: bgStats.sigma,
+      fgMean: fgStats.mean,
       fgMedian: fgStats.median,
       fgSigma: fgStats.sigma,
       snr: snr
@@ -209,10 +211,12 @@ function measureROI(image, rect) {
    roiImage.assign(image, new Rect(rect.x0, rect.y0, rect.x1, rect.y1));
    
    // Measure statistics
+   var mean = roiImage.mean();
    var median = roiImage.median();
    var sigma = roiImage.stdDev();
    
    return {
+      mean: mean,
       median: median,
       sigma: sigma
    };

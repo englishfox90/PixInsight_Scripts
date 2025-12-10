@@ -58,8 +58,12 @@ function planIntegrationDepths(strategy, maxSubs, customList, includeFullDepth) 
          totalExposure: 0,  // Will be calculated when subframes are known
          integrationTime: 0,
          starRemovalTime: 0,
+         starRemovalTimeSec: 0,
          stretchTime: 0,
+         bgMean: 0,
          bgMedian: 0,
+         bgSigma: 0,
+         fgMean: 0,
          fgMedian: 0,
          fgSigma: 0,
          snr: 0
