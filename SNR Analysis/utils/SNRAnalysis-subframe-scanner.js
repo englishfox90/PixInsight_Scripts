@@ -138,6 +138,37 @@ function findFilesRecursive(dirPath, extensions) {
 /**
  * Extract metadata from a single subframe
  */
+var __snrExposureUnitConversionNotified = false;
+
+function normalizeExposureSeconds(exposureValue) {
+   if (typeof exposureValue !== "number" || !isFinite(exposureValue) || exposureValue <= 0)
+      return 0;
+
+   // Heuristic:
+   // - Some producers write EXPTIME/EXPOSURE in milliseconds (e.g. 600000 for 600s)
+   // - Some write microseconds (e.g. 600000000 for 600s)
+   // We only convert when values are very large and cleanly divisible.
+   if (exposureValue > 10000) {
+      var rounded = Math.round(exposureValue);
+      if (Math.abs(exposureValue - rounded) < 1.0e-6) {
+         // milliseconds
+         if (rounded % 1000 === 0) {
+            var secFromMs = rounded / 1000;
+            if (secFromMs > 0 && secFromMs <= 20000)
+               return secFromMs;
+         }
+         // microseconds
+         if (rounded % 1000000 === 0) {
+            var secFromUs = rounded / 1000000;
+            if (secFromUs > 0 && secFromUs <= 20000)
+               return secFromUs;
+         }
+      }
+   }
+
+   return exposureValue;
+}
+
 function extractSubframeMetadata(filePath) {
    try {
       // Fast keyword-only reading without loading image data
@@ -178,7 +209,15 @@ function extractSubframeMetadata(filePath) {
       // Close the window immediately
       window.forceClose();
       
-      // Validate required fields
+      // Normalize and validate required fields
+      var normalizedExposure = normalizeExposureSeconds(exposure);
+      if (normalizedExposure !== exposure && !__snrExposureUnitConversionNotified) {
+         __snrExposureUnitConversionNotified = true;
+         console.warningln("Exposure keyword appears to be in ms/us for some files; converting to seconds for calculations.");
+      }
+
+      exposure = normalizedExposure;
+
       if (exposure <= 0) {
          return null;
       }

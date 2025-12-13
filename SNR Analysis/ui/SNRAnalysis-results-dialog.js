@@ -64,7 +64,7 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath, insights
                  formatTime(insights.recommendedRange.minExposure) + " - " +
                  formatTime(insights.recommendedRange.maxExposure) + "\n";
       }
-      if (insights.scalingExponent !== null) {
+      if (typeof insights.scalingExponent === "number" && isFinite(insights.scalingExponent)) {
          text += "• Scaling exponent: " + insights.scalingExponent.toFixed(2) + " (ideal √N = 0.50)\n";
       }
       if (insights.projectedGains) {
@@ -290,8 +290,8 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
          summaryContent += "INSIGHTS\n";
          summaryContent += "=".repeat(80) + "\n\n";
          
-         if (fr.insights.scalingExponent !== undefined) {
-            summaryContent += "Scaling Exponent: " + fr.insights.scalingExponent.toFixed(3) + 
+         if (typeof fr.insights.scalingExponent === "number" && isFinite(fr.insights.scalingExponent)) {
+            summaryContent += "Scaling Exponent: " + fr.insights.scalingExponent.toFixed(3) +
                             " (ideal √N = 0.500)\n";
          }
 
@@ -461,7 +461,7 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
       previewTabBox.addPage(graphTab, "Graph");
       
       // Tab 2: Stack Preview
-      var filterSuffix = "_" + fr.filterName.replace(/[^a-zA-Z0-9]/g, "_");
+      var filterSuffix = (typeof fr.filterSuffix === "string") ? fr.filterSuffix : ("_" + fr.filterName.replace(/[^a-zA-Z0-9]/g, "_"));
       var stackTab = createStackPreviewPanel(
          tabPage,
          createStackPreviewEntries(fr.results, outputDir, filterSuffix, CONFIG.generateStarless),

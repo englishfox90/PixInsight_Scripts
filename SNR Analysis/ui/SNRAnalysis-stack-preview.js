@@ -14,15 +14,34 @@
 function createStackPreviewEntries(results, outputDir, filterSuffix, starRemovalEnabled) {
    var entries = [];
    filterSuffix = filterSuffix || "";
+
+   function resolvePath(basePath, fallbackPath) {
+      if (File.exists(basePath))
+         return basePath;
+      if (fallbackPath && File.exists(fallbackPath))
+         return fallbackPath;
+      return basePath;
+   }
    
    for (var i = 0; i < results.length; i++) {
       var r = results[i];
       
       var stackPath = outputDir + "/int_" + r.label + filterSuffix + ".xisf";
+      // Fallback: if suffix-based name is missing, try without suffix (and vice versa)
+      var altStackPath = null;
+      if (filterSuffix) {
+         altStackPath = outputDir + "/int_" + r.label + ".xisf";
+      }
+      stackPath = resolvePath(stackPath, altStackPath);
       var starlessPath = null;
       
       if (starRemovalEnabled) {
          starlessPath = outputDir + "/int_" + r.label + filterSuffix + "_starless.xisf";
+         var altStarlessPath = null;
+         if (filterSuffix) {
+            altStarlessPath = outputDir + "/int_" + r.label + "_starless.xisf";
+         }
+         starlessPath = resolvePath(starlessPath, altStarlessPath);
          // Check if starless file exists, otherwise set to null
          if (!File.exists(starlessPath)) {
             starlessPath = null;
@@ -60,11 +79,11 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
    // Info label at top
    var infoLabel = new Label(panel);
    if (isCroppedMode) {
-      infoLabel.text = "Cropped ROI stack preview";
-      infoLabel.toolTip = "Showing cropped region from ROI bounding box";
+      infoLabel.text = "Cropped ROI stack preview (auto-stretch is display-only; SNR is measured on linear data before stretch)";
+      infoLabel.toolTip = "Preview uses an automatic display stretch for visibility only. SNR calculations are performed on the linear (pre-stretch) integration.";
    } else {
-      infoLabel.text = "Integrated stack preview";
-      infoLabel.toolTip = "Showing full-frame integrated stacks";
+      infoLabel.text = "Integrated stack preview (auto-stretch is display-only; SNR is measured on linear data before stretch)";
+      infoLabel.toolTip = "Preview uses an automatic display stretch for visibility only. SNR calculations are performed on the linear (pre-stretch) integration.";
    }
    infoLabel.styleSheet = "font-style: italic; color: #606060;";
    infoLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
@@ -193,22 +212,17 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
          window.hide();  // Don't show to user
          previewBox.currentWindow = window;
          
-         // Calculate Auto-STF parameters (standard PixInsight auto-stretch)
+         // Calculate Auto-STF parameters (PixInsight-style)
          var img = window.mainView.image;
          var median = img.median();
          var avgDev = img.avgDev();
-         
-         // Shadow clipping point
-         var c0 = Math.max(0, median + (-2.8) * avgDev);
-         
-         // Target background of 0.25 (standard PixInsight auto-STF)
-         var targetBackground = 0.25;
-         var m = calculateMidtonesBalance(median - c0, targetBackground);
-         
-         // Highlight point - leave at 1.0 (no clipping)
-         var c1 = 1.0;
-         
-         console.writeln("STF params - c0: " + c0 + ", m: " + m + ", c1: " + c1);
+
+         var stretch = calculateAutoStretchParameters(median, avgDev, -1.25, 0.25);
+         var c0 = stretch.c0;
+         var m = stretch.m;
+         var c1 = stretch.c1;
+
+         console.writeln("Preview stretch - c0: " + c0 + ", m: " + m + ", c1: " + c1);
          console.writeln("Image min: " + img.minimum() + ", median: " + median + ", max: " + img.maximum());
          
          // Create a working copy of the image
@@ -216,13 +230,16 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
                                        img.colorSpace, img.bitsPerSample, img.sampleType);
          stretchedImg.assign(img);
          
-         // Apply stretch using HistogramTransformation on the copy
+         // Apply stretch using a linked HistogramTransformation on the copy.
+         // Applying per-channel stretches can exaggerate artifacts/colors; use the RGB/K row.
          var HT = new HistogramTransformation;
-         HT.H = [[c0, m, c1, 0, 1.0],
-                 [c0, m, c1, 0, 1.0],
-                 [c0, m, c1, 0, 1.0],
-                 [c0, m, c1, 0, 1.0],
-                 [c0, m, c1, 0, 1.0]];
+         HT.H = [
+            [0, 0.5, 1, 0, 1],
+            [0, 0.5, 1, 0, 1],
+            [0, 0.5, 1, 0, 1],
+            [c0, m, c1, 0, 1],
+            [0, 0.5, 1, 0, 1]
+         ];
          
          // Apply the stretch to the copied image
          HT.executeOn(stretchedImg);
@@ -354,4 +371,51 @@ function calculateMidtonesBalance(median, targetMedian) {
    if (m > 1) m = 1;
    
    return m;
+}
+
+/*
+ * PixInsight AutoSTF-style parameter calculation for previews.
+ * Based on the simplified AutoStretch routine (c0 in sigma units + midtones solve).
+ */
+function findMidtonesBalance(v0, v1, eps) {
+   if (v1 <= 0)
+      return 0;
+   if (v1 >= 1)
+      return 1;
+
+   v0 = Math.range(v0, 0.0, 1.0);
+   eps = eps ? Math.max(1.0e-15, eps) : 5.0e-05;
+
+   var m0, m1;
+   if (v1 < v0) {
+      m0 = 0;
+      m1 = 0.5;
+   } else {
+      m0 = 0.5;
+      m1 = 1;
+   }
+
+   for (;;) {
+      var m = (m0 + m1) / 2;
+      var v = Math.mtf(m, v1);
+
+      if (Math.abs(v - v0) < eps)
+         return m;
+
+      if (v < v0)
+         m1 = m;
+      else
+         m0 = m;
+   }
+}
+
+function calculateAutoStretchParameters(median, avgDev, shadowsClipping, targetBackground) {
+   if (shadowsClipping === undefined)
+      shadowsClipping = -1.25;
+   if (targetBackground === undefined)
+      targetBackground = 0.25;
+
+   var c0 = Math.range(median + shadowsClipping * avgDev, 0.0, 1.0);
+   var m = findMidtonesBalance(targetBackground, median - c0);
+   return { m: m, c0: c0, c1: 1 };
 }

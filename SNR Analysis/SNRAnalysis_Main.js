@@ -269,6 +269,7 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
    
    return {
       filterName: filterName,
+      filterSuffix: filterSuffix,
       results: results,
       rois: rois,
       insights: insights,
@@ -570,6 +571,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    
    return {
       filterName: filterName,
+      filterSuffix: filterSuffix,
       results: results,
       rois: rois,
       insights: insights,

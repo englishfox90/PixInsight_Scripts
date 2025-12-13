@@ -83,9 +83,10 @@ function computeScalingExponent(results) {
    var logSNR = [];
    
    for (var i = 0; i < results.length; i++) {
-      if (results[i].snr > 0) {
-         logN.push(Math.log(results[i].depth));
-         logSNR.push(Math.log(results[i].snr));
+      var r = results[i];
+      if (r && r.depth > 0 && r.snr > 0) {
+         logN.push(Math.log(r.depth));
+         logSNR.push(Math.log(r.snr));
       }
    }
    
@@ -102,8 +103,12 @@ function computeScalingExponent(results) {
       sumX2 += logN[i] * logN[i];
    }
    
-   var slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-   
+   var denom = (n * sumX2 - sumX * sumX);
+   if (denom === 0) return null;
+
+   var slope = (n * sumXY - sumX * sumY) / denom;
+   if (!isFinite(slope)) return null;
+
    return slope;
 }
 
@@ -111,7 +116,7 @@ function computeScalingExponent(results) {
  * Project potential SNR gains with additional integration time
  */
 function projectFutureGains(results, insights) {
-   if (results.length < 2 || !insights.scalingExponent) {
+   if (results.length < 2 || !insights || typeof insights.scalingExponent !== "number" || !isFinite(insights.scalingExponent)) {
       return null;
    }
    
