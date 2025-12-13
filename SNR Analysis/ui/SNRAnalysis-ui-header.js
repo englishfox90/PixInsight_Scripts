@@ -19,7 +19,7 @@ function buildHeaderSection(dialog) {
    titleSizer.spacing = 4;
    
    var titleLabel = new Label(dialog);
-   titleLabel.text = "SNR vs Integration Time Analysis v1.0.0";
+   titleLabel.text = "SNR vs Integration Time Analysis v" + (typeof SCRIPT_VERSION !== "undefined" ? SCRIPT_VERSION : "?");
    titleLabel.styleSheet = "QLabel { font-weight: bold; }";
    
    var copyrightLabel = new Label(dialog);

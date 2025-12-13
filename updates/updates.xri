@@ -11,7 +11,7 @@
 
   <platform os="all" arch="noarch" version="1.8.0:2.0.0">
     <package fileName="AstroBinExport-3.2.1-20251212.zip"
-             sha1="c83319aa9cf28116e4b203b5a13ef9e55f7374b6"
+             sha1="cf6140d8c7430beb25a98e994c4a1337dab91bce"
              type="script"
              releaseDate="20251212">
       <title>
@@ -41,7 +41,7 @@
     </package>
 
     <package fileName="SNRAnalysis-1.5.5-20251212.zip"
-             sha1="e1e2037f08d7daec59b7baa2670c575495137987"
+             sha1="335e905d3c49821081b1961068a91da7bacbac1f"
              type="script"
              releaseDate="20251212">
       <title>

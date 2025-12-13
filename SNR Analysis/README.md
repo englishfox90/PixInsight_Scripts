@@ -264,7 +264,7 @@ MIT License - see repository root for details
 
 ## Version
 
-**1.0.0** - Initial production release
+**1.5.5**
 
 ---
 
