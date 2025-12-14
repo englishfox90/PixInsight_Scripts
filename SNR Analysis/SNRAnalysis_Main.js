@@ -15,7 +15,7 @@
                foreground ROIs, generates graphs, and provides insights about diminishing \
                returns and optimal integration times.
 
-#feature-icon  SNRAnalysis.svg
+#feature-icon  @script_icons_dir/SNRAnalysis.svg
 
 // Include necessary PJSR libraries
 #include <pjsr/Sizer.jsh>
