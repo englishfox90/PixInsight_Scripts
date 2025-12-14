@@ -507,6 +507,9 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
       tabPage.graphTypeCombo = graphTypeCombo;
       tabPage.graphPreview = graphPreview;
       
+      // Force initial graph display update
+      graphPreview.viewport.update();
+      
       graphTab.sizer.add(graphPreview);
       
       previewTabBox.addPage(graphTab, "Graph");
