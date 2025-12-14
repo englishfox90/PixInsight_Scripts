@@ -52,7 +52,7 @@ A production-ready PixInsight PJSR script that analyzes how Signal-to-Noise Rati
    - Organize in a directory (can include multiple filters)
 
 2. **Configure Analysis**
-   - Select input directory containing calibrated subs
+   - Select input directory containing calibrated  and registered subs
    - Enable "Analyze all filters separately" to auto-group by FILTER header
    - **Choose ROI Mode**:
      - **Auto**: Script automatically detects background and faint signal regions using tile-based analysis
@@ -151,7 +151,7 @@ ANOMALIES DETECTED:
 ## Configuration Options
 
 ### Input
-- **Input Directory**: Folder containing calibrated subframes
+- **Input Directory**: Folder containing calibrated  and registered subframes
 - **File Pattern**: File extensions to scan (default: `*.xisf;*.fits`)
 - **Analyze All Filters**: Group subframes by FILTER header for independent analysis
 

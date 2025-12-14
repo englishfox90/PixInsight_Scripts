@@ -10,195 +10,245 @@
  * @param {string} outputDir - Output directory path
  * @param {string} graphPath - Optional path to graph image file
  */
-function showResultsDialog(results, totalTimeSec, outputDir, graphPath, insights) {
+function showResultsDialog(results, totalTimeSec, outputDir, graphPath, gainGraphPathParam, insights) {
    var dialog = new Dialog();
    dialog.windowTitle = "SNR Analysis Complete";
-   dialog.scaledMinWidth = 800;
-   dialog.scaledMinHeight = 975;
+   dialog.scaledMinWidth = 1000;
+   dialog.scaledMinHeight = 1250;
    
    // Results summary
    var summaryText = new TextBox(dialog);
    summaryText.readOnly = true;
    summaryText.styleSheet = "font-family: monospace; font-size: 10pt;";
-   summaryText.setScaledMinSize(750, 415);
+   summaryText.setScaledMinSize(950, 415);
    
    var text = "=== SNR ANALYSIS RESULTS ===\n\n";
+
+   // Calculate overall improvement
+   if (results.length >= 2) {
+      var firstSNR = results[0].snr;
+      var lastSNR = results[results.length - 1].snr;
+      var totalImprovement = ((lastSNR - firstSNR) / firstSNR) * 100;
+      var snrMultiplier = lastSNR / firstSNR;
+      
+      text += "OVERALL IMPROVEMENT:\n";
+      text += "  " + results[0].label + " → " + results[results.length - 1].label + "\n";
+      text += "  SNR: " + firstSNR.toFixed(2) + " → " + lastSNR.toFixed(2) + "\n";
+      text += "  ★ " + totalImprovement.toFixed(1) + "% better (" + snrMultiplier.toFixed(2) + "x increase)\n\n";
+   }
+   
+   // Part E - Clarify signal scale locking if enabled
+   var lockScaleEnabled = (results.length > 0 && results[0].scaleFactor !== undefined && results[0].scaleFactor !== 1.0);
+   if (lockScaleEnabled) {
+      text += "  ★ Signal scale locked to reference background for consistent measurement\n";
+      text += "  ★ All integrations normalized before SNR calculation\n";
+   }
+   text += "\n";
+
    text += "Analyzed " + results.length + " integration depths\n";
    text += "Total runtime: " + formatTime(totalTimeSec) + "\n\n";
    
-   text += "Label        N Subs    Total Exp               SNR         \u0394 SNR\n";
-   text += "--------------------------------------------------------------------\n";
+   text += "Label        N Subs    Total Exp               SNR      Improvement    Gain/hr\n";
+   text += "------------------------------------------------------------------------------------\n";
    
    for (var i = 0; i < results.length; i++) {
       var r = results[i];
       var deltaSNR = "";
+      var gainHrStr = "--";
       
       if (i > 0) {
          var delta = ((r.snr - results[i-1].snr) / results[i-1].snr) * 100;
-         deltaSNR = (delta >= 0 ? "+" : "") + delta.toFixed(1) + "%";
+         var arrow = delta > 50 ? "↑↑" : delta > 20 ? "↑ " : delta > 0 ? "↗ " : "→ ";
+         deltaSNR = arrow + (delta >= 0 ? "+" : "") + delta.toFixed(1) + "%";
+         if (r.gainPerHour !== null && r.gainPerHour !== undefined) {
+            gainHrStr = r.gainPerHour.toFixed(1) + "%/h";
+         }
+      } else {
+         deltaSNR = "(baseline)";
       }
       
       var line = padRight(r.label, 12) + " " + 
               padLeft(r.depth.toString(), 6) + "    " +
               padLeft(formatTime(r.totalExposure), 20) + "    " +
               padLeft(r.snr.toFixed(2), 6) + "    " +
-              padLeft(deltaSNR, 8) + "\n";
+              padLeft(deltaSNR, 14) + "   " +
+              padLeft(gainHrStr, 10) + "\n";
       text += line;
    }
    
    text += "\n=== INSIGHTS ===\n\n";
    
-   if (insights) {
-      if (insights.diminishingReturns10pct) {
-         var idx10 = findResultIndex(results, insights.diminishingReturns10pct);
-         text += "• SNR improvements drop below 10% after " + insights.diminishingReturns10pct +
-                 " (" + formatTime(results[idx10].totalExposure) + ")\n";
-      }
-      if (insights.diminishingReturns5pct) {
-         var idx5 = findResultIndex(results, insights.diminishingReturns5pct);
-         text += "• SNR improvements drop below 5% after " + insights.diminishingReturns5pct +
-                 " (" + formatTime(results[idx5].totalExposure) + ")\n";
-      }
-      if (insights.recommendedRange) {
-         text += "• Recommended integration range: " +
-                 formatTime(insights.recommendedRange.minExposure) + " - " +
-                 formatTime(insights.recommendedRange.maxExposure) + "\n";
-      }
-      if (typeof insights.scalingExponent === "number" && isFinite(insights.scalingExponent)) {
-         text += "• Scaling exponent: " + insights.scalingExponent.toFixed(2) + " (ideal √N = 0.50)\n";
-      }
-      if (insights.projectedGains) {
-         var proj = insights.projectedGains;
-         if (proj.category === "strong") {
-            text += "\nADDITIONAL INTEGRATION RECOMMENDED:\n";
-            text += "Current: " + proj.currentDepth + " subs, SNR = " + proj.currentSNR.toFixed(2) + "\n";
-            text += "Doubling integration (" + formatTime(proj.projection2x.totalTime) + " total):\n";
-            text += "  → Projected SNR: " + proj.projection2x.snr.toFixed(2) + " (+" + proj.projection2x.gain.toFixed(1) + "% gain)\n";
-            text += "  → Additional time needed: " + formatTime(proj.projection2x.additionalTime) + "\n";
-            text += "Tripling integration (" + formatTime(proj.projection3x.totalTime) + " total):\n";
-            text += "  → Projected SNR: " + proj.projection3x.snr.toFixed(2) + " (+" + proj.projection3x.gain.toFixed(1) + "% gain)\n";
-            text += "  → Additional time needed: " + formatTime(proj.projection3x.additionalTime) + "\n";
-         } else if (proj.category === "modest") {
-            text += "\nMODEST GAINS POSSIBLE:\n";
-            text += "Last step gain: " + proj.lastImprovementPct.toFixed(1) + "%\n";
-            text += "Doubling integration (" + formatTime(proj.projection2x.totalTime) + " total):\n";
-            text += "  → Projected SNR: " + proj.projection2x.snr.toFixed(2) + " (+" + proj.projection2x.gain.toFixed(1) + "% gain)\n";
-            text += "  → Additional time needed: " + formatTime(proj.projection2x.additionalTime) + "\n";
-            text += "Tripling integration (" + formatTime(proj.projection3x.totalTime) + " total):\n";
-            text += "  → Projected SNR: " + proj.projection3x.snr.toFixed(2) + " (+" + proj.projection3x.gain.toFixed(1) + "% gain)\n";
-            text += "  → Additional time needed: " + formatTime(proj.projection3x.additionalTime) + "\n";
-         } else {
-            text += "\nINTEGRATION STATUS:\n";
-            text += "• Diminishing returns reached - additional integration may not be cost-effective\n";
-         }
-      }
-      if (insights.anomalies && insights.anomalies.length > 0) {
-         text += "\nANOMALIES DETECTED:\n";
-         for (var a = 0; a < insights.anomalies.length; a++) {
-            text += "  - " + insights.anomalies[a].label + ": " + insights.anomalies[a].issue + "\n";
-         }
-      }
+   if (insights && insights.summary) {
+      // Use the comprehensive summary generated by generateInsightsSummary()
+      text += insights.summary;
    }
    
    text += "\n=== OUTPUT FILES ===\n\n";
-   text += "Location: " + outputDir + "\n\n";
-   text += "\u2022 snr_results.csv - Full data for spreadsheet analysis\n";
-   text += "\u2022 snr_results.json - Structured data with insights\n";
-   text += "\u2022 snr_graph.png/jpg - Visual plot of SNR vs time\n";
-   text += "\u2022 int_NX.xisf - Integration files for each depth\n";
+   text += "Base Location: " + CONFIG.baseAnalysisDir + "\n\n";
+   text += "Data (CSV/JSON):\n";
+   text += "  \u2022 data/snr_results.csv - Full data for spreadsheet analysis\n";
+   text += "  \u2022 data/snr_results.json - Structured data with insights\n\n";
+   text += "Graphs:\n";
+   text += "  \u2022 graphs/snr_graph.png - SNR vs integration time\n";
+   text += "  \u2022 graphs/gain_graph.png - Gain/hr vs integration time\n\n";
+   text += "Integrations:\n";
+   text += "  \u2022 integrations/int_NX.xisf - Integrated files for each depth\n\n";
+   text += "Previews:\n";
+   text += "  \u2022 previews/int_NX_starless.xisf - Starless versions\n";
    
    summaryText.text = text;
    
    // Create preview TabBox to hold Graph and Stack preview
    var previewTabBox = new TabBox(dialog);
    
-   // Tab 1: Graph Preview (existing functionality preserved)
+   // Tab 1: Graph Preview with dropdown selector
    var graphTab = new Control(dialog);
    graphTab.sizer = new VerticalSizer;
-   graphTab.sizer.margin = 4;
+   graphTab.sizer.margin = 6;
    graphTab.sizer.spacing = 4;
    
-   // Graph preview using ScrollBox (existing code preserved)
-   var graphPreview = null;
+   // Graph type selector row
+   var graphSelectorSizer = new HorizontalSizer;
+   graphSelectorSizer.spacing = 6;
    
-   // Use provided graphPath if available, otherwise try default locations
-   if (!graphPath) {
-      graphPath = outputDir + "/snr_graph.png";
-      if (!File.exists(graphPath)) {
-         graphPath = outputDir + "/snr_graph.jpg";
+   var graphTypeLabel = new Label(graphTab);
+   graphTypeLabel.text = "Graph Type:";
+   graphTypeLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   graphTypeLabel.minWidth = 80;
+   
+   var graphTypeCombo = new ComboBox(graphTab);
+   graphTypeCombo.addItem("SNR vs Time");
+   graphTypeCombo.addItem("Gain/hr vs Time");
+   graphTypeCombo.currentItem = 0;
+   graphTypeCombo.minWidth = 150;
+   
+   graphSelectorSizer.add(graphTypeLabel);
+   graphSelectorSizer.add(graphTypeCombo);
+   graphSelectorSizer.addStretch();
+   
+   graphTab.sizer.add(graphSelectorSizer);
+   
+   // Graph preview ScrollBox
+   var graphPreview = new ScrollBox(graphTab);
+   graphPreview.autoScroll = true;
+   graphPreview.setScaledMinSize(780, 390);
+   graphPreview.setScaledMaxSize(780, 390);
+   
+   // Store both graph paths
+   var snrGraphPath = graphPath;
+   var gainGraphPath = gainGraphPathParam;
+   
+   // Debug: Show what paths were passed
+   console.writeln("Graph paths received - SNR: " + (snrGraphPath || "null") + ", Gain: " + (gainGraphPath || "null"));
+   
+   // Try to find SNR graph if not provided
+   if (!snrGraphPath) {
+      snrGraphPath = CONFIG.graphsDir + "/snr_graph.png";
+      if (!File.exists(snrGraphPath)) {
+         snrGraphPath = CONFIG.graphsDir + "/snr_graph.jpg";
       }
-      if (!File.exists(graphPath)) {
-         graphPath = outputDir + "/snr_graph.bmp";
+      if (!File.exists(snrGraphPath)) {
+         snrGraphPath = CONFIG.graphsDir + "/snr_graph.bmp";
       }
+      console.writeln("SNR graph fallback search result: " + snrGraphPath);
    }
    
-   console.writeln("Single-filter dialog checking graph: " + graphPath);
-   console.writeln("  File.exists: " + File.exists(graphPath));
+   // Try to find Gain/hr graph if not provided
+   if (!gainGraphPath) {
+      gainGraphPath = CONFIG.graphsDir + "/gain_graph.png";
+      if (!File.exists(gainGraphPath)) {
+         gainGraphPath = CONFIG.graphsDir + "/gain_graph.jpg";
+      }
+      if (!File.exists(gainGraphPath)) {
+         gainGraphPath = CONFIG.graphsDir + "/gain_graph.bmp";
+      }
+      console.writeln("Gain graph fallback search result: " + gainGraphPath);
+   }
    
-   if (graphPath && File.exists(graphPath)) {
+   // Load both graphs
+   var snrGraphBitmap = null;
+   var gainGraphBitmap = null;
+   
+   if (snrGraphPath && File.exists(snrGraphPath)) {
       try {
-         var bmp = new Bitmap(graphPath);
-         
-         graphPreview = new ScrollBox(graphTab);
-         graphPreview.autoScroll = true;
-         graphPreview.setScaledMinSize(780, 420);
-         graphPreview.setScaledMaxSize(780, 420);
-         
-         // Store bitmap reference for paint handler
-         graphPreview.graphBitmap = bmp;
-         
-         graphPreview.viewport.onPaint = function(x0, y0, x1, y1) {
-            var g = new Graphics(this);
-            var bmp = this.parent.graphBitmap;
-            
-            if (bmp && bmp.width > 0 && bmp.height > 0) {
-               // Fill background (white for single-filter)
-               g.fillRect(x0, y0, x1, y1, new Brush(0xFFFFFFFF));
-               
-               // Calculate scale to fit viewport
-               var maxWidth = 760;
-               var maxHeight = 400;
-               var scale = Math.min(maxWidth / bmp.width, maxHeight / bmp.height, 1.0);
-               var scaledWidth = Math.floor(bmp.width * scale);
-               var scaledHeight = Math.floor(bmp.height * scale);
-               
-               // Center the scaled bitmap in the viewport
-               var xOffset = Math.max(0, (this.width - scaledWidth) / 2);
-               var yOffset = Math.max(0, (this.height - scaledHeight) / 2);
-               
-               // Draw scaled bitmap
-               g.drawScaledBitmap(xOffset, yOffset, xOffset + scaledWidth, yOffset + scaledHeight, bmp);
-            } else {
-               g.fillRect(x0, y0, x1, y1, new Brush(0xFFFFFFFF));
-               g.pen = new Pen(0xFF000000);
-               g.drawText(10, 30, "No graph available");
-            }
-            
-            g.end();
-         };
-         
-         console.writeln("Graph preview loaded: " + graphPath + " (" + bmp.width + "x" + bmp.height + ")");
+         snrGraphBitmap = new Bitmap(snrGraphPath);
+         console.writeln("SNR graph loaded: " + snrGraphPath);
       } catch (e) {
-         console.warningln("Graph preview failed: " + e.message);
-         graphPreview = null;
+         console.warningln("Failed to load SNR graph: " + e.message);
       }
    }
    
-   if (graphPreview) {
-      graphTab.sizer.add(graphPreview);
-   } else {
-      var noGraphLabel = new Label(graphTab);
-      noGraphLabel.text = "Graph not available";
-      noGraphLabel.textAlignment = TextAlign_Center | TextAlign_VertCenter;
-      graphTab.sizer.add(noGraphLabel);
+   if (gainGraphPath && File.exists(gainGraphPath)) {
+      try {
+         gainGraphBitmap = new Bitmap(gainGraphPath);
+         console.writeln("Gain/hr graph loaded: " + gainGraphPath);
+      } catch (e) {
+         console.warningln("Failed to load Gain/hr graph: " + e.message);
+      }
    }
+   
+   // Store bitmaps for switching
+   graphPreview.snrBitmap = snrGraphBitmap;
+   graphPreview.gainBitmap = gainGraphBitmap;
+   graphPreview.currentBitmap = snrGraphBitmap;
+   graphPreview.statusText = snrGraphBitmap ? "" : "SNR graph not available";
+   
+   // Viewport paint handler
+   graphPreview.viewport.onPaint = function(x0, y0, x1, y1) {
+      var g = new Graphics(this);
+      var bmp = this.parent.currentBitmap;
+      
+      if (bmp && bmp.width > 0 && bmp.height > 0) {
+         // Fill background (white)
+         g.fillRect(x0, y0, x1, y1, new Brush(0xFFFFFFFF));
+         
+         // Calculate scale to fit viewport
+         var maxWidth = 760;
+         var maxHeight = 370;
+         var scale = Math.min(maxWidth / bmp.width, maxHeight / bmp.height, 1.0);
+         var scaledWidth = Math.floor(bmp.width * scale);
+         var scaledHeight = Math.floor(bmp.height * scale);
+         
+         // Center the scaled bitmap
+         var xOffset = Math.max(0, (this.width - scaledWidth) / 2);
+         var yOffset = Math.max(0, (this.height - scaledHeight) / 2);
+         
+         // Draw scaled bitmap
+         g.drawScaledBitmap(xOffset, yOffset, xOffset + scaledWidth, yOffset + scaledHeight, bmp);
+      } else {
+         // No graph available
+         g.fillRect(x0, y0, x1, y1, new Brush(0xFFFFFFFF));
+         g.pen = new Pen(0xFF000000);
+         g.font = new Font("helvetica", 12);
+         var statusText = this.parent.statusText || "Graph not available";
+         g.drawText(20, 30, statusText);
+      }
+      
+      g.end();
+   };
+   
+   // Graph type combo change handler
+   graphTypeCombo.onItemSelected = function(index) {
+      if (index === 0) {
+         // SNR graph
+         graphPreview.currentBitmap = graphPreview.snrBitmap;
+         graphPreview.statusText = graphPreview.snrBitmap ? "" : "SNR graph not available";
+      } else {
+         // Gain/hr graph
+         graphPreview.currentBitmap = graphPreview.gainBitmap;
+         graphPreview.statusText = graphPreview.gainBitmap ? "" : "Gain/hr graph not available";
+      }
+      graphPreview.viewport.update();
+   };
+   
+   graphTab.sizer.add(graphPreview)
    
    previewTabBox.addPage(graphTab, "Graph");
    
    // Tab 2: Stack Preview
    var stackTab = createStackPreviewPanel(
       dialog,
-      createStackPreviewEntries(results, outputDir, "", CONFIG.generateStarless),
+      createStackPreviewEntries(results, null, "", CONFIG.generateStarless),
       false,  // Always full-frame mode
       ""
    );
@@ -261,27 +311,61 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
       var summaryContent = "";
       summaryContent += "SNR Analysis Results - " + fr.filterName + "\n";
       summaryContent += "=".repeat(80) + "\n\n";
+
+      // Calculate overall improvement for this filter
+      if (fr.results.length >= 2) {
+         var firstSNR = fr.results[0].snr;
+         var lastSNR = fr.results[fr.results.length - 1].snr;
+         var totalImprovement = ((lastSNR - firstSNR) / firstSNR) * 100;
+         var snrMultiplier = lastSNR / firstSNR;
+         
+         summaryContent += "OVERALL IMPROVEMENT:\n";
+         summaryContent += "  " + fr.results[0].label + " → " + fr.results[fr.results.length - 1].label + "\n";
+         summaryContent += "  SNR: " + firstSNR.toFixed(2) + " → " + lastSNR.toFixed(2) + "\n";
+         summaryContent += "  ★ " + totalImprovement.toFixed(1) + "% better (" + snrMultiplier.toFixed(2) + "x increase)\n\n";
+      }
+      
+      // Part E - Clarify signal scale locking if enabled
+      var lockScaleEnabled = (fr.results.length > 0 && fr.results[0].scaleFactor !== undefined && fr.results[0].scaleFactor !== 1.0);
+      if (lockScaleEnabled) {
+         summaryContent += "  ★ Signal scale locked to reference background for consistent measurement\n";
+         summaryContent += "  ★ All integrations normalized before SNR calculation\n";
+      }
+      summaryContent += "\n";
       
       summaryContent += "Output Directory: " + outputDir + "\n";
       summaryContent += "Total Runtime: " + formatTime(fr.totalTime) + "\n";
       summaryContent += "Depths Analyzed: " + fr.results.length + "\n\n";
       
       summaryContent += padRight("Label", 12) + padRight("N Subs", 10) + padRight("Total Exp", 15) + 
-                       padRight("SNR", 10) + padRight("Int Time", 12) + "Star/Stretch\n";
-      summaryContent += "-".repeat(80) + "\n";
+                       padRight("SNR", 10) + padRight("Improvement", 14) + padRight("Gain/hr", 11) + "Timings\n";
+      summaryContent += "-".repeat(91) + "\n";
       
       for (var j = 0; j < fr.results.length; j++) {
          var r = fr.results[j];
          var totalExpStr = formatTime(r.totalExposure);
-         var intTimeStr = r.integrationTime.toFixed(1) + "s";
-         var starStretchStr = r.starRemovalTime.toFixed(1) + "s / " + r.stretchTime.toFixed(1) + "s";
+         var timingsStr = "int:" + r.integrationTime.toFixed(1) + "s star:" + r.starRemovalTime.toFixed(1) + "s";
+         
+         var improvementStr = "";
+         var gainHrStr = "--";
+         if (j > 0) {
+            var delta = ((r.snr - fr.results[j-1].snr) / fr.results[j-1].snr) * 100;
+            var arrow = delta > 50 ? "↑↑" : delta > 20 ? "↑ " : delta > 0 ? "↗ " : "→ ";
+            improvementStr = arrow + (delta >= 0 ? "+" : "") + delta.toFixed(1) + "%";
+            if (r.gainPerHour !== null && r.gainPerHour !== undefined) {
+               gainHrStr = r.gainPerHour.toFixed(1) + "%/h";
+            }
+         } else {
+            improvementStr = "(baseline)";
+         }
          
          summaryContent += padRight(r.label, 12) + 
                           padRight(r.depth.toString(), 10) + 
                           padRight(totalExpStr, 15) + 
                           padRight(r.snr.toFixed(2), 10) + 
-                          padRight(intTimeStr, 12) + 
-                          starStretchStr + "\n";
+                          padRight(improvementStr, 14) + 
+                          padRight(gainHrStr, 11) + 
+                          timingsStr + "\n";
       }
       
       // Add insights if available
@@ -290,89 +374,9 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
          summaryContent += "INSIGHTS\n";
          summaryContent += "=".repeat(80) + "\n\n";
          
-         if (typeof fr.insights.scalingExponent === "number" && isFinite(fr.insights.scalingExponent)) {
-            summaryContent += "Scaling Exponent: " + fr.insights.scalingExponent.toFixed(3) +
-                            " (ideal √N = 0.500)\n";
-         }
-
-         // Quick gain highlights
-         if (fr.insights.improvements && fr.insights.improvements.length > 0) {
-            var lastGain = fr.insights.improvements[fr.insights.improvements.length - 1];
-            var bestGain = fr.insights.improvements[0];
-            for (var g = 1; g < fr.insights.improvements.length; g++) {
-               if (fr.insights.improvements[g].improvementPct > bestGain.improvementPct) {
-                  bestGain = fr.insights.improvements[g];
-               }
-            }
-            summaryContent += "Last Step Gain: " + lastGain.improvementPct.toFixed(1) + "% (" + lastGain.fromLabel + " → " + lastGain.toLabel + ")\n";
-            summaryContent += "Best Step Gain: " + bestGain.improvementPct.toFixed(1) + "% (" + bestGain.fromLabel + " → " + bestGain.toLabel + ")\n";
-         }
-         
-         // Peak SNR
-         if (fr.results && fr.results.length > 0) {
-            var peak = fr.results[0];
-            for (var p = 1; p < fr.results.length; p++) {
-               if (fr.results[p].snr > peak.snr) {
-                  peak = fr.results[p];
-               }
-            }
-            summaryContent += "Peak SNR: " + peak.snr.toFixed(2) + " at " + peak.label + " (" + formatTime(peak.totalExposure) + ")\n";
-         }
-         
-         if (fr.insights.diminishingReturns10pct) {
-            summaryContent += "Diminishing Returns (< 10% gain): " + fr.insights.diminishingReturns10pct + "\n";
-         }
-         
-         if (fr.insights.diminishingReturns5pct) {
-            summaryContent += "Diminishing Returns (< 5% gain): " + fr.insights.diminishingReturns5pct + "\n";
-         }
-         
-         if (fr.insights.recommendedRange) {
-            summaryContent += "Recommended Range: " + 
-                            formatTime(fr.insights.recommendedRange.minExposure) + " - " +
-                            formatTime(fr.insights.recommendedRange.maxExposure) + "\n";
-         }
-         
-         // Future projections if available
-         if (fr.insights.projectedGains && fr.insights.projectedGains.category === "strong") {
-            summaryContent += "\nADDITIONAL INTEGRATION RECOMMENDED:\n";
-            var proj = fr.insights.projectedGains;
-            
-            summaryContent += "Current: " + proj.currentDepth + " subs, SNR = " + proj.currentSNR.toFixed(2) + "\n";
-            summaryContent += "Doubling integration (" + formatTime(proj.projection2x.totalTime) + " total):\n";
-            summaryContent += "  → Projected SNR: " + proj.projection2x.snr.toFixed(2) + 
-                            " (+" + proj.projection2x.gain.toFixed(1) + "% gain)\n";
-            summaryContent += "  → Additional time needed: " + formatTime(proj.projection2x.additionalTime) + "\n";
-            
-            summaryContent += "Tripling integration (" + formatTime(proj.projection3x.totalTime) + " total):\n";
-            summaryContent += "  → Projected SNR: " + proj.projection3x.snr.toFixed(2) + 
-                            " (+" + proj.projection3x.gain.toFixed(1) + "% gain)\n";
-            summaryContent += "  → Additional time needed: " + formatTime(proj.projection3x.additionalTime) + "\n";
-         } else if (fr.insights.projectedGains && fr.insights.projectedGains.category === "modest") {
-            summaryContent += "\nMODEST GAINS POSSIBLE:\n";
-            var projm = fr.insights.projectedGains;
-            summaryContent += "Last step gain: " + projm.lastImprovementPct.toFixed(1) + "%\n";
-            summaryContent += "Doubling integration (" + formatTime(projm.projection2x.totalTime) + " total):\n";
-            summaryContent += "  → Projected SNR: " + projm.projection2x.snr.toFixed(2) + 
-                            " (+" + projm.projection2x.gain.toFixed(1) + "% gain)\n";
-            summaryContent += "  → Additional time needed: " + formatTime(projm.projection2x.additionalTime) + "\n";
-            summaryContent += "Tripling integration (" + formatTime(projm.projection3x.totalTime) + " total):\n";
-            summaryContent += "  → Projected SNR: " + projm.projection3x.snr.toFixed(2) + 
-                            " (+" + projm.projection3x.gain.toFixed(1) + "% gain)\n";
-            summaryContent += "  → Additional time needed: " + formatTime(projm.projection3x.additionalTime) + "\n";
-         } else {
-            summaryContent += "\nINTEGRATION STATUS:\n";
-            summaryContent += "Diminishing returns reached - additional integration may not be cost-effective\n";
-         }
-         
-         if (fr.insights.anomalies && fr.insights.anomalies.length > 0) {
-            summaryContent += "\nAnomalies Detected:\n";
-            for (var k = 0; k < fr.insights.anomalies.length; k++) {
-               var a = fr.insights.anomalies[k];
-               var label = a.label ? a.label : "Depth";
-               var issue = a.issue ? a.issue : a.toString();
-               summaryContent += "  - " + label + ": " + issue + "\n";
-            }
+         // Use the comprehensive summary generated by generateInsightsSummary()
+         if (fr.insights.summary) {
+            summaryContent += fr.insights.summary;
          }
       }
       
@@ -382,81 +386,123 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
       // Create preview TabBox for Graph and Stack preview
       var previewTabBox = new TabBox(tabPage);
       
-      // Tab 1: Graph Preview (existing functionality)
+      // Tab 1: Graph Preview with dropdown selector
       var graphTab = new Control(tabPage);
       graphTab.sizer = new VerticalSizer;
-      graphTab.sizer.margin = 4;
+      graphTab.sizer.margin = 6;
       graphTab.sizer.spacing = 4;
       
-      // Graph preview
-      console.writeln("Filter " + fr.filterName + " - graphPath: " + (fr.graphPath ? fr.graphPath : "NULL"));
-      if (fr.graphPath) {
-         console.writeln("  File.exists(" + fr.graphPath + "): " + File.exists(fr.graphPath));
+      // Graph type selector row
+      var graphSelectorSizer = new HorizontalSizer;
+      graphSelectorSizer.spacing = 6;
+      
+      var graphTypeLabel = new Label(graphTab);
+      graphTypeLabel.text = "Graph Type:";
+      graphTypeLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+      graphTypeLabel.minWidth = 80;
+      
+      var graphTypeCombo = new ComboBox(graphTab);
+      graphTypeCombo.addItem("SNR vs Time");
+      graphTypeCombo.addItem("Gain/hr vs Time");
+      graphTypeCombo.currentItem = 0;
+      graphTypeCombo.minWidth = 150;
+      
+      graphSelectorSizer.add(graphTypeLabel);
+      graphSelectorSizer.add(graphTypeCombo);
+      graphSelectorSizer.addStretch();
+      
+      graphTab.sizer.add(graphSelectorSizer);
+      
+      // Graph preview ScrollBox
+      var graphPreview = new ScrollBox(graphTab);
+      graphPreview.autoScroll = true;
+      graphPreview.setScaledMinSize(780, 390);
+      graphPreview.setScaledMaxSize(780, 390);
+      
+      // Store both graph paths
+      var snrGraphPath = fr.graphPath;
+      var gainGraphPath = fr.gainGraphPath;
+      
+      // Debug: Show what paths were passed
+      console.writeln("Multi-filter graph paths (" + fr.filterName + ") - SNR: " + (snrGraphPath || "null") + ", Gain: " + (gainGraphPath || "null"));
+      
+      // Load both graphs
+      var snrGraphBitmap = null;
+      var gainGraphBitmap = null;
+      
+      if (snrGraphPath && File.exists(snrGraphPath)) {
+         try {
+            snrGraphBitmap = new Bitmap(snrGraphPath);
+            console.writeln("SNR graph loaded (" + fr.filterName + "): " + snrGraphPath);
+         } catch (e) {
+            console.warningln("Failed to load SNR graph: " + e.message);
+         }
       }
       
-      if (fr.graphPath && File.exists(fr.graphPath)) {
+      if (gainGraphPath && File.exists(gainGraphPath)) {
          try {
-            var scrollBox = new ScrollBox(graphTab);
-            scrollBox.setScaledMinSize(780, 420);
-            scrollBox.autoScroll = true;
-            scrollBox.tracking = true;
-            scrollBox.cursor = new Cursor(StdCursor_Arrow);
-            
-            // Load bitmap
-            var bmp = new Bitmap(fr.graphPath);
-            
-            console.writeln("Graph preview (" + fr.filterName + "): " + bmp.width + "x" + bmp.height);
-            
-            // Store bitmap reference for paint handler
-            scrollBox.graphBitmap = bmp;
-            
-            scrollBox.viewport.onPaint = function(x0, y0, x1, y1) {
-               var g = new Graphics(this);
-               var bmp = this.parent.graphBitmap;
-               
-               if (bmp && bmp.width > 0 && bmp.height > 0) {
-                  // Fill background
-                  g.fillRect(x0, y0, x1, y1, new Brush(0xFF222222));
-                  
-                  // Calculate scale to fit viewport
-                  var maxWidth = 760;
-                  var maxHeight = 400;
-                  var scale = Math.min(maxWidth / bmp.width, maxHeight / bmp.height, 1.0);
-                  var scaledWidth = Math.floor(bmp.width * scale);
-                  var scaledHeight = Math.floor(bmp.height * scale);
-                  
-                  // Center the image
-                  var xOffset = Math.max(0, (this.width - scaledWidth) / 2);
-                  var yOffset = Math.max(0, (this.height - scaledHeight) / 2);
-                  
-                  // Draw scaled bitmap
-                  g.drawScaledBitmap(xOffset, yOffset, xOffset + scaledWidth, yOffset + scaledHeight, bmp);
-               } else {
-                  // No bitmap - show placeholder
-                  g.fillRect(x0, y0, x1, y1, new Brush(0xFF222222));
-                  g.pen = new Pen(0xFFFFFFFF);
-                  g.drawText(10, 30, "No graph available");
-               }
-               
-               g.end();
-            };
-            
-            graphTab.sizer.add(scrollBox);
-            console.writeln("Graph preview added to tab for " + fr.filterName);
+            gainGraphBitmap = new Bitmap(gainGraphPath);
+            console.writeln("Gain/hr graph loaded (" + fr.filterName + "): " + gainGraphPath);
          } catch (e) {
-            console.warningln("Failed to load graph for " + fr.filterName + ": " + e.message);
-            var noGraphLabel = new Label(graphTab);
-            noGraphLabel.text = "Graph load failed: " + e.message;
-            noGraphLabel.textAlignment = TextAlign_Center | TextAlign_VertCenter;
-            graphTab.sizer.add(noGraphLabel);
+            console.warningln("Failed to load Gain/hr graph: " + e.message);
          }
-      } else {
-         console.writeln("Skipping graph preview for " + fr.filterName + " - no valid path");
-         var noGraphLabel = new Label(graphTab);
-         noGraphLabel.text = "Graph not available";
-         noGraphLabel.textAlignment = TextAlign_Center | TextAlign_VertCenter;
-         graphTab.sizer.add(noGraphLabel);
       }
+      
+      // Store bitmaps for switching
+      graphPreview.snrBitmap = snrGraphBitmap;
+      graphPreview.gainBitmap = gainGraphBitmap;
+      graphPreview.currentBitmap = snrGraphBitmap;
+      graphPreview.statusText = snrGraphBitmap ? "" : "SNR graph not available";
+      
+      // Viewport paint handler
+      graphPreview.viewport.onPaint = function(x0, y0, x1, y1) {
+         var g = new Graphics(this);
+         var bmp = this.parent.currentBitmap;
+         
+         if (bmp && bmp.width > 0 && bmp.height > 0) {
+            // Fill background
+            g.fillRect(x0, y0, x1, y1, new Brush(0xFF222222));
+            
+            // Calculate scale to fit viewport
+            var maxWidth = 760;
+            var maxHeight = 370;
+            var scale = Math.min(maxWidth / bmp.width, maxHeight / bmp.height, 1.0);
+            var scaledWidth = Math.floor(bmp.width * scale);
+            var scaledHeight = Math.floor(bmp.height * scale);
+            
+            // Center the scaled bitmap
+            var xOffset = Math.max(0, (this.width - scaledWidth) / 2);
+            var yOffset = Math.max(0, (this.height - scaledHeight) / 2);
+            
+            // Draw scaled bitmap
+            g.drawScaledBitmap(xOffset, yOffset, xOffset + scaledWidth, yOffset + scaledHeight, bmp);
+         } else {
+            // No graph available
+            g.fillRect(x0, y0, x1, y1, new Brush(0xFF222222));
+            g.pen = new Pen(0xFFA0A0A0);
+            g.font = new Font("helvetica", 12);
+            var statusText = this.parent.statusText || "Graph not available";
+            g.drawText(20, 30, statusText);
+         }
+         
+         g.end();
+      };
+      
+      // Graph type combo change handler
+      graphTypeCombo.onItemSelected = function(index) {
+         if (index === 0) {
+            // SNR graph
+            graphPreview.currentBitmap = graphPreview.snrBitmap;
+            graphPreview.statusText = graphPreview.snrBitmap ? "" : "SNR graph not available";
+         } else {
+            // Gain/hr graph
+            graphPreview.currentBitmap = graphPreview.gainBitmap;
+            graphPreview.statusText = graphPreview.gainBitmap ? "" : "Gain/hr graph not available";
+         }
+         graphPreview.viewport.update();
+      };
+      
+      graphTab.sizer.add(graphPreview);
       
       previewTabBox.addPage(graphTab, "Graph");
       
@@ -464,7 +510,7 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
       var filterSuffix = (typeof fr.filterSuffix === "string") ? fr.filterSuffix : ("_" + fr.filterName.replace(/[^a-zA-Z0-9]/g, "_"));
       var stackTab = createStackPreviewPanel(
          tabPage,
-         createStackPreviewEntries(fr.results, outputDir, filterSuffix, CONFIG.generateStarless),
+         createStackPreviewEntries(fr.results, null, filterSuffix, CONFIG.generateStarless),
          false,  // Always full-frame mode
          fr.filterName
       );

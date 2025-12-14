@@ -249,8 +249,8 @@ function detectAutoRois(view, tileSize) {
 function measureTileStats(image, rect) {
    // Create temporary image for the tile
    var tileImage = new Image(
-      rect.width,
-      rect.height,
+      Math.floor(rect.width),
+      Math.floor(rect.height),
       image.numberOfChannels,
       image.colorSpace,
       image.bitsPerSample,

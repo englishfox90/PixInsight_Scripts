@@ -45,8 +45,8 @@ function ProgressMonitor() {
       
       this.dialog = new Dialog();
       this.dialog.windowTitle = "SNR Analysis Progress";
-      this.dialog.scaledMinWidth = 840;  // 700 * 1.2 = 840
-      this.dialog.scaledMinHeight = 440; // 400 * 1.1 = 440
+      this.dialog.scaledMinWidth = 900; 
+      this.dialog.scaledMinHeight = 440; 
       
       // Status label
       this.statusLabel = new Label(this.dialog);
@@ -85,9 +85,9 @@ function ProgressMonitor() {
       this.stepsTreeBox.setScaledMinHeight(300);
       
       // Make Step column 3x wider than default
-      this.stepsTreeBox.setColumnWidth(0, 300); // Step name - triple width
+      this.stepsTreeBox.setColumnWidth(0, 250); // Step name - triple width
       this.stepsTreeBox.setColumnWidth(1, 100); // Status
-      this.stepsTreeBox.setColumnWidth(2, 200); // Details
+      this.stepsTreeBox.setColumnWidth(2, 400); // Details
       this.stepsTreeBox.setColumnWidth(3, 80);  // Time
       
       // Elapsed time label

@@ -4,7 +4,7 @@
  */
 
 var SCRIPT_NAME = "SNR Analysis";
-var SCRIPT_VERSION = "1.5.5";
+var SCRIPT_VERSION = "1.6.0";
 var SCRIPT_DESCRIPTION = "Analyzes how SNR improves with integration depth by creating partial integrations and measuring SNR in user-defined ROIs.";
 
 // Settings module ID (unique to avoid conflicts with other tools)
@@ -21,12 +21,13 @@ var FILE_EXTS = [".xisf", ".fits", ".fit", ".fts"];
 var CONFIG = {
    // Input
    inputDir: "",
-   filePattern: "*.xisf;*.fits",
+   filePattern: "*_c_r.xisf;*_c_r.fits",  // Default to calibrated and registered files
    analyzeAllFilters: true,  // If true, group by FILTER header and analyze each separately
    
    // ROI Mode
-   roiMode: "manual",  // "manual" or "auto" - how to define BG/FG regions
+   roiMode: "rangeMask",  // "rangeMask" (default), "auto", or "manual" - how to define BG/FG regions
    autoRoiTileSize: 96,  // Tile size for auto ROI detection
+   saveDebugOverlay: false,  // Save debug overlay for range mask mode
    
    // Depth strategy
    depthStrategy: "preset_osc",  // preset_osc, doubling, fibonacci, logarithmic, custom
@@ -39,8 +40,20 @@ var CONFIG = {
    starRemovalLinear: true,  // Assume linear data (true for integrated stacks)
    starRemovalStrength: 0.70,  // Strength parameter (0.0-1.0) for StarXTerminator unscreen_correction
    
+   // Integration rejection settings (WBPP-style)
+   rejectionAlgorithm: "Auto",  // Auto, PercentileClip, WinsorizedSigmaClip, LinearFit, ESD
+   percentileLow: 0.27,
+   percentileHigh: 0.13,
+   sigmaLow: 4.00,
+   sigmaHigh: 3.00,
+   linearFitLow: 5.00,
+   linearFitHigh: 2.50,
+   
    // Stretch
    applyStretch: false,
+   
+   // Signal normalization
+   lockSignalScale: true,  // Background-normalize all depths to fix SNR scaling (recommended)
    
    // Output
    outputDir: "",
@@ -49,7 +62,14 @@ var CONFIG = {
    generateGraph: true,
    generateInsights: true,
    logTimings: true,
-   keepIntermediateImages: false
+   keepIntermediateImages: false,
+   
+   // Output structure (set automatically)
+   baseAnalysisDir: "",    // [outputDir]/SNRAnalysis/
+   dataDir: "",             // [baseAnalysisDir]/data/
+   graphsDir: "",           // [baseAnalysisDir]/graphs/
+   integrationsDir: "",     // [baseAnalysisDir]/integrations/
+   previewsDir: ""          // [baseAnalysisDir]/previews/
 };
 
 /**
@@ -80,6 +100,9 @@ function loadSettings() {
       var tileSize = Settings.read(SNR_SETTINGS_MODULE + "/autoRoiTileSize", DataType_UInt32);
       if (Settings.lastReadOK) CONFIG.autoRoiTileSize = tileSize;
       
+      var debugOverlay = Settings.read(SNR_SETTINGS_MODULE + "/saveDebugOverlay", DataType_Boolean);
+      if (Settings.lastReadOK) CONFIG.saveDebugOverlay = debugOverlay;
+      
       // Depth strategy
       var strategy = Settings.read(SNR_SETTINGS_MODULE + "/depthStrategy", DataType_String);
       if (Settings.lastReadOK) CONFIG.depthStrategy = strategy;
@@ -104,6 +127,32 @@ function loadSettings() {
       
       var strength = Settings.read(SNR_SETTINGS_MODULE + "/starRemovalStrength", DataType_Double);
       if (Settings.lastReadOK) CONFIG.starRemovalStrength = strength;
+      
+      // Signal normalization
+      var lockScale = Settings.read(SNR_SETTINGS_MODULE + "/lockSignalScale", DataType_Boolean);
+      if (Settings.lastReadOK) CONFIG.lockSignalScale = lockScale;
+      
+      // Rejection algorithm settings
+      var rejAlgo = Settings.read(SNR_SETTINGS_MODULE + "/rejectionAlgorithm", DataType_String);
+      if (Settings.lastReadOK) CONFIG.rejectionAlgorithm = rejAlgo;
+      
+      var pctLow = Settings.read(SNR_SETTINGS_MODULE + "/percentileLow", DataType_Double);
+      if (Settings.lastReadOK) CONFIG.percentileLow = pctLow;
+      
+      var pctHigh = Settings.read(SNR_SETTINGS_MODULE + "/percentileHigh", DataType_Double);
+      if (Settings.lastReadOK) CONFIG.percentileHigh = pctHigh;
+      
+      var sigLow = Settings.read(SNR_SETTINGS_MODULE + "/sigmaLow", DataType_Double);
+      if (Settings.lastReadOK) CONFIG.sigmaLow = sigLow;
+      
+      var sigHigh = Settings.read(SNR_SETTINGS_MODULE + "/sigmaHigh", DataType_Double);
+      if (Settings.lastReadOK) CONFIG.sigmaHigh = sigHigh;
+      
+      var linLow = Settings.read(SNR_SETTINGS_MODULE + "/linearFitLow", DataType_Double);
+      if (Settings.lastReadOK) CONFIG.linearFitLow = linLow;
+      
+      var linHigh = Settings.read(SNR_SETTINGS_MODULE + "/linearFitHigh", DataType_Double);
+      if (Settings.lastReadOK) CONFIG.linearFitHigh = linHigh;
       
       // Stretch
       var stretch = Settings.read(SNR_SETTINGS_MODULE + "/applyStretch", DataType_Boolean);
@@ -148,6 +197,7 @@ function saveSettings() {
       // ROI Mode
       Settings.write(SNR_SETTINGS_MODULE + "/roiMode", DataType_String, CONFIG.roiMode);
       Settings.write(SNR_SETTINGS_MODULE + "/autoRoiTileSize", DataType_UInt32, CONFIG.autoRoiTileSize);
+      Settings.write(SNR_SETTINGS_MODULE + "/saveDebugOverlay", DataType_Boolean, CONFIG.saveDebugOverlay);
       
       // Depth strategy
       Settings.write(SNR_SETTINGS_MODULE + "/depthStrategy", DataType_String, CONFIG.depthStrategy);
@@ -159,6 +209,18 @@ function saveSettings() {
       Settings.write(SNR_SETTINGS_MODULE + "/starRemovalMethod", DataType_String, CONFIG.starRemovalMethod);
       Settings.write(SNR_SETTINGS_MODULE + "/starRemovalLinear", DataType_Boolean, CONFIG.starRemovalLinear);
       Settings.write(SNR_SETTINGS_MODULE + "/starRemovalStrength", DataType_Double, CONFIG.starRemovalStrength);
+      
+      // Signal normalization
+      Settings.write(SNR_SETTINGS_MODULE + "/lockSignalScale", DataType_Boolean, CONFIG.lockSignalScale);
+      
+      // Rejection algorithm settings
+      Settings.write(SNR_SETTINGS_MODULE + "/rejectionAlgorithm", DataType_String, CONFIG.rejectionAlgorithm);
+      Settings.write(SNR_SETTINGS_MODULE + "/percentileLow", DataType_Double, CONFIG.percentileLow);
+      Settings.write(SNR_SETTINGS_MODULE + "/percentileHigh", DataType_Double, CONFIG.percentileHigh);
+      Settings.write(SNR_SETTINGS_MODULE + "/sigmaLow", DataType_Double, CONFIG.sigmaLow);
+      Settings.write(SNR_SETTINGS_MODULE + "/sigmaHigh", DataType_Double, CONFIG.sigmaHigh);
+      Settings.write(SNR_SETTINGS_MODULE + "/linearFitLow", DataType_Double, CONFIG.linearFitLow);
+      Settings.write(SNR_SETTINGS_MODULE + "/linearFitHigh", DataType_Double, CONFIG.linearFitHigh);
       
       // Stretch
       Settings.write(SNR_SETTINGS_MODULE + "/applyStretch", DataType_Boolean, CONFIG.applyStretch);
@@ -233,6 +295,44 @@ function ensureDirectory(path) {
    if (!File.directoryExists(path)) {
       File.createDirectory(path, true);
    }
+}
+
+/**
+ * Setup organized output directory structure
+ * Creates: [outputDir]/SNRAnalysis/data/, graphs/, integrations/, previews/
+ * Updates CONFIG with full paths to each subdirectory
+ */
+function setupOutputDirectories(baseOutputDir) {
+   // Create main SNRAnalysis folder
+   CONFIG.baseAnalysisDir = baseOutputDir + "/SNRAnalysis";
+   
+   if (!File.directoryExists(CONFIG.baseAnalysisDir)) {
+      File.createDirectory(CONFIG.baseAnalysisDir, true);
+      console.writeln("Created analysis directory: " + CONFIG.baseAnalysisDir);
+   }
+   
+   // Create subdirectories
+   CONFIG.dataDir = CONFIG.baseAnalysisDir + "/data";
+   CONFIG.graphsDir = CONFIG.baseAnalysisDir + "/graphs";
+   CONFIG.integrationsDir = CONFIG.baseAnalysisDir + "/integrations";
+   CONFIG.previewsDir = CONFIG.baseAnalysisDir + "/previews";
+   
+   var subdirs = [CONFIG.dataDir, CONFIG.graphsDir, CONFIG.integrationsDir, CONFIG.previewsDir];
+   
+   for (var i = 0; i < subdirs.length; i++) {
+      if (!File.directoryExists(subdirs[i])) {
+         File.createDirectory(subdirs[i], true);
+         console.writeln("Created subdirectory: " + subdirs[i]);
+      }
+   }
+   
+   console.writeln("");
+   console.writeln("Output structure:");
+   console.writeln("  Data (CSV/JSON): " + CONFIG.dataDir);
+   console.writeln("  Graphs: " + CONFIG.graphsDir);
+   console.writeln("  Integrations: " + CONFIG.integrationsDir);
+   console.writeln("  Previews: " + CONFIG.previewsDir);
+   console.writeln("");
 }
 
 /**

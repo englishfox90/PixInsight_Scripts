@@ -10,10 +10,10 @@
   </description>
 
   <platform os="all" arch="noarch" version="1.8.0:2.0.0">
-    <package fileName="AstroBinExport-3.2.1-20251212.zip"
-             sha1="cf6140d8c7430beb25a98e994c4a1337dab91bce"
+    <package fileName="AstroBinExport-3.2.1-20251213.zip"
+             sha1="55a7e8fab62a9da40336d504bdefce72820e81e4"
              type="script"
-             releaseDate="20251212">
+             releaseDate="20251213">
       <title>
         AstroBin Export
       </title>
@@ -40,35 +40,39 @@
       </description>
     </package>
 
-    <package fileName="SNRAnalysis-1.5.5-20251212.zip"
-             sha1="335e905d3c49821081b1961068a91da7bacbac1f"
+    <package fileName="SNRAnalysis-1.6.0-20251213.zip"
+             sha1="be21a9239a7c0be9a3d4e4ed0c9f3003a0d9e767"
              type="script"
-             releaseDate="20251212">
+             releaseDate="20251213">
       <title>
         SNR Analysis
       </title>
       <description>
         <p>
-          SNR Analysis v1.5.5
+          SNR Analysis v1.6.0
         </p>
         <p>
-          Analyzes how SNR improves with integration depth by creating partial integrations from calibrated subframes and measuring SNR in user-defined ROIs. Generates graphs, CSV/JSON output, and provides insights about diminishing returns.
+          Analyzes how SNR improves with integration depth by creating partial integrations from calibrated and registered subframes and measuring SNR in user-defined ROIs. Generates dual graphs (SNR &amp; Gain/hr), CSV/JSON output, and provides actionable insights about diminishing returns.
         </p>
         <p>
           <b>Key Features:</b>
         </p>
         <ul>
-          <li>Multiple integration depth strategies (OSC preset, doubling, Fibonacci, logarithmic, custom)</li>
-          <li>Full-depth reference integration with ROI selection</li>
-          <li>Per-depth partial integrations</li>
+          <li>MorphologicalTransformation-based range masking for accurate foreground/background separation</li>
+          <li>Expanded integration methods: OSC preset, doubling, Fibonacci, logarithmic, by-hour, custom</li>
+          <li>Dual graph system: SNR vs Time and Gain/hr vs Time with dropdown selector</li>
+          <li>Gain per hour metric showing marginal improvement rate</li>
+          <li>Organized output structure: SNRAnalysis/{data/, graphs/, integrations/, previews/}</li>
+          <li>Enhanced UI with better section organization and tooltips</li>
+          <li>Full-depth reference integration with multi-mode ROI selection (Range Mask, Auto, Manual)</li>
+          <li>Per-depth partial integrations with multiple normalization options</li>
           <li>Optional starless stack generation (StarNet2/StarXTerminator)</li>
-          <li>Optional STF-based stretching</li>
-          <li>ROI-based SNR measurement</li>
+          <li>Optional STF-based stretching for visual comparison</li>
+          <li>ROI-based SNR measurement with automatic tile-based analysis</li>
           <li>Stack preview with auto-stretch in results dialog</li>
-          <li>CSV and JSON output with full metadata</li>
-          <li>SNR vs time graph generation</li>
-          <li>Automated insights (diminishing returns, scaling exponent, recommended ranges)</li>
-          <li>Detailed timing logs</li>
+          <li>CSV and JSON output with full metadata and timing logs</li>
+          <li>Automated insights (diminishing returns, scaling exponent, T+10 hours analysis)</li>
+          <li>Reference master window visibility for verification</li>
         </ul>
       </description>
     </package>

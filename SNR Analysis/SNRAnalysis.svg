@@ -1,0 +1,24 @@
+<!--?xml version="1.0" encoding="UTF-8"?-->
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Outer frame -->
+  <rect x="3" y="3" width="58" height="58" rx="6" fill="none" stroke="#9aa0a6" stroke-width="2"></rect>
+
+  <!-- Background region (left, low signal) -->
+  <rect x="10" y="16" width="16" height="32" fill="#9aa0a6" opacity="0.35"></rect>
+
+  <!-- Foreground region (right, higher signal) -->
+  <rect x="30" y="16" width="24" height="32" fill="#b388ff" opacity="0.9"></rect>
+
+  <!-- SNR bars (integration depth increasing) -->
+  <rect x="14" y="46" width="4" height="2" fill="#ffffff"></rect>
+  <rect x="20" y="42" width="4" height="6" fill="#ffffff"></rect>
+  <rect x="26" y="36" width="4" height="12" fill="#ffffff"></rect>
+  <rect x="32" y="30" width="4" height="18" fill="#ffffff"></rect>
+  <rect x="38" y="24" width="4" height="24" fill="#ffffff"></rect>
+  <rect x="44" y="18" width="4" height="30" fill="#ffffff"></rect>
+
+  <!-- Divider line (FG vs BG) -->
+  <line x1="28" y1="14" x2="28" y2="50" stroke="#ffffff" stroke-width="1.5" opacity="0.8"></line>
+
+</svg>
