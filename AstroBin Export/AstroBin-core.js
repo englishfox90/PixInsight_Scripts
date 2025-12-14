@@ -5,7 +5,7 @@
 
 // Script metadata
 var SCRIPT_NAME = "AstroBin Export";
-var SCRIPT_VERSION = "3.2.1";
+var SCRIPT_VERSION = "3.2.2";
 var SCRIPT_DESCRIPTION = "Generates CSV files compatible with AstroBin's bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.";
 var SCRIPT_DEVELOPER = "Paul Fox-Reeks (englishfox90)";
 

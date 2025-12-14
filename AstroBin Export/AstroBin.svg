@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"
+     viewBox="0 0 64 64" fill="none">
+  <!--
+    PixInsight Feature Icon: AstroBin CSV Import
+    - Document + CSV grid + "astro" star badge
+    - Designed to remain legible down to ~24px
+  -->
+
+  <!-- Colors (tweak as needed) -->
+  <defs>
+    <style>
+      .stroke { stroke:#C9D1D9; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+      .fill   { fill:#C9D1D9; }
+      .muted  { stroke:#8B949E; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+      .badge  { fill:#2F81F7; }
+      .badgeStroke { stroke:#0B1F3A; stroke-width:1.5; }
+    </style>
+  </defs>
+
+  <!-- CSV grid (3x3) -->
+  <rect x="16" y="26" width="26" height="18" rx="2" class="muted"/>
+  <path class="muted" d="M26.666 26v18M35.333 26v18M16 32h26M16 38h26"/>
+
+ <!-- Folded corner -->
+  <path class="muted" d="M38 10v10h8"/>
+
+  <!-- Document body -->
+  <path class="stroke" d="M18 10h20l8 8v30a6 6 0 0 1-6 6H18a6 6 0 0 1-6-6V16a6 6 0 0 1 6-6z"/>
+
+  <!-- Small "CSV" hint line (optional, stays readable small) -->
+  <path class="muted" d="M20 48h18"/>
+
+    <!-- Badge circle (astro) -->
+  <circle cx="46.5" cy="46.5" r="10.5" class="badge badgeStroke"/>
+
+  <!-- Star -->
+  <path class="fill" d="M46.5 39.3l1.7 4.2 4.5.3-3.5 2.8 1.1 4.4-3.8-2.4-3.8 2.4 1.1-4.4-3.5-2.8 4.5-.3 1.7-4.2z"/>
+</svg>

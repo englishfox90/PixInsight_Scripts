@@ -14,6 +14,8 @@
                 formatted for AstroBin's acquisition import. This automates and accelerates \
                 the process of creating image entries on AstroBin.
 
+#feature-icon  @script_icons_dir/AstroBin.svg
+
 // Include necessary PJSR libraries for UI functionality
 #include <pjsr/Sizer.jsh>
 #include <pjsr/FrameStyle.jsh>
