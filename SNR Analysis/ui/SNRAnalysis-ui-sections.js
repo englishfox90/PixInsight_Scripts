@@ -13,6 +13,13 @@ function buildInputSection(dialog) {
    inputGroupBox.sizer.margin = 6;
    inputGroupBox.sizer.spacing = 4;
    
+   // Informational guidance
+   var infoLabel = new Label(dialog);
+   infoLabel.text = "Select a directory containing calibrated  and registered subframes (individual exposures). Do NOT use integrated/stacked images.";
+   infoLabel.wordWrapping = true;
+   infoLabel.useRichText = false;
+   infoLabel.styleSheet = "QLabel { color: #0066cc; font-style: italic; }";
+   
    // Input directory
    var inputDirLabel = new Label(dialog);
    inputDirLabel.text = "Input Directory:";
@@ -28,10 +35,10 @@ function buildInputSection(dialog) {
    var inputDirButton = new ToolButton(dialog);
    inputDirButton.icon = dialog.scaledResource(":/browser/select-file.png");
    inputDirButton.setScaledFixedSize(20, 20);
-   inputDirButton.toolTip = "Select directory";
+   inputDirButton.toolTip = "Select directory containing calibrated and registered subframes";
    inputDirButton.onClick = function() {
       var dirDialog = new GetDirectoryDialog();
-      dirDialog.caption = "Select Input Directory";
+      dirDialog.caption = "Select Directory with Calibrated and Registered Subframes";
       if (dirDialog.execute()) {
          inputDirEdit.text = dirDialog.directory;
          CONFIG.inputDir = dirDialog.directory;
@@ -68,8 +75,12 @@ function buildInputSection(dialog) {
    analyzeAllCheck.toolTip = "When enabled, subframes are grouped by FILTER header and analyzed independently";
    analyzeAllCheck.onCheck = function(checked) { CONFIG.analyzeAllFilters = checked; };
    
+   inputGroupBox.sizer.add(infoLabel);
+   inputGroupBox.sizer.addSpacing(6);
    inputGroupBox.sizer.add(inputDirSizer);
+   inputGroupBox.sizer.addSpacing(2);
    inputGroupBox.sizer.add(patternSizer);
+   inputGroupBox.sizer.addSpacing(4);
    inputGroupBox.sizer.add(analyzeAllCheck);
    
    return inputGroupBox;
@@ -91,24 +102,56 @@ function buildRoiModeSection(dialog) {
    roiModeLabel.minWidth = 100;
    
    var roiModeCombo = new ComboBox(dialog);
-   roiModeCombo.addItem("Manual previews (BG/FG)");
+   roiModeCombo.addItem("Range Mask");
    roiModeCombo.addItem("Auto-detect BG/FG");
-   roiModeCombo.currentItem = (CONFIG.roiMode === "auto") ? 1 : 0;
-   roiModeCombo.toolTip = "Manual: Create BG/FG previews yourself\\nAuto: Script automatically detects background and faint signal regions";
+   roiModeCombo.addItem("Manual previews (BG/FG)");
+   
+   // Set current item based on CONFIG.roiMode
+   var currentItem = 0; // Default to rangeMask
+   if (CONFIG.roiMode === "rangeMask") {
+      currentItem = 0;
+   } else if (CONFIG.roiMode === "auto") {
+      currentItem = 1;
+   } else if (CONFIG.roiMode === "manual") {
+      currentItem = 2;
+   }
+   roiModeCombo.currentItem = currentItem;
+   roiModeCombo.toolTip = "Range Mask: Statistics-driven auto ROI (recommended)\\nAuto-detect: Tile-based detection\\nManual: Create BG/FG previews yourself";
    
    var tileSizeEdit = new SpinBox(dialog);
    tileSizeEdit.minValue = 32;
    tileSizeEdit.maxValue = 256;
    tileSizeEdit.value = CONFIG.autoRoiTileSize;
-   tileSizeEdit.toolTip = "Size of tiles for auto ROI detection (32-256 pixels)";
+   tileSizeEdit.toolTip = "Size of tiles for ROI selection (32-256 pixels)";
    tileSizeEdit.enabled = (CONFIG.roiMode === "auto");
    tileSizeEdit.onValueUpdated = function(value) {
       CONFIG.autoRoiTileSize = value;
    };
    
+   // Debug overlay checkbox (only visible for rangeMask mode)
+   var debugOverlayCheck = new CheckBox(dialog);
+   debugOverlayCheck.text = "Save debug overlay (FG/BG ROIs)";
+   debugOverlayCheck.checked = CONFIG.saveDebugOverlay || false;
+   debugOverlayCheck.toolTip = "Save visualization of detected FG mask and ROI rectangles";
+   debugOverlayCheck.visible = (CONFIG.roiMode === "rangeMask");
+   debugOverlayCheck.onCheck = function(checked) {
+      CONFIG.saveDebugOverlay = checked;
+   };
+   
    roiModeCombo.onItemSelected = function(index) {
-      CONFIG.roiMode = (index === 1) ? "auto" : "manual";
-      tileSizeEdit.enabled = (index === 1);
+      if (index === 0) {
+         CONFIG.roiMode = "rangeMask";
+      } else if (index === 1) {
+         CONFIG.roiMode = "auto";
+      } else {
+         CONFIG.roiMode = "manual";
+      }
+      
+      tileSizeEdit.enabled = (CONFIG.roiMode === "auto");
+      debugOverlayCheck.visible = (CONFIG.roiMode === "rangeMask");
+      
+      // Force dialog to adjust layout
+      dialog.adjustToContents();
    };
    
    var roiModeSizer = new HorizontalSizer;
@@ -116,7 +159,7 @@ function buildRoiModeSection(dialog) {
    roiModeSizer.add(roiModeLabel);
    roiModeSizer.add(roiModeCombo, 100);
    
-   // Tile size for auto mode
+   // Tile size and debug checkbox on same row
    var tileSizeLabel = new Label(dialog);
    tileSizeLabel.text = "Auto Tile Size:";
    tileSizeLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
@@ -126,9 +169,12 @@ function buildRoiModeSection(dialog) {
    tileSizeSizer.spacing = 4;
    tileSizeSizer.add(tileSizeLabel);
    tileSizeSizer.add(tileSizeEdit);
+   tileSizeSizer.addSpacing(20);
+   tileSizeSizer.add(debugOverlayCheck);
    tileSizeSizer.addStretch();
    
    roiGroupBox.sizer.add(roiModeSizer);
+   roiGroupBox.sizer.addSpacing(2);
    roiGroupBox.sizer.add(tileSizeSizer);
    
    return roiGroupBox;
@@ -271,9 +317,46 @@ function buildProcessingSection(dialog) {
    }
    var starMethodSizer = new HorizontalSizer;
    starMethodSizer.spacing = 4;
-   starMethodSizer.addSpacing(20);
    starMethodSizer.add(starMethodLabel);
    starMethodSizer.add(starMethodCombo, 100);
+
+   // Integration rejection algorithm section
+   var rejectionLabel = new Label(dialog);
+   rejectionLabel.text = "Integration rejection:";
+   rejectionLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   rejectionLabel.minWidth = 180;
+   
+   var rejectionCombo = new ComboBox(dialog);
+   rejectionCombo.addItem("Auto (WBPP-style)");
+   rejectionCombo.addItem("Percentile Clip");
+   rejectionCombo.addItem("Winsorized Sigma Clip");
+   rejectionCombo.addItem("Linear Fit");
+   rejectionCombo.addItem("ESD Test");
+   
+   // Set current item based on CONFIG
+   var rejectionModes = ["Auto", "PercentileClip", "WinsorizedSigmaClip", "LinearFit", "ESD"];
+   var currentIndex = rejectionModes.indexOf(CONFIG.rejectionAlgorithm);
+   if (currentIndex >= 0) {
+      rejectionCombo.currentItem = currentIndex;
+   } else {
+      rejectionCombo.currentItem = 0;
+      CONFIG.rejectionAlgorithm = "Auto";
+   }
+   
+   rejectionCombo.toolTip = "Auto adapts rejection based on image count (WBPP behavior):\\n" +
+      "  < 5 images: Percentile Clip\\n" +
+      "  5-14 images: Percentile Clip\\n" +
+      "  15-24 images: Winsorized Sigma Clip\\n" +
+      "  25+ images: Linear Fit";
+   
+   rejectionCombo.onItemSelected = function(index) {
+      CONFIG.rejectionAlgorithm = rejectionModes[index];
+   };
+   
+   var rejectionSizer = new HorizontalSizer;
+   rejectionSizer.spacing = 4;
+   rejectionSizer.add(rejectionLabel);
+   rejectionSizer.add(rejectionCombo, 100);
 
    // Stretch checkbox
    var stretchCheck = new CheckBox(dialog);
@@ -283,8 +366,24 @@ function buildProcessingSection(dialog) {
       CONFIG.applyStretch = checked;
    };
    
+   // Lock signal scale checkbox
+   var lockScaleCheck = new CheckBox(dialog);
+   lockScaleCheck.text = "Lock signal scale (BG normalize depths - fixes SNR scaling)";
+   lockScaleCheck.checked = CONFIG.lockSignalScale;
+   lockScaleCheck.toolTip = "Background-normalizes all integration depths to a common reference level. " +
+                             "This corrects the SNR scaling to follow theoretical √N behavior by removing " +
+                             "normalization drift introduced by ImageIntegration. Recommended: enabled.";
+   lockScaleCheck.onCheck = function(checked) {
+      CONFIG.lockSignalScale = checked;
+   };
+   
    processingGroupBox.sizer.add(starMethodSizer);
+   processingGroupBox.sizer.addSpacing(2);
+   processingGroupBox.sizer.add(rejectionSizer);
+   processingGroupBox.sizer.addSpacing(4);
    processingGroupBox.sizer.add(stretchCheck);
+   processingGroupBox.sizer.addSpacing(2);
+   processingGroupBox.sizer.add(lockScaleCheck);
    
    return processingGroupBox;
 }

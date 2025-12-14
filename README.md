@@ -58,13 +58,13 @@ The SNR Analysis tool follows a clean, modular architecture with all files under
 
 ### 🔧 Setup Requirements:
 
-1. **Calibrated Subframes**: WBPP-calibrated or similar processed FITS/XISF files
+1. **Calibrated  and registered Subframes**: WBPP-calibrated or similar processed FITS/XISF files
 2. **StarXTerminator/StarNet2** (optional): For starless SNR measurements
 3. **FITS Headers**: Proper exposure time and filter metadata
 
 ### 🎯 Workflow:
 
-1. **Select input directory** containing calibrated subframes
+1. **Select input directory** containing calibrated  and registered subframes
 2. **Choose ROI mode**: 
    - **Auto**: Script detects background and foreground regions automatically
    - **Manual**: Create `BG` and `FG` preview rectangles on reference image

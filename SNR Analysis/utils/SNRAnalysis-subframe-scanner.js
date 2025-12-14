@@ -4,7 +4,7 @@
  */
 
 /**
- * Scans a directory for calibrated subframes and extracts metadata
+ * Scans a directory for calibrated  and registeredsubframes and extracts metadata
  * 
  * @param {string} dirPath - Directory to scan
  * @param {string} pattern - File pattern (e.g., "*.xisf;*.fits")

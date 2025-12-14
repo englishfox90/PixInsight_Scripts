@@ -43,15 +43,33 @@ function buildHeaderSection(dialog) {
 }
 
 /**
- * Build info section (why use this tool)
+ * Build info section (why use this tool) - expandable
  */
 function buildInfoSection(dialog) {
    var infoGroupBox = new GroupBox(dialog);
-   infoGroupBox.title = "Why Use This Tool?";
+   infoGroupBox.title = "";
    infoGroupBox.sizer = new VerticalSizer;
    infoGroupBox.sizer.margin = 6;
    infoGroupBox.sizer.spacing = 4;
    
+   // Header with toggle button on the RIGHT
+   var headerSizer = new HorizontalSizer;
+   headerSizer.spacing = 4;
+   
+   var titleLabel = new Label(dialog);
+   titleLabel.text = "Why Use This Tool?";
+   titleLabel.styleSheet = "QLabel { font-weight: bold; }";
+   
+   var toggleButton = new ToolButton(dialog);
+   toggleButton.icon = dialog.scaledResource(":/process-interface/contract.png");
+   toggleButton.setScaledFixedSize(20, 20);
+   toggleButton.toolTip = "Click to show/hide tool information";
+   
+   headerSizer.add(titleLabel);
+   headerSizer.addStretch();
+   headerSizer.add(toggleButton);
+   
+   // Content (collapsible)
    var infoLabel = new Label(dialog);
    infoLabel.text = 
       "<b>What it does:</b> Integrates your subframes at increasing depths (e.g., 8, 16, 32 subs) and measures SNR at each step.<br/><br/>" +
@@ -65,7 +83,27 @@ function buildInfoSection(dialog) {
    infoLabel.wordWrapping = true;
    infoLabel.useRichText = true;
    infoLabel.styleSheet = "QLabel { color: #444; }";
+   infoLabel.visible = false; // Start collapsed
    
+   // Toggle functionality with dynamic window resizing
+   toggleButton.onClick = function() {
+      infoLabel.visible = !infoLabel.visible;
+      toggleButton.icon = infoLabel.visible ? 
+         dialog.scaledResource(":/process-interface/expand.png") :
+         dialog.scaledResource(":/process-interface/contract.png");
+      
+      // Force dialog to resize properly both ways (expand and collapse)
+      // Multiple passes are needed to ensure proper resize
+      dialog.setFixedSize();
+      processEvents();
+      dialog.adjustToContents();
+      processEvents();
+      dialog.setVariableSize();
+      processEvents();
+      dialog.adjustToContents();
+   };
+   
+   infoGroupBox.sizer.add(headerSizer);
    infoGroupBox.sizer.add(infoLabel);
    
    return infoGroupBox;

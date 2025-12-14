@@ -199,7 +199,7 @@ function removeStarsWithStarX(config, job, imageWindow, filterSuffix) {
    }
    
    // Save to disk
-   var outputPath = config.outputDir + "/" + finalId + ".xisf";
+   var outputPath = CONFIG.previewsDir + "/" + finalId + ".xisf";
    if (!starlessWindow.saveAs(outputPath, false, false, false, false)) {
       console.warningln("Failed to save starless image: " + outputPath);
    }
@@ -287,7 +287,7 @@ function removeStarsWithStarNet(config, job, imageWindow, filterSuffix) {
    starlessWindow.mainView.id = finalId;
    
    // Save to disk
-   var outputPath = config.outputDir + "/" + finalId + ".xisf";
+   var outputPath = CONFIG.previewsDir + "/" + finalId + ".xisf";
    if (!starlessWindow.saveAs(outputPath, false, false, false, false)) {
       console.warningln("Failed to save starless image: " + outputPath);
    }

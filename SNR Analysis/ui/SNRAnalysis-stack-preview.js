@@ -26,20 +26,21 @@ function createStackPreviewEntries(results, outputDir, filterSuffix, starRemoval
    for (var i = 0; i < results.length; i++) {
       var r = results[i];
       
-      var stackPath = outputDir + "/int_" + r.label + filterSuffix + ".xisf";
+      // Use organized directory structure
+      var stackPath = CONFIG.integrationsDir + "/int_" + r.label + filterSuffix + ".xisf";
       // Fallback: if suffix-based name is missing, try without suffix (and vice versa)
       var altStackPath = null;
       if (filterSuffix) {
-         altStackPath = outputDir + "/int_" + r.label + ".xisf";
+         altStackPath = CONFIG.integrationsDir + "/int_" + r.label + ".xisf";
       }
       stackPath = resolvePath(stackPath, altStackPath);
       var starlessPath = null;
       
       if (starRemovalEnabled) {
-         starlessPath = outputDir + "/int_" + r.label + filterSuffix + "_starless.xisf";
+         starlessPath = CONFIG.previewsDir + "/int_" + r.label + filterSuffix + "_starless.xisf";
          var altStarlessPath = null;
          if (filterSuffix) {
-            altStarlessPath = outputDir + "/int_" + r.label + "_starless.xisf";
+            altStarlessPath = CONFIG.previewsDir + "/int_" + r.label + "_starless.xisf";
          }
          starlessPath = resolvePath(starlessPath, altStarlessPath);
          // Check if starless file exists, otherwise set to null
@@ -226,7 +227,7 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
          console.writeln("Image min: " + img.minimum() + ", median: " + median + ", max: " + img.maximum());
          
          // Create a working copy of the image
-         var stretchedImg = new Image(img.width, img.height, img.numberOfChannels, 
+         var stretchedImg = new Image(Math.floor(img.width), Math.floor(img.height), img.numberOfChannels, 
                                        img.colorSpace, img.bitsPerSample, img.sampleType);
          stretchedImg.assign(img);
          
@@ -305,8 +306,8 @@ function applyAutoSTFForPreview(window) {
       var isFloatSample = (window.mainView.image.bitsPerSample == 32);
       
       var duplicate = new ImageWindow(
-         window.mainView.image.width,
-         window.mainView.image.height,
+         Math.floor(window.mainView.image.width),
+         Math.floor(window.mainView.image.height),
          window.mainView.image.numberOfChannels,
          window.mainView.image.bitsPerSample,
          isFloatSample,

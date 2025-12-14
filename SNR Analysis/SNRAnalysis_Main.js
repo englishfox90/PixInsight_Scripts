@@ -2,18 +2,20 @@
  * PixInsight PJSR: SNR vs Integration Time Analysis Tool
  * 
  * Analyzes how SNR improves with integration depth by creating partial integrations
- * from calibrated subframes and measuring SNR in user-defined regions.
+ * from calibrated  and registeredsubframes and measuring SNR in user-defined regions.
  * 
- * Version: 1.5.5
+ * Version: 1.6.0
  * Author: PixInsight Community
  */
 
 #feature-id    SNRAnalysis : PFRAstro > SNR Analysis
 
 #feature-info  Analyzes how SNR improves with integration depth. Creates partial integrations \
-               from calibrated subframes at various depths, measures SNR in background and \
+               from calibrated  and registeredsubframes at various depths, measures SNR in background and \
                foreground ROIs, generates graphs, and provides insights about diminishing \
                returns and optimal integration times.
+
+#feature-icon  SNRAnalysis.svg
 
 // Include necessary PJSR libraries
 #include <pjsr/Sizer.jsh>
@@ -25,6 +27,8 @@
 #include <pjsr/Color.jsh>
 #include <pjsr/FontFamily.jsh>
 #include <pjsr/DataType.jsh>
+#include <pjsr/UndoFlag.jsh>
+#include <pjsr/MorphOp.jsh>
 
 // Include our modular components
 // Core modules
@@ -42,6 +46,7 @@
 
 // Analysis modules
 #include "analysis/SNRAnalysis-roi-auto.js"
+#include "analysis/SNRAnalysis-roi-rangemask.js"
 #include "analysis/SNRAnalysis-graph.js"
 #include "analysis/SNRAnalysis-insights.js"
 #include "analysis/SNRAnalysis-output.js"
@@ -86,8 +91,8 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
    }
    progress.updateElapsed();
    
-   // Continue with the rest of processFilterGroup from depth processing onward...
-   // (Copy the depth processing loop and output sections from processFilterGroup)
+   // NOTE: bgRef should already be in rois.bgRef (computed during ROI setup phase)
+   // It will be passed to measureSNR for signal scale normalization
    
    // Step: Process each depth (integrate, star removal, stretch, SNR)
    progress.setStatus("Processing integration depths" + filterLabel + "...");
@@ -148,14 +153,45 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
       progress.updateElapsed();
       
       // Measure SNR on linear starless stack before any stretch
-      var snrMetrics = measureSNR(imageId, rois.bg, rois.fg);
+      // Pass rois.bgRef if available for signal scale normalization
+      var bgRefForMeasure = (rois && rois.bgRef) ? rois.bgRef : null;
+      var snrMetrics = measureSNR(imageId, rois.bg, rois.fg, bgRefForMeasure);
       job.bgMean = snrMetrics.bgMean;
       job.bgMedian = snrMetrics.bgMedian;
       job.bgSigma = snrMetrics.bgSigma;
+      job.bgSigmaMAD = snrMetrics.bgSigmaMAD;
       job.fgMean = snrMetrics.fgMean;
       job.fgMedian = snrMetrics.fgMedian;
       job.fgSigma = snrMetrics.fgSigma;
+      job.fgSigmaMAD = snrMetrics.fgSigmaMAD;
       job.snr = snrMetrics.snr;
+      job.snrBG = snrMetrics.snrBG;
+      job.snrFG = snrMetrics.snrFG;
+      // Store validation fields (Part A)
+      job.scaleFactor = snrMetrics.scaleFactor;
+      job.bgMedianRaw = snrMetrics.bgMedianRaw;
+      job.bgMedianScaled = snrMetrics.bgMedianScaled;
+      // Store global noise metrics
+      job.globalMedian = snrMetrics.globalMedian;
+      job.globalNoise = snrMetrics.globalNoise;
+      
+      // Compute Gain per Hour metrics (diminishing returns analysis)
+      if (i > 0) {
+         var prevJob = depthJobs[i - 1];
+         var deltaSNR = job.snr - prevJob.snr;
+         var deltaSNRpct = (prevJob.snr > 0) ? ((deltaSNR / prevJob.snr) * 100.0) : 0;
+         var deltaTime = job.totalExposure - prevJob.totalExposure;  // in seconds
+         var deltaHours = deltaTime / 3600.0;
+         var gainPerHour = (deltaHours > 0) ? (deltaSNRpct / deltaHours) : 0;
+         
+         job.deltaSNRpct = deltaSNRpct;
+         job.deltaHours = deltaHours;
+         job.gainPerHour = gainPerHour;
+      } else {
+         job.deltaSNRpct = null;
+         job.deltaHours = null;
+         job.gainPerHour = null;
+      }
 
       // STF stretch (optional) after measuring SNR
       if (CONFIG.applyStretch) {
@@ -188,6 +224,54 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
       return null;
    }
    
+   // Compute reference signal from deepest integration (decision metric)
+   console.writeln("");
+   console.writeln("Computing decision SNR with fixed signal reference...");
+   
+   // Sort by depth to find deepest
+   results.sort(function(a, b) { return a.depth - b.depth; });
+   var deepestResult = results[results.length - 1];
+   var signalRef = deepestResult.fgMedian - deepestResult.bgMedian;
+   var refLabel = deepestResult.label;
+   
+   console.writeln("Reference signal (deepest stack " + refLabel + "):");
+   console.writeln("  signalRef = fgMedian - bgMedian = " + signalRef.toFixed(8));
+   console.writeln("");
+   
+   // Compute snrStop for all depths using fixed signal
+   for (var i = 0; i < results.length; i++) {
+      var r = results[i];
+      r.signalMeasured = r.fgMedian - r.bgMedian;
+      r.signalRef = signalRef;
+      r.snrMeasured = r.snr;  // Store original measured SNR
+      r.snrStop = signalRef / r.bgSigmaMAD;  // Decision metric
+      r.snr = r.snrStop;  // Override for downstream code
+   }
+   
+   // Initialize metrics for first depth (no previous to compare)
+   results[0].deltaSNRpct = null;
+   results[0].deltaHours = null;
+   results[0].gainPerHour = null;
+   results[0].t10Hours = null;
+
+   // Recompute gain/hr metrics using snrStop
+   for (var i = 1; i < results.length; i++) {
+      var r = results[i];
+      var prevResult = results[i - 1];
+      var deltaSNR = r.snrStop - prevResult.snrStop;
+      var deltaSNRpct = (prevResult.snrStop > 0) ? ((deltaSNR / prevResult.snrStop) * 100.0) : 0;
+      var deltaTime = r.totalExposure - prevResult.totalExposure;
+      var deltaHours = deltaTime / 3600.0;
+      var gainPerHour = (deltaHours > 0) ? (deltaSNRpct / deltaHours) : 0;
+      
+      r.deltaSNRpct = deltaSNRpct;
+      r.deltaHours = deltaHours;
+      r.gainPerHour = gainPerHour;
+      
+      // Compute hours for +10% SNR at current rate (T10)
+      r.t10Hours = (deltaSNRpct > 0) ? (deltaHours * (10.0 / deltaSNRpct)) : Infinity;
+   }
+   
    // Step: Output results
    stepName = isMultiFilter ? ("output_" + filterName) : "output";
    progress.updateStep(stepName, progress.STATE_RUNNING);
@@ -197,7 +281,7 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
    console.writeln("Generating outputs" + filterLabel + "...");
    
    // Console summary
-   printResultsSummary(results);
+   printResultsSummary(results, signalRef, refLabel);
    
    // CSV
    if (CONFIG.outputCSV) {
@@ -235,21 +319,36 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
    progress.updateStep(stepName, progress.STATE_SUCCESS, "CSV/JSON written");
    progress.updateElapsed();
    
-   // Graph
+   // Graphs (SNR and Gain/hr)
    var graphPath = null;
+   var gainGraphPath = null;
    if (CONFIG.generateGraph) {
       stepName = isMultiFilter ? ("graph_" + filterName) : "graph";
       progress.updateStep(stepName, progress.STATE_RUNNING);
-      progress.setStatus("Generating graph" + filterLabel + "...");
+      progress.setStatus("Generating graphs" + filterLabel + "...");
       progress.updateElapsed();
-      console.writeln("Generating graph" + filterLabel + "...");
+      console.writeln("Generating graphs" + filterLabel + "...");
+      
+      // SNR graph
       graphPath = generateGraph(results, CONFIG.outputDir, filterSuffix, filterName);
       if (graphPath) {
-         console.writeln("Graph written: " + graphPath);
-         progress.updateStep(stepName, progress.STATE_SUCCESS, "Graph saved");
+         console.writeln("SNR graph written: " + graphPath);
       } else {
-         console.warningln("Graph generation failed");
-         progress.updateStep(stepName, progress.STATE_WARNING, "Graph failed");
+         console.warningln("SNR graph generation failed");
+      }
+      
+      // Gain/hr graph
+      gainGraphPath = generateGainGraph(results, CONFIG.outputDir, filterSuffix, filterName);
+      if (gainGraphPath) {
+         console.writeln("Gain/hr graph written: " + gainGraphPath);
+      } else {
+         console.warningln("Gain/hr graph generation failed");
+      }
+      
+      if (graphPath || gainGraphPath) {
+         progress.updateStep(stepName, progress.STATE_SUCCESS, "Graphs saved");
+      } else {
+         progress.updateStep(stepName, progress.STATE_WARNING, "Graph generation failed");
       }
    }
    progress.updateElapsed();
@@ -270,11 +369,13 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
    return {
       filterName: filterName,
       filterSuffix: filterSuffix,
+      refImageId: refImageId,  // Track reference master for preservation
       results: results,
       rois: rois,
       insights: insights,
       totalTime: totalTime,
-      graphPath: graphPath
+      graphPath: graphPath,
+      gainGraphPath: gainGraphPath
    };
 }
 
@@ -304,7 +405,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    
    if (!refWindow || refWindow.isNull) {
       // Try to load from disk if it exists
-      var refPath = CONFIG.outputDir + "/ref_master_full" + filterSuffix + ".xisf";
+      var refPath = CONFIG.integrationsDir + "/ref_master_full" + filterSuffix + ".xisf";
       if (File.exists(refPath)) {
          console.writeln("Found existing reference master on disk, loading...");
          var windows = ImageWindow.open(refPath);
@@ -312,6 +413,8 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
             refWindow = windows[0];
             refWindow.mainView.id = refImageId;
             refImageId = refWindow.mainView.id;
+            refWindow.show();
+            refWindow.zoomToFit();
          }
       }
    }
@@ -323,22 +426,93 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
          progress.updateStep(stepName, progress.STATE_ERROR, "Integration failed");
          throw new Error("Full integration failed for " + filterName);
       }
+      refWindow = ImageWindow.windowById(refImageId);
+      if (refWindow && !refWindow.isNull) {
+         refWindow.show();
+         refWindow.zoomToFit();
+      }
       progress.updateStep(stepName, progress.STATE_SUCCESS, "New master created");
    } else {
       console.writeln("Using existing reference master: " + refImageId);
+      refWindow.show();
+      refWindow.zoomToFit();
       progress.updateStep(stepName, progress.STATE_SUCCESS, "Using existing master");
    }
    progress.updateElapsed();
    
-   // Step: Define ROI previews (manual or auto mode)
+   // Step: Define ROI previews (manual, auto, or rangeMask mode)
    progress.setStatus("Defining ROI regions" + filterLabel + "...");
    stepName = isMultiFilter ? ("roi_" + filterName) : "roi";
    progress.updateStep(stepName, progress.STATE_RUNNING);
    
    var rois = null;
    
-   if (CONFIG.roiMode === "auto") {
-      // Auto-detect ROIs
+   if (CONFIG.roiMode === "rangeMask") {
+      // Range Mask mode: statistics-driven auto ROI on starless reference
+      console.writeln("Range Mask ROI detection (auto, per-filter)" + filterLabel + "...");
+      var refWindow = ImageWindow.windowById(refImageId);
+      if (!refWindow || refWindow.isNull) {
+         progress.updateStep(stepName, progress.STATE_ERROR, "Window not found");
+         throw new Error("Reference window not found: " + refImageId);
+      }
+      
+      // CRITICAL: Ensure star removal happens BEFORE range mask analysis
+      console.writeln("Preparing starless reference for ROI detection...");
+      var refForROI = refImageId;
+      var starlessRefId = refImageId + "_starless_for_roi";
+      
+      // Check if starless version already exists
+      var starlessWindow = ImageWindow.windowById(starlessRefId);
+      
+      if (!starlessWindow || starlessWindow.isNull) {
+         // Create starless version for ROI detection
+         var starlessResult = runStarRemoval(
+            CONFIG.starRemovalMethod, 
+            CONFIG, 
+            { label: "Reference", depth: subframes.length }, 
+            refWindow, 
+            filterSuffix + "_roi"
+         );
+         
+         if (starlessResult) {
+            starlessRefId = starlessResult.id;
+            starlessWindow = starlessResult.window;
+            console.writeln("Star removal completed for ROI reference");
+         } else {
+            console.warningln("Star removal failed - using starry reference for ROI detection");
+            starlessRefId = refImageId;
+            starlessWindow = refWindow;
+         }
+      } else {
+         console.writeln("Using existing starless reference: " + starlessRefId);
+      }
+      
+      // Compute range mask ROIs
+      var rangeMaskResult = computeRangeMaskROIs(
+         starlessWindow.mainView.image,
+         CONFIG.autoRoiTileSize,
+         CONFIG.saveDebugOverlay,
+         CONFIG.outputDir,
+         filterName
+      );
+      
+      if (rangeMaskResult) {
+         console.writeln("Range Mask ROI detection successful");
+         rois = {
+            bg: rangeMaskResult.bgRect,
+            fg: rangeMaskResult.fgRect,
+            meta: rangeMaskResult.meta
+         };
+         
+         // Optionally create previews on the reference for visualization
+         if (CONFIG.keepIntermediateImages) {
+            createRangeMaskPreviews(refWindow, rangeMaskResult);
+         }
+      } else {
+         console.warningln("Range Mask ROI detection failed - falling back to auto tile mode");
+      }
+   } else if (CONFIG.roiMode === "auto") {
+      // Auto-detect ROIs (original tile-based method)
       console.writeln("Auto-detecting ROI regions" + filterLabel + "...");
       var refWindow = ImageWindow.windowById(refImageId);
       if (!refWindow || refWindow.isNull) {
@@ -360,10 +534,10 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       }
    }
    
-   // If auto mode failed or manual mode selected, use manual ROI
+   // If auto/rangeMask mode failed or manual mode selected, use manual ROI
    if (!rois) {
       console.writeln("Waiting for user to define ROI previews" + filterLabel + "...");
-      var autoFailed = (CONFIG.roiMode === "auto");
+      var autoFailed = (CONFIG.roiMode === "auto" || CONFIG.roiMode === "rangeMask");
       rois = promptForROIs(refImageId, autoFailed, filterName);
    }
    
@@ -376,6 +550,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    progress.updateStep(stepName, progress.STATE_SUCCESS, "ROIs defined");
    console.writeln("Background ROI: " + formatRect(rois.bg));
    console.writeln("Foreground ROI: " + formatRect(rois.fg));
+   console.writeln("Note: Reference master '" + refImageId + "' with ROI previews will remain open for reference");
    progress.updateElapsed();
    
    // Step: Generate integration depth list
@@ -395,6 +570,23 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
                     formatTime(depthJobs[i].totalExposure) + ")");
    }
    progress.updateElapsed();
+   
+   // Compute reference background for signal scale locking (if enabled)
+   var bgRef = null;
+   if (CONFIG.lockSignalScale) {
+      console.writeln("");
+      console.writeln("Computing reference background for signal normalization...");
+      // Use the reference master (deepest integration) - Part C
+      bgRef = computeBgRef(refImageId, rois.bg);
+      if (bgRef) {
+         rois.bgRef = bgRef;  // Store in rois for JSON output
+         rois.bgRefSourceLabel = "Reference Master (full depth)";  // Part C - track source
+         console.writeln("Signal scale locking enabled with BG_ref = " + bgRef.toFixed(8) + 
+                        " from " + rois.bgRefSourceLabel);
+      } else {
+         console.warningln("Failed to compute BG_ref, signal scale normalization disabled for this filter");
+      }
+   }
    
    // Step: Process each depth (integrate, star removal, stretch, SNR)
    progress.setStatus("Processing integration depths" + filterLabel + "...");
@@ -455,14 +647,44 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       progress.updateElapsed();
       
       // Measure SNR on linear starless stack before any stretch
-      var snrMetrics = measureSNR(imageId, rois.bg, rois.fg);
+      // Pass bgRef for signal scale normalization if enabled
+      var snrMetrics = measureSNR(imageId, rois.bg, rois.fg, bgRef);
       job.bgMean = snrMetrics.bgMean;
       job.bgMedian = snrMetrics.bgMedian;
       job.bgSigma = snrMetrics.bgSigma;
+      job.bgSigmaMAD = snrMetrics.bgSigmaMAD;
       job.fgMean = snrMetrics.fgMean;
       job.fgMedian = snrMetrics.fgMedian;
       job.fgSigma = snrMetrics.fgSigma;
+      job.fgSigmaMAD = snrMetrics.fgSigmaMAD;
       job.snr = snrMetrics.snr;
+      job.snrBG = snrMetrics.snrBG;
+      job.snrFG = snrMetrics.snrFG;
+      // Store validation fields (Part A)
+      job.scaleFactor = snrMetrics.scaleFactor;
+      job.bgMedianRaw = snrMetrics.bgMedianRaw;
+      job.bgMedianScaled = snrMetrics.bgMedianScaled;
+      // Store global noise metrics
+      job.globalMedian = snrMetrics.globalMedian;
+      job.globalNoise = snrMetrics.globalNoise;
+      
+      // Compute Gain per Hour metrics (diminishing returns analysis)
+      if (i > 0) {
+         var prevJob = depthJobs[i - 1];
+         var deltaSNR = job.snr - prevJob.snr;
+         var deltaSNRpct = (prevJob.snr > 0) ? ((deltaSNR / prevJob.snr) * 100.0) : 0;
+         var deltaTime = job.totalExposure - prevJob.totalExposure;  // in seconds
+         var deltaHours = deltaTime / 3600.0;
+         var gainPerHour = (deltaHours > 0) ? (deltaSNRpct / deltaHours) : 0;
+         
+         job.deltaSNRpct = deltaSNRpct;
+         job.deltaHours = deltaHours;
+         job.gainPerHour = gainPerHour;
+      } else {
+         job.deltaSNRpct = null;
+         job.deltaHours = null;
+         job.gainPerHour = null;
+      }
 
       // STF stretch (optional) after measuring SNR
       if (CONFIG.applyStretch) {
@@ -495,6 +717,54 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       return null;
    }
    
+   // Compute reference signal from deepest integration (decision metric)
+   console.writeln("");
+   console.writeln("Computing decision SNR with fixed signal reference...");
+   
+   // Sort by depth to find deepest
+   results.sort(function(a, b) { return a.depth - b.depth; });
+   var deepestResult = results[results.length - 1];
+   var signalRef = deepestResult.fgMedian - deepestResult.bgMedian;
+   var refLabel = deepestResult.label;
+   
+   console.writeln("Reference signal (deepest stack " + refLabel + "):");
+   console.writeln("  signalRef = fgMedian - bgMedian = " + signalRef.toFixed(8));
+   console.writeln("");
+   
+   // Compute snrStop for all depths using fixed signal
+   for (var i = 0; i < results.length; i++) {
+      var r = results[i];
+      r.signalMeasured = r.fgMedian - r.bgMedian;
+      r.signalRef = signalRef;
+      r.snrMeasured = r.snr;  // Store original measured SNR
+      r.snrStop = signalRef / r.bgSigmaMAD;  // Decision metric
+      r.snr = r.snrStop;  // Override for downstream code
+   }
+   
+   // Initialize metrics for first depth (no previous to compare)
+   results[0].deltaSNRpct = null;
+   results[0].deltaHours = null;
+   results[0].gainPerHour = null;
+   results[0].t10Hours = null;
+
+   // Recompute gain/hr metrics using snrStop
+   for (var i = 1; i < results.length; i++) {
+      var r = results[i];
+      var prevResult = results[i - 1];
+      var deltaSNR = r.snrStop - prevResult.snrStop;
+      var deltaSNRpct = (prevResult.snrStop > 0) ? ((deltaSNR / prevResult.snrStop) * 100.0) : 0;
+      var deltaTime = r.totalExposure - prevResult.totalExposure;
+      var deltaHours = deltaTime / 3600.0;
+      var gainPerHour = (deltaHours > 0) ? (deltaSNRpct / deltaHours) : 0;
+      
+      r.deltaSNRpct = deltaSNRpct;
+      r.deltaHours = deltaHours;
+      r.gainPerHour = gainPerHour;
+      
+      // Compute hours for +10% SNR at current rate (T10)
+      r.t10Hours = (deltaSNRpct > 0) ? (deltaHours * (10.0 / deltaSNRpct)) : Infinity;
+   }
+   
    // Step: Output results
    stepName = isMultiFilter ? ("output_" + filterName) : "output";
    progress.updateStep(stepName, progress.STATE_RUNNING);
@@ -504,7 +774,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    console.writeln("Generating outputs" + filterLabel + "...");
    
    // Console summary
-   printResultsSummary(results);
+   printResultsSummary(results, signalRef, refLabel);
    
    // CSV
    if (CONFIG.outputCSV) {
@@ -542,17 +812,37 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    progress.updateStep(stepName, progress.STATE_SUCCESS, "CSV/JSON written");
    progress.updateElapsed();
    
-   // Graph
+   // Graphs (SNR and Gain/hr)
    var graphPath = null;
+   var gainGraphPath = null;
    if (CONFIG.generateGraph) {
       stepName = isMultiFilter ? ("graph_" + filterName) : "graph";
       progress.updateStep(stepName, progress.STATE_RUNNING);
-      progress.setStatus("Generating graph" + filterLabel + "...");
+      progress.setStatus("Generating graphs" + filterLabel + "...");
       progress.updateElapsed();
-      console.writeln("Generating graph" + filterLabel + "...");
+      console.writeln("Generating graphs" + filterLabel + "...");
+      
+      // SNR graph
       graphPath = generateGraph(results, CONFIG.outputDir, filterSuffix, filterName);
-      if (graphPath) { console.writeln("Graph written: " + graphPath); } else { console.warningln("Graph generation failed"); }
-      progress.updateStep(stepName, progress.STATE_SUCCESS, "Graph saved");
+      if (graphPath) {
+         console.writeln("SNR graph written: " + graphPath);
+      } else {
+         console.warningln("SNR graph generation failed");
+      }
+      
+      // Gain/hr graph
+      gainGraphPath = generateGainGraph(results, CONFIG.outputDir, filterSuffix, filterName);
+      if (gainGraphPath) {
+         console.writeln("Gain/hr graph written: " + gainGraphPath);
+      } else {
+         console.warningln("Gain/hr graph generation failed");
+      }
+      
+      if (graphPath || gainGraphPath) {
+         progress.updateStep(stepName, progress.STATE_SUCCESS, "Graphs saved");
+      } else {
+         progress.updateStep(stepName, progress.STATE_WARNING, "Graph generation failed");
+      }
    }
    progress.updateElapsed();
    
@@ -576,7 +866,8 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       rois: rois,
       insights: insights,
       totalTime: totalTime,
-      graphPath: graphPath
+      graphPath: graphPath,
+      gainGraphPath: gainGraphPath
    };
 }
 
@@ -600,6 +891,9 @@ function SNRAnalysisEngine() {
             console.writeln("Analysis cancelled by user.");
             return;
          }
+         
+         // Setup organized output directory structure
+         setupOutputDirectories(CONFIG.outputDir);
          
          // Create progress monitor
          var progress = new ProgressMonitor();
@@ -702,6 +996,12 @@ function SNRAnalysisEngine() {
             var refMasters = {};
             
             for (var filterName in filterGroups) {
+               if (progress.isCancelled()) {
+                  progress.close();
+                  console.writeln("Analysis cancelled by user.");
+                  return;
+               }
+               
                var subs = filterGroups[filterName];
                var filterSuffix = "_" + filterName.replace(/[^a-zA-Z0-9]/g, "_");
                var stepName = "ref_master_" + filterName;
@@ -714,7 +1014,7 @@ function SNRAnalysisEngine() {
                var refWindow = ImageWindow.windowById(refImageId);
                
                if (!refWindow || refWindow.isNull) {
-                  var refPath = CONFIG.outputDir + "/ref_master_full" + filterSuffix + ".xisf";
+                  var refPath = CONFIG.integrationsDir + "/ref_master_full" + filterSuffix + ".xisf";
                   if (File.exists(refPath)) {
                      console.writeln("Loading existing reference master from disk...");
                      var windows = ImageWindow.open(refPath);
@@ -722,6 +1022,8 @@ function SNRAnalysisEngine() {
                         refWindow = windows[0];
                         refWindow.mainView.id = refImageId;
                         refImageId = refWindow.mainView.id;
+                        refWindow.show();
+                        refWindow.zoomToFit();
                      }
                   }
                }
@@ -732,9 +1034,16 @@ function SNRAnalysisEngine() {
                      progress.updateStep(stepName, progress.STATE_ERROR, "Integration failed");
                      throw new Error("Full integration failed for " + filterName);
                   }
+                  refWindow = ImageWindow.windowById(refImageId);
+                  if (refWindow && !refWindow.isNull) {
+                     refWindow.show();
+                     refWindow.zoomToFit();
+                  }
                   progress.updateStep(stepName, progress.STATE_SUCCESS, "New master created");
                } else {
                   console.writeln("Using existing reference master: " + refImageId);
+                  refWindow.show();
+                  refWindow.zoomToFit();
                   progress.updateStep(stepName, progress.STATE_SUCCESS, "Using existing master");
                }
                
@@ -752,6 +1061,12 @@ function SNRAnalysisEngine() {
             var missingROIs = [];
             
             for (var filterName in filterGroups) {
+               if (progress.isCancelled()) {
+                  progress.close();
+                  console.writeln("Analysis cancelled by user.");
+                  return;
+               }
+               
                var refId = refMasters[filterName];
                var stepName = "roi_" + filterName;
                
@@ -761,7 +1076,67 @@ function SNRAnalysisEngine() {
                try {
                   var rois = null;
                   
-                  if (CONFIG.roiMode === "auto") {
+                  if (CONFIG.roiMode === "rangeMask") {
+                     // Range Mask mode: statistics-driven auto ROI on starless reference
+                     console.writeln("Range Mask ROI detection (auto, per-filter) for " + filterName + "...");
+                     var refWindow = ImageWindow.windowById(refId);
+                     if (refWindow && !refWindow.isNull) {
+                        // CRITICAL: Ensure star removal happens BEFORE range mask analysis
+                        console.writeln("Preparing starless reference for ROI detection (" + filterName + ")...");
+                        var starlessRefId = refId + "_starless_for_roi";
+                        
+                        // Check if starless version already exists
+                        var starlessWindow = ImageWindow.windowById(starlessRefId);
+                        
+                        if (!starlessWindow || starlessWindow.isNull) {
+                           // Create starless version for ROI detection
+                           var filterSuffix = "_" + filterName.replace(/[^a-zA-Z0-9]/g, "_");
+                           var subs = filterGroups[filterName];
+                           var starlessResult = runStarRemoval(
+                              CONFIG.starRemovalMethod, 
+                              CONFIG, 
+                              { label: "Reference", depth: subs.length }, 
+                              refWindow, 
+                              filterSuffix + "_roi"
+                           );
+                           
+                           if (starlessResult) {
+                              starlessRefId = starlessResult.id;
+                              starlessWindow = starlessResult.window;
+                              console.writeln("Star removal completed for ROI reference (" + filterName + ")");
+                           } else {
+                              console.warningln("Star removal failed - using starry reference for ROI detection (" + filterName + ")");
+                              starlessRefId = refId;
+                              starlessWindow = refWindow;
+                           }
+                        } else {
+                           console.writeln("Using existing starless reference: " + starlessRefId);
+                        }
+                        
+                        // Compute range mask ROIs
+                        var rangeMaskResult = computeRangeMaskROIs(
+                           starlessWindow.mainView.image,
+                           CONFIG.autoRoiTileSize,
+                           CONFIG.saveDebugOverlay,
+                           CONFIG.outputDir,
+                           filterName
+                        );
+                        
+                        if (rangeMaskResult) {
+                           console.writeln(filterName + " - Range Mask ROI detection successful");
+                           rois = {
+                              bg: rangeMaskResult.bgRect,
+                              fg: rangeMaskResult.fgRect,
+                              meta: rangeMaskResult.meta
+                           };
+                           
+                           // Create previews on the reference for visualization
+                           createRangeMaskPreviews(refWindow, rangeMaskResult);
+                        } else {
+                           console.warningln(filterName + " - Range Mask ROI detection failed - falling back to manual mode");
+                        }
+                     }
+                  } else if (CONFIG.roiMode === "auto") {
                      // Auto-detect ROIs
                      console.writeln("Auto-detecting ROI regions for " + filterName + "...");
                      var refWindow = ImageWindow.windowById(refId);
@@ -781,10 +1156,24 @@ function SNRAnalysisEngine() {
                      }
                   }
                   
-                  // If auto mode failed or manual mode selected, use manual ROI
+                  // If auto/rangeMask mode failed or manual mode selected, use manual ROI
                   if (!rois) {
-                     var autoFailed = (CONFIG.roiMode === "auto");
+                     var autoFailed = (CONFIG.roiMode === "auto" || CONFIG.roiMode === "rangeMask");
                      rois = promptForROIs(refId, autoFailed, filterName);
+                  }
+                  
+                  // Compute reference background for signal scale locking (if enabled)
+                  if (rois && CONFIG.lockSignalScale) {
+                     console.writeln("Computing reference background for signal normalization (" + filterName + ")...");
+                     var bgRef = computeBgRef(refId, rois.bg);
+                     if (bgRef) {
+                        rois.bgRef = bgRef;
+                        rois.bgRefSourceLabel = "Reference Master (full depth)";  // Part C
+                        console.writeln(filterName + " - Signal scale locking enabled with BG_ref = " + bgRef.toFixed(8) +
+                                      " from " + rois.bgRefSourceLabel);
+                     } else {
+                        console.warningln(filterName + " - Failed to compute BG_ref, signal scale normalization disabled");
+                     }
                   }
                   
                   allROIs[filterName] = rois;
@@ -835,6 +1224,12 @@ function SNRAnalysisEngine() {
          var allFilterResults = [];
          
          for (var filterName in filterGroups) {
+            if (progress.isCancelled()) {
+               progress.close();
+               console.writeln("Analysis cancelled by user.");
+               return;
+            }
+            
             var subs = filterGroups[filterName];
             
             if (isMultiFilter) {
@@ -861,6 +1256,15 @@ function SNRAnalysisEngine() {
          console.writeln("");
          console.writeln("Analysis complete!");
          console.writeln("Results saved to: " + CONFIG.outputDir);
+         console.writeln("");
+         console.writeln("=== REFERENCE MASTERS ===");
+         for (var i = 0; i < allFilterResults.length; i++) {
+            if (allFilterResults[i].refImageId) {
+               console.writeln("  " + allFilterResults[i].filterName + ": " + 
+                              allFilterResults[i].refImageId + " (with ROI previews - left open)");
+            }
+         }
+         console.writeln("");
          
          // Mark complete to stop live timer
          progress.markComplete();

@@ -99,23 +99,25 @@ function performFullIntegration(subframes, outputDir, filterSuffix) {
    P.weightScale = ImageIntegration.prototype.WeightScale_IKSS;
    P.ignoreNoiseKeywords = false;
    
-   // Rejection
-   P.rejection = ImageIntegration.prototype.WinsorizedSigmaClip;
+   // Adaptive rejection algorithm (WBPP-style Auto mode)
+   P.rejection = selectRejectionAlgorithm(subframes.length);
    P.rejectionNormalization = ImageIntegration.prototype.Scale;
    P.minMaxLow = 1;
    P.minMaxHigh = 1;
-   P.pcClipLow = 0.200;
-   P.pcClipHigh = 0.100;
-   P.sigmaLow = 4.000;
-   P.sigmaHigh = 3.000;
-   P.linearFitLow = 5.000;
-   P.linearFitHigh = 2.500;
+   
+   // Use CONFIG values for rejection parameters
+   P.pcClipLow = CONFIG.percentileLow;
+   P.pcClipHigh = CONFIG.percentileHigh;
+   P.sigmaLow = CONFIG.sigmaLow;
+   P.sigmaHigh = CONFIG.sigmaHigh;
+   P.linearFitLow = CONFIG.linearFitLow;
+   P.linearFitHigh = CONFIG.linearFitHigh;
    P.ccdGain = 1.00;
    P.ccdReadNoise = 10.00;
    P.ccdScaleNoise = 0.00;
    
-   // Range clipping
-   P.rangeClipLow = true;
+   // Range clipping - disable low clipping to avoid dark sky artifacts
+   P.rangeClipLow = false;
    P.rangeLow = 0.000000;
    P.rangeClipHigh = false;
    P.rangeHigh = 0.980000;
@@ -147,10 +149,14 @@ function performFullIntegration(subframes, outputDir, filterSuffix) {
    addIntegrationMetadata(window, subframes, subframes.length);
    
    // Save to disk
-   var outputPath = outputDir + "/ref_master_full" + filterSuffix + ".xisf";
+   var outputPath = CONFIG.integrationsDir + "/ref_master_full" + filterSuffix + ".xisf";
    if (!window.saveAs(outputPath, false, false, false, false)) {
       console.warningln("Failed to save reference master to disk");
    }
+   
+   // Show the window to the user
+   window.show();
+   window.zoomToFit();
    
    console.writeln("Full integration complete: " + window.mainView.id);
    
@@ -158,10 +164,112 @@ function performFullIntegration(subframes, outputDir, filterSuffix) {
 }
 
 /**
+ * Select rejection algorithm based on Auto mode (WBPP-style)
+ * @param {number} depth - Number of images being integrated
+ * @returns {number} ImageIntegration rejection constant
+ */
+function selectRejectionAlgorithm(depth) {
+   var algo = CONFIG.rejectionAlgorithm;
+   
+   if (algo === "Auto") {
+      // WBPP Auto mode logic: adapt based on image count
+      if (depth < 5) {
+         console.writeln("  Auto mode: Using PercentileClip (depth < 5)");
+         return ImageIntegration.prototype.PercentileClip;
+      } else if (depth < 15) {
+         console.writeln("  Auto mode: Using PercentileClip (depth < 15)");
+         return ImageIntegration.prototype.PercentileClip;
+      } else if (depth < 25) {
+         console.writeln("  Auto mode: Using WinsorizedSigmaClip (depth 15-24)");
+         return ImageIntegration.prototype.WinsorizedSigmaClip;
+      } else {
+         console.writeln("  Auto mode: Using LinearFit (depth >= 25)");
+         return ImageIntegration.prototype.LinearFit;
+      }
+   }
+   
+   // Manual selection
+   if (algo === "PercentileClip") return ImageIntegration.prototype.PercentileClip;
+   if (algo === "WinsorizedSigmaClip") return ImageIntegration.prototype.WinsorizedSigmaClip;
+   if (algo === "LinearFit") return ImageIntegration.prototype.LinearFit;
+   if (algo === "ESD" && ImageIntegration.prototype.Rejection_ESD) {
+      return ImageIntegration.prototype.Rejection_ESD;
+   }
+   
+   // Fallback
+   console.warningln("  Unknown rejection algorithm '" + algo + "', using WinsorizedSigmaClip");
+   return ImageIntegration.prototype.WinsorizedSigmaClip;
+}
+
+/**
  * Integrate a specific depth (first N subframes)
+ * Optimization: Reuse reference master if depth equals total subframes
  */
 function integrateDepth(job, subframes, outputDir, filterSuffix) {
    filterSuffix = filterSuffix || "";
+   
+   // Check if this depth matches the full reference master
+   if (job.depth === subframes.length) {
+      var refMasterId = "ref_master_full" + filterSuffix;
+      var refWindow = ImageWindow.windowById(refMasterId);
+      
+      // Try to use existing reference master window
+      if (refWindow && !refWindow.isNull) {
+         console.writeln("Reusing reference master for " + job.label + " (depth = " + job.depth + ")");
+         
+         // Clone the reference to create a new window with appropriate naming
+         var newWindow = new ImageWindow(
+            refWindow.mainView.image.width,
+            refWindow.mainView.image.height,
+            refWindow.mainView.image.numberOfChannels,
+            refWindow.mainView.image.bitsPerSample,
+            refWindow.mainView.image.isReal,
+            refWindow.mainView.image.isColor,
+            "int_" + job.label + filterSuffix
+         );
+         
+         newWindow.mainView.beginProcess(UndoFlag_NoSwapFile);
+         newWindow.mainView.image.assign(refWindow.mainView.image);
+         newWindow.mainView.endProcess();
+         
+         // Copy keywords
+         newWindow.keywords = refWindow.keywords;
+         
+         // Save the cloned image
+         var outputPath = CONFIG.integrationsDir + "/int_" + job.label + filterSuffix + ".xisf";
+         if (!newWindow.saveAs(outputPath, false, false, false, false)) {
+            console.warningln("Failed to save " + newWindow.mainView.id + " to disk");
+         }
+         
+         newWindow.show();
+         
+         console.writeln("Reference master reused successfully (saved integration time)");
+         return newWindow.mainView.id;
+      }
+      
+      // If reference master window not available, try loading from disk
+      var refPath = CONFIG.integrationsDir + "/ref_master_full" + filterSuffix + ".xisf";
+      if (File.exists(refPath)) {
+         console.writeln("Loading reference master from disk for " + job.label + "...");
+         var windows = ImageWindow.open(refPath);
+         if (windows && windows.length > 0) {
+            var loadedWindow = windows[0];
+            loadedWindow.mainView.id = "int_" + job.label + filterSuffix;
+            
+            // Save as the depth integration file
+            var outputPath = CONFIG.integrationsDir + "/int_" + job.label + filterSuffix + ".xisf";
+            if (!loadedWindow.saveAs(outputPath, false, false, false, false)) {
+               console.warningln("Failed to save " + loadedWindow.mainView.id + " to disk");
+            }
+            
+            console.writeln("Reference master loaded and reused (saved integration time)");
+            return loadedWindow.mainView.id;
+         }
+      }
+      
+      console.writeln("Reference master not available, proceeding with full integration for " + job.label + "...");
+   }
+   
    console.writeln("Integrating " + job.depth + " subframes...");
    
    var P = new ImageIntegration();
@@ -178,7 +286,7 @@ function integrateDepth(job, subframes, outputDir, filterSuffix) {
    }
    P.images = images;
    
-   // Configure (same as full integration)
+   // Configure integration
    P.inputHints = "";
    P.combination = ImageIntegration.prototype.Average;
    P.normalization = ImageIntegration.prototype.AdditiveWithScaling;
@@ -187,21 +295,25 @@ function integrateDepth(job, subframes, outputDir, filterSuffix) {
    P.weightScale = ImageIntegration.prototype.WeightScale_IKSS;
    P.ignoreNoiseKeywords = false;
    
-   P.rejection = ImageIntegration.prototype.WinsorizedSigmaClip;
+   // Adaptive rejection algorithm (WBPP-style Auto mode)
+   P.rejection = selectRejectionAlgorithm(job.depth);
    P.rejectionNormalization = ImageIntegration.prototype.Scale;
    P.minMaxLow = 1;
    P.minMaxHigh = 1;
-   P.pcClipLow = 0.200;
-   P.pcClipHigh = 0.100;
-   P.sigmaLow = 4.000;
-   P.sigmaHigh = 3.000;
-   P.linearFitLow = 5.000;
-   P.linearFitHigh = 2.500;
+   
+   // Use CONFIG values for rejection parameters
+   P.pcClipLow = CONFIG.percentileLow;
+   P.pcClipHigh = CONFIG.percentileHigh;
+   P.sigmaLow = CONFIG.sigmaLow;
+   P.sigmaHigh = CONFIG.sigmaHigh;
+   P.linearFitLow = CONFIG.linearFitLow;
+   P.linearFitHigh = CONFIG.linearFitHigh;
    P.ccdGain = 1.00;
    P.ccdReadNoise = 10.00;
    P.ccdScaleNoise = 0.00;
    
-   P.rangeClipLow = true;
+   // Range clipping - disable low clipping to avoid dark sky artifacts
+   P.rangeClipLow = false;
    P.rangeLow = 0.000000;
    P.rangeClipHigh = false;
    P.rangeHigh = 0.980000;
@@ -235,7 +347,7 @@ function integrateDepth(job, subframes, outputDir, filterSuffix) {
    addIntegrationMetadata(window, subframes, job.depth);
    
    // Save
-   var outputPath = outputDir + "/" + id + ".xisf";
+   var outputPath = CONFIG.integrationsDir + "/" + id + ".xisf";
    if (!window.saveAs(outputPath, false, false, false, false)) {
       console.warningln("Failed to save " + id + " to disk");
    }
