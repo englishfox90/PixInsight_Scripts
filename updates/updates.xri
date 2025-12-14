@@ -41,7 +41,7 @@
     </package>
 
     <package fileName="SNRAnalysis-1.6.4-20251214.zip"
-             sha1="f19bbaca19205e5df05b377d30f188a2423b3723"
+             sha1="95795d4bbc0765509f2e98f9c2224d758156ac99"
              type="script"
              releaseDate="20251214">
       <title>

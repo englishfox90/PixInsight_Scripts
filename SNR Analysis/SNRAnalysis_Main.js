@@ -4,7 +4,7 @@
  * Analyzes how SNR improves with integration depth by creating partial integrations
  * from calibrated  and registeredsubframes and measuring SNR in user-defined regions.
  * 
- * Version: 1.6.0
+ * Version: 1.6.4
  * Author: PixInsight Community
  */
 
