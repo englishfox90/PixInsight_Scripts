@@ -40,8 +40,8 @@
       </description>
     </package>
 
-    <package fileName="SNRAnalysis-1.6.2-20251214.zip"
-             sha1="ac5a1c288139cd750cce88385dadfe26e392daf8"
+    <package fileName="SNRAnalysis-1.6.3-20251214.zip"
+             sha1="4505f8032bd1aed7cb7844eac4f5575b9c53ace7"
              type="script"
              releaseDate="20251214">
       <title>
@@ -49,7 +49,7 @@
       </title>
       <description>
         <p>
-          SNR Analysis v1.6.2
+          SNR Analysis v1.6.3
         </p>
         <p>
           Analyzes how SNR improves with integration depth by creating partial integrations from calibrated and registered subframes and measuring SNR in user-defined ROIs. Generates dual graphs (SNR &amp; Gain/hr), CSV/JSON output, and provides actionable insights about diminishing returns.

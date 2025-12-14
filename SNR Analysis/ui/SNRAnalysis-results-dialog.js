@@ -97,6 +97,7 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath, gainGrap
    text += "  \u2022 previews/int_NX_starless.xisf - Starless versions\n";
    
    summaryText.text = text;
+   summaryText.cursorPosition = 0;  // Scroll to top
    
    // Create preview TabBox to hold Graph and Stack preview
    var previewTabBox = new TabBox(dialog);
@@ -381,6 +382,7 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
       }
       
       summaryText.text = summaryContent;
+      summaryText.cursorPosition = 0;  // Scroll to top
       tabPage.sizer.add(summaryText);
       
       // Create preview TabBox for Graph and Stack preview
@@ -488,21 +490,22 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
          g.end();
       };
       
-      // Graph type combo change handler
+      // Graph type combo change handler - use stored reference to avoid closure issues
       graphTypeCombo.onItemSelected = function(index) {
+         var preview = this.graphPreview;  // Use stored reference, not closure variable
          if (index === 0) {
             // SNR graph
-            graphPreview.currentBitmap = graphPreview.snrBitmap;
-            graphPreview.statusText = graphPreview.snrBitmap ? "" : "SNR graph not available";
+            preview.currentBitmap = preview.snrBitmap;
+            preview.statusText = preview.snrBitmap ? "" : "SNR graph not available";
          } else {
             // Gain/hr graph
-            graphPreview.currentBitmap = graphPreview.gainBitmap;
-            graphPreview.statusText = graphPreview.gainBitmap ? "" : "Gain/hr graph not available";
+            preview.currentBitmap = preview.gainBitmap;
+            preview.statusText = preview.gainBitmap ? "" : "Gain/hr graph not available";
          }
-         graphPreview.viewport.update();
+         preview.viewport.update();
       };
       
-      // Store references for tab change handler
+      // Store references for tab change handler and combo handler
       graphTypeCombo.graphPreview = graphPreview;
       tabPage.graphTypeCombo = graphTypeCombo;
       tabPage.graphPreview = graphPreview;
