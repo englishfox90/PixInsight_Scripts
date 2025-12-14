@@ -502,6 +502,11 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
          graphPreview.viewport.update();
       };
       
+      // Store references for tab change handler
+      graphTypeCombo.graphPreview = graphPreview;
+      tabPage.graphTypeCombo = graphTypeCombo;
+      tabPage.graphPreview = graphPreview;
+      
       graphTab.sizer.add(graphPreview);
       
       previewTabBox.addPage(graphTab, "Graph");
@@ -524,6 +529,23 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
       
       tabBox.addPage(tabPage, fr.filterName);
    }
+   
+   // Add tab change handler to refresh graph display
+   tabBox.onPageSelected = function(pageIndex) {
+      var tabPage = this.pageControlByIndex(pageIndex);
+      if (tabPage && tabPage.graphPreview && tabPage.graphTypeCombo) {
+         // Refresh the graph based on current dropdown selection
+         var index = tabPage.graphTypeCombo.currentItem;
+         if (index === 0) {
+            tabPage.graphPreview.currentBitmap = tabPage.graphPreview.snrBitmap;
+            tabPage.graphPreview.statusText = tabPage.graphPreview.snrBitmap ? "" : "SNR graph not available";
+         } else {
+            tabPage.graphPreview.currentBitmap = tabPage.graphPreview.gainBitmap;
+            tabPage.graphPreview.statusText = tabPage.graphPreview.gainBitmap ? "" : "Gain/hr graph not available";
+         }
+         tabPage.graphPreview.viewport.update();
+      }
+   };
    
    // OK button
    var okButton = new PushButton(dialog);

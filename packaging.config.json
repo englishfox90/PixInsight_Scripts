@@ -73,7 +73,7 @@
       "name": "SNR Analysis",
       "sourceDir": "SNR Analysis",
       "zipNamePrefix": "SNRAnalysis",
-      "version": "1.6.0",
+      "version": "1.6.1",
       "piScriptRoot": "src/scripts/SNRAnalysis",
       "piResourceRoot": "rsc/SNRAnalysis",
       "description": "Analyzes how SNR improves with integration depth by creating partial integrations from calibrated and registered subframes and measuring SNR in user-defined ROIs. Generates dual graphs (SNR & Gain/hr), CSV/JSON output, and provides actionable insights about diminishing returns.",

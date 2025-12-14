@@ -26,7 +26,7 @@ function generateGraph(results, outputDir, filterSuffix, filterName) {
    // Graph dimensions
    var width = 1000;
    var height = 600;
-   var marginLeft = 120;  // Increased for Y-axis label
+   var marginLeft = 150;  // Increased for Y-axis label
    var marginRight = 40;
    var marginTop = 40;
    var marginBottom = 60;
@@ -280,7 +280,7 @@ function generateGainGraph(results, outputDir, filterSuffix, filterName) {
    // Graph dimensions
    var width = 1000;
    var height = 600;
-   var marginLeft = 120;  // Increased for Y-axis label
+   var marginLeft = 170;  // Increased for Y-axis label
    var marginRight = 40;
    var marginTop = 40;
    var marginBottom = 60;
@@ -413,7 +413,7 @@ function generateGainGraph(results, outputDir, filterSuffix, filterName) {
    
    // Y axis label (horizontal, on left side)
    g.font = new Font("helvetica", 12);
-   var yLabel = "Gain/hr (%/hr)";
+   var yLabel = "Gain/hr";
    g.drawText(10, (marginTop + height - marginBottom) / 2, yLabel);
    
    // X axis label

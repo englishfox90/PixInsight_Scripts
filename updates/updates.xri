@@ -10,10 +10,10 @@
   </description>
 
   <platform os="all" arch="noarch" version="1.8.0:2.0.0">
-    <package fileName="AstroBinExport-3.2.1-20251213.zip"
+    <package fileName="AstroBinExport-3.2.1-20251214.zip"
              sha1="55a7e8fab62a9da40336d504bdefce72820e81e4"
              type="script"
-             releaseDate="20251213">
+             releaseDate="20251214">
       <title>
         AstroBin Export
       </title>
@@ -40,16 +40,16 @@
       </description>
     </package>
 
-    <package fileName="SNRAnalysis-1.6.0-20251213.zip"
-             sha1="be21a9239a7c0be9a3d4e4ed0c9f3003a0d9e767"
+    <package fileName="SNRAnalysis-1.6.1-20251214.zip"
+             sha1="115fed8fd0806048aa1791ca09431afaa75ffd26"
              type="script"
-             releaseDate="20251213">
+             releaseDate="20251214">
       <title>
         SNR Analysis
       </title>
       <description>
         <p>
-          SNR Analysis v1.6.0
+          SNR Analysis v1.6.1
         </p>
         <p>
           Analyzes how SNR improves with integration depth by creating partial integrations from calibrated and registered subframes and measuring SNR in user-defined ROIs. Generates dual graphs (SNR &amp; Gain/hr), CSV/JSON output, and provides actionable insights about diminishing returns.

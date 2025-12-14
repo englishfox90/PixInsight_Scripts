@@ -4,7 +4,7 @@
  */
 
 var SCRIPT_NAME = "SNR Analysis";
-var SCRIPT_VERSION = "1.6.0";
+var SCRIPT_VERSION = "1.6.1";
 var SCRIPT_DESCRIPTION = "Analyzes how SNR improves with integration depth by creating partial integrations and measuring SNR in user-defined ROIs.";
 
 // Settings module ID (unique to avoid conflicts with other tools)
