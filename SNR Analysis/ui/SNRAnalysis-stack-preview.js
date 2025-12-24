@@ -194,7 +194,7 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
          previewBox.statusText = "File not found: " + entry.label;
          infoTextLabel.text = entry.label + " - File not available";
          previewBox.viewport.update();
-         console.warningln("Stack preview: File not found - " + filePath);
+         Console.warningln("Stack preview: File not found - " + filePath);
          return;
       }
       
@@ -205,7 +205,7 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
             previewBox.statusText = "Failed to load: " + entry.label;
             infoTextLabel.text = entry.label + " - Load failed";
             previewBox.viewport.update();
-            console.warningln("Stack preview: Failed to open - " + filePath);
+            Console.warningln("Stack preview: Failed to open - " + filePath);
             return;
          }
          
@@ -223,8 +223,8 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
          var m = stretch.m;
          var c1 = stretch.c1;
 
-         console.writeln("Preview stretch - c0: " + c0 + ", m: " + m + ", c1: " + c1);
-         console.writeln("Image min: " + img.minimum() + ", median: " + median + ", max: " + img.maximum());
+         Console.writeln("Preview stretch - c0: " + c0 + ", m: " + m + ", c1: " + c1);
+         Console.writeln("Image min: " + img.minimum() + ", median: " + median + ", max: " + img.maximum());
          
          // Create a working copy of the image
          var stretchedImg = new Image(Math.floor(img.width), Math.floor(img.height), img.numberOfChannels, 
@@ -245,12 +245,12 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
          // Apply the stretch to the copied image
          HT.executeOn(stretchedImg);
          
-         console.writeln("After stretch - min: " + stretchedImg.minimum() + ", median: " + stretchedImg.median() + ", max: " + stretchedImg.maximum());
+         Console.writeln("After stretch - min: " + stretchedImg.minimum() + ", median: " + stretchedImg.median() + ", max: " + stretchedImg.maximum());
          
          // Render the stretched image to bitmap
          var bmp = stretchedImg.render();
          
-         console.writeln("Bitmap created: " + bmp.width + "x" + bmp.height);
+         Console.writeln("Bitmap created: " + bmp.width + "x" + bmp.height);
          
          // Clean up
          stretchedImg.free();
@@ -264,13 +264,13 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
                              entry.snr.toFixed(2) + " (" + typeStr + ")";
          
          previewBox.viewport.update();
-         console.writeln("Stack preview loaded: " + entry.label + " (" + window.mainView.image.width + "x" + window.mainView.image.height + ")");
+         Console.writeln("Stack preview loaded: " + entry.label + " (" + window.mainView.image.width + "x" + window.mainView.image.height + ")");
          
       } catch (e) {
          previewBox.statusText = "Error loading: " + entry.label;
          infoTextLabel.text = entry.label + " - Error: " + e.message;
          previewBox.viewport.update();
-         console.warningln("Stack preview error: " + e.message);
+         Console.warningln("Stack preview error: " + e.message);
       }
    }
    
@@ -355,7 +355,7 @@ function applyAutoSTFForPreview(window) {
       return duplicate;
       
    } catch (e) {
-      console.warningln("STF preview failed, using original: " + e.message);
+      Console.warningln("STF preview failed, using original: " + e.message);
       return window;
    }
 }

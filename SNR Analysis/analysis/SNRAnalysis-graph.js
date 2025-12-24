@@ -19,7 +19,7 @@ function generateGraph(results, outputDir, filterSuffix, filterName) {
    filterName = filterName || "";
    
    if (results.length < 2) {
-      console.warningln("Need at least 2 data points to generate graph");
+      Console.warningln("Need at least 2 data points to generate graph");
       return null;
    }
    
@@ -173,14 +173,14 @@ function generateGraph(results, outputDir, filterSuffix, filterName) {
             
             if (writer.writeImage(img)) {
                writer.close();
-               console.writeln("Graph saved as PNG: " + pngPath);
+               Console.writeln("Graph saved as PNG: " + pngPath);
                graphPath = pngPath;
             } else {
                writer.close();
             }
          }
       } catch (e) {
-         console.warningln("PNG save failed: " + e.message);
+         Console.warningln("PNG save failed: " + e.message);
       }
    }
    
@@ -198,14 +198,14 @@ function generateGraph(results, outputDir, filterSuffix, filterName) {
                
                if (writer.writeImage(img)) {
                   writer.close();
-                  console.writeln("Graph saved as JPEG: " + jpgPath);
+                  Console.writeln("Graph saved as JPEG: " + jpgPath);
                   graphPath = jpgPath;
                } else {
                   writer.close();
                }
             }
          } catch (e) {
-            console.warningln("JPEG save failed: " + e.message);
+            Console.warningln("JPEG save failed: " + e.message);
          }
       }
    }
@@ -215,16 +215,16 @@ function generateGraph(results, outputDir, filterSuffix, filterName) {
       var bmpPath = CONFIG.graphsDir + "/snr_graph" + filterSuffix + ".bmp";
       try {
          if (bmp.save(bmpPath)) {
-            console.writeln("Graph saved as BMP: " + bmpPath);
+            Console.writeln("Graph saved as BMP: " + bmpPath);
             graphPath = bmpPath;
          }
       } catch (e) {
-         console.warningln("BMP save failed: " + e.message);
+         Console.warningln("BMP save failed: " + e.message);
       }
    }
    
    if (!graphPath) {
-      console.warningln("Could not save graph - all formats failed. Check PixInsight file format support.");
+      Console.warningln("Could not save graph - all formats failed. Check PixInsight file format support.");
    }
    
    return graphPath;
@@ -273,7 +273,7 @@ function generateGainGraph(results, outputDir, filterSuffix, filterName) {
    }
    
    if (gainPoints.length < 1) {
-      console.warningln("Need at least 1 point with gain/hr data to generate graph");
+      Console.warningln("Need at least 1 point with gain/hr data to generate graph");
       return null;
    }
    
@@ -438,19 +438,19 @@ function generateGainGraph(results, outputDir, filterSuffix, filterName) {
             
             if (writer.writeImage(img)) {
                writer.close();
-               console.writeln("Gain graph saved as PNG: " + pngPath);
+               Console.writeln("Gain graph saved as PNG: " + pngPath);
                graphPath = pngPath;
             } else {
                writer.close();
             }
          }
       } catch (e) {
-         console.warningln("PNG save failed: " + e.message);
+         Console.warningln("PNG save failed: " + e.message);
       }
    }
    
    if (!graphPath) {
-      console.warningln("Could not save gain graph");
+      Console.warningln("Could not save gain graph");
    }
    
    return graphPath;

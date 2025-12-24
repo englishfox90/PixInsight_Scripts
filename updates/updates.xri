@@ -10,16 +10,16 @@
   </description>
 
   <platform os="all" arch="noarch" version="1.8.0:2.0.0">
-    <package fileName="AstroBinExport-3.2.3-20251214.zip"
-             sha1="d67cd3d5c78a7326e4b406b15dfc42e2d4dd8304"
+    <package fileName="AstroBinExport-3.2.4-20251223.zip"
+             sha1="b899281fad830e80fc78c9ef4ad90bfcc93d52be"
              type="script"
-             releaseDate="20251214">
+             releaseDate="20251223">
       <title>
         AstroBin Export
       </title>
       <description>
         <p>
-          AstroBin Export v3.2.3
+          AstroBin Export v3.2.4
         </p>
         <p>
           Generates CSV files compatible with AstroBin&apos;s bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.
@@ -40,16 +40,16 @@
       </description>
     </package>
 
-    <package fileName="SNRAnalysis-1.6.5-20251214.zip"
-             sha1="4f952c02e415c4df5b2001fb7e975172b9c5f563"
+    <package fileName="SNRAnalysis-1.6.6-20251223.zip"
+             sha1="2da5e11c294ab81ef3ea6ec5d63f2746b4a512c9"
              type="script"
-             releaseDate="20251214">
+             releaseDate="20251223">
       <title>
         SNR Analysis
       </title>
       <description>
         <p>
-          SNR Analysis v1.6.5
+          SNR Analysis v1.6.6
         </p>
         <p>
           Analyzes how SNR improves with integration depth by creating partial integrations from calibrated and registered subframes and measuring SNR in user-defined ROIs. Generates dual graphs (SNR &amp; Gain/hr), CSV/JSON output, and provides actionable insights about diminishing returns.

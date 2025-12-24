@@ -558,7 +558,7 @@ AstroBinDialog.prototype.createImageAnalysisSection = function()
          var newFilterId = node.text(3);
          if (g_analysisData && g_analysisData[node.dataIndex]) {
             g_analysisData[node.dataIndex].filterId = newFilterId;
-            console.writeln("Updated filter ID for image " + (node.dataIndex + 1) + " to: " + newFilterId);
+            Console.writeln("Updated filter ID for image " + (node.dataIndex + 1) + " to: " + newFilterId);
          }
          // Update Filter Name (column 2) immediately after edit
          try {
@@ -576,7 +576,7 @@ AstroBinDialog.prototype.createImageAnalysisSection = function()
             }
             node.setText(2, filterNameCombined);
          } catch (e) {
-            console.warningln("Could not update filter name column: " + e);
+            Console.warningln("Could not update filter name column: " + e);
          }
          // Regenerate CSV if it exists
          if (self.csvPreviewTextBox && self.csvPreviewTextBox.text) {

@@ -86,39 +86,39 @@ function writeJSON(results, rois, insights, outputDir, filterSuffix) {
 }
 
 /**
- * Print results summary to console
+ * Print results summary to Console
  */
 function printResultsSummary(results, signalRef, refLabel) {
-   console.writeln("");
-   console.writeln("=== DECISION SNR (Fixed Signal Reference) ===");
-   console.writeln("");
-   console.writeln("Decision SNR uses fixed signal from deepest stack to measure only noise improvement:");
-   console.writeln("");
-   console.writeln("              signalRef");
-   console.writeln("  SNR_stop = -----------");
-   console.writeln("             σ_BG(depth)");
-   console.writeln("");
-   console.writeln("  signalRef = median(FG_ref) − median(BG_ref)");
-   console.writeln("  σ_BG(depth) = 1.4826 × MAD(background pixels)");
-   console.writeln("");
-   console.writeln("★ Decision SNR uses fixed signal from deepest stack:");
-   console.writeln("  signalRef = " + signalRef.toFixed(8) + " at " + refLabel);
-   console.writeln("");
-   console.writeln("=== RESULTS SUMMARY ===");
-   console.writeln("");
-   console.writeln("Diminishing returns metric:");
-   console.writeln("        100 × (SNRᵢ − SNRᵢ₋₁)");
-   console.writeln("  ΔSNR% = --------------------");
-   console.writeln("              SNRᵢ₋₁");
-   console.writeln("");
-   console.writeln("           ΔSNR%");
-   console.writeln("  Gain/hr = ------");
-   console.writeln("          Δt(hours)");
-   console.writeln("");
-   console.writeln("  T₁₀ = Δt × (10 / ΔSNR%)");
-   console.writeln("");
-   console.writeln(format("%-10s %8s %12s %10s %10s %12s %10s %10s %10s", "Label", "N Subs", "Total Exp", "SNR_meas", "SNR_stop", "Global Noise", "ΔSNR", "Gain/hr", "T10(hrs)"));
-   console.writeln("-".repeat(110));
+   Console.writeln("");
+   Console.writeln("=== DECISION SNR (Fixed Signal Reference) ===");
+   Console.writeln("");
+   Console.writeln("Decision SNR uses fixed signal from deepest stack to measure only noise improvement:");
+   Console.writeln("");
+   Console.writeln("              signalRef");
+   Console.writeln("  SNR_stop = -----------");
+   Console.writeln("             σ_BG(depth)");
+   Console.writeln("");
+   Console.writeln("  signalRef = median(FG_ref) − median(BG_ref)");
+   Console.writeln("  σ_BG(depth) = 1.4826 × MAD(background pixels)");
+   Console.writeln("");
+   Console.writeln("★ Decision SNR uses fixed signal from deepest stack:");
+   Console.writeln("  signalRef = " + signalRef.toFixed(8) + " at " + refLabel);
+   Console.writeln("");
+   Console.writeln("=== RESULTS SUMMARY ===");
+   Console.writeln("");
+   Console.writeln("Diminishing returns metric:");
+   Console.writeln("        100 × (SNRᵢ − SNRᵢ₋₁)");
+   Console.writeln("  ΔSNR% = --------------------");
+   Console.writeln("              SNRᵢ₋₁");
+   Console.writeln("");
+   Console.writeln("           ΔSNR%");
+   Console.writeln("  Gain/hr = ------");
+   Console.writeln("          Δt(hours)");
+   Console.writeln("");
+   Console.writeln("  T₁₀ = Δt × (10 / ΔSNR%)");
+   Console.writeln("");
+   Console.writeln(format("%-10s %8s %12s %10s %10s %12s %10s %10s %10s", "Label", "N Subs", "Total Exp", "SNR_meas", "SNR_stop", "Global Noise", "ΔSNR", "Gain/hr", "T10(hrs)"));
+   Console.writeln("-".repeat(110));
    
    for (var i = 0; i < results.length; i++) {
       var r = results[i];
@@ -135,7 +135,7 @@ function printResultsSummary(results, signalRef, refLabel) {
       var t10HrsStr = (r.t10Hours !== null && r.t10Hours !== undefined && isFinite(r.t10Hours)) ?
                       r.t10Hours.toFixed(1) : "--";
       
-      console.writeln(format("%-10s %8d %12s %10s %10s %12s %10s %10s %10s",
+      Console.writeln(format("%-10s %8d %12s %10s %10s %12s %10s %10s %10s",
          r.label,
          r.depth,
          formatTime(r.totalExposure),
@@ -148,11 +148,11 @@ function printResultsSummary(results, signalRef, refLabel) {
       ));
    }
    
-   console.writeln("");
-   console.writeln("Note: SNR is ROI-dependent and used to evaluate relative improvement,");
-   console.writeln("      not as a global image quality score.");
-   console.writeln("      Global Noise is measured across the entire image using MAD estimator.");
-   console.writeln("");
+   Console.writeln("");
+   Console.writeln("Note: SNR is ROI-dependent and used to evaluate relative improvement,");
+   Console.writeln("      not as a global image quality score.");
+   Console.writeln("      Global Noise is measured across the entire image using MAD estimator.");
+   Console.writeln("");
 }
 
 /**

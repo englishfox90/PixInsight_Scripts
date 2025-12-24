@@ -1,11 +1,22 @@
 /*
  * AstroBin CSV Export - Core Utilities
  * File operations, date parsing, and other utility functions
+ * 
+ * MODULE SCOPE HYGIENE NOTES:
+ * This module is loaded via PJSR #include, which shares global scope.
+ * The following globals are INTENTIONAL and required for cross-module access:
+ *   - CONFIG: Shared configuration object (read/written by GUI and analysis modules)
+ *   - SCRIPT_NAME, SCRIPT_VERSION, etc.: Metadata constants
+ *   - Helper functions: endsWithAny, listFiles, readKeyword, parseDateObs, etc.
+ *   - AB_SETTINGS_MODULE: Settings namespace constant
+ * 
+ * All other variables should be scoped to functions to avoid pollution.
+ * Entry point (main script) uses "use strict" + IIFE wrapper to catch accidental globals.
  */
 
 // Script metadata
 var SCRIPT_NAME = "AstroBin Export";
-var SCRIPT_VERSION = "3.2.3";
+var SCRIPT_VERSION = "3.2.4";  // Bumped for hygiene improvements
 var SCRIPT_DESCRIPTION = "Generates CSV files compatible with AstroBin's bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.";
 var SCRIPT_DEVELOPER = "Paul Fox-Reeks (englishfox90)";
 
@@ -69,7 +80,7 @@ var DEFAULT_EXPORT_COLUMNS = {
 function loadExportColumnSettings() {
   var cols = {};
   try {
-    console.writeln("[AstroBin] Loading export column settings...");
+    Console.writeln("[AstroBin] Loading export column settings...");
     var init = Settings.read(AB_SETTINGS_MODULE + "/exportColumns/_initialized", DataType_UInt32);
     var initialized = Settings.lastReadOK && (init === 1);
 
@@ -78,7 +89,7 @@ function loadExportColumnSettings() {
       for (var d in DEFAULT_EXPORT_COLUMNS) cols[d] = !!DEFAULT_EXPORT_COLUMNS[d];
       // Enforce required columns
       cols.number = true; cols.duration = true;
-      console.writeln("[AstroBin] Export column settings not found; using defaults.");
+      Console.writeln("[AstroBin] Export column settings not found; using defaults.");
       return cols;
     }
 
@@ -94,19 +105,19 @@ function loadExportColumnSettings() {
     // Enforce required columns
     cols.number = true;
     cols.duration = true;
-    console.writeln("[AstroBin] Export column settings loaded successfully.");
+    Console.writeln("[AstroBin] Export column settings loaded successfully.");
   } catch (e) {
     // Fall back to defaults on error
     for (var d in DEFAULT_EXPORT_COLUMNS) cols[d] = !!DEFAULT_EXPORT_COLUMNS[d];
     cols.number = true; cols.duration = true;
-    console.warningln("[AstroBin] Failed to read settings, using defaults. Error: " + e);
+    Console.warningln("[AstroBin] Failed to read settings, using defaults. Error: " + e);
   }
   return cols;
 }
 
 function saveExportColumnSettings(columns) {
   try {
-    console.writeln("[AstroBin] Saving export column settings...");
+    Console.writeln("[AstroBin] Saving export column settings...");
     for (var key in DEFAULT_EXPORT_COLUMNS) {
       var val = columns.hasOwnProperty(key) ? !!columns[key] : DEFAULT_EXPORT_COLUMNS[key];
       // Enforce required columns saved as true
@@ -115,10 +126,10 @@ function saveExportColumnSettings(columns) {
     }
     // Mark as initialized
     Settings.write(AB_SETTINGS_MODULE + "/exportColumns/_initialized", DataType_UInt32, EXPORT_COLUMNS_VERSION);
-    console.writeln("[AstroBin] Export column settings saved successfully to: " + AB_SETTINGS_MODULE);
+    Console.writeln("[AstroBin] Export column settings saved successfully to: " + AB_SETTINGS_MODULE);
   } catch (e) {
     // Non-fatal; continue
-    console.criticalln("[AstroBin] Error saving export column settings: " + e);
+    Console.criticalln("[AstroBin] Error saving export column settings: " + e);
   }
 }
 
@@ -135,12 +146,12 @@ var DEFAULT_PERSONAL_FILTER_SET = { L: "", R: "", G: "", B: "", Ha: "", OIII: ""
 function loadPersonalFilterSet() {
   var set = {};
   try {
-    console.writeln("[AstroBin] Loading personal filter set...");
+    Console.writeln("[AstroBin] Loading personal filter set...");
     var init = Settings.read(AB_SETTINGS_MODULE + "/personalFilters/_initialized", DataType_UInt32);
     var initialized = Settings.lastReadOK && (init === 1);
     
     if (!initialized) {
-      console.writeln("[AstroBin] Personal filter set not found; using empty defaults.");
+      Console.writeln("[AstroBin] Personal filter set not found; using empty defaults.");
       for (var key in DEFAULT_PERSONAL_FILTER_SET) set[key] = ""; // empty defaults
       return set;
     }
@@ -150,17 +161,17 @@ function loadPersonalFilterSet() {
       if (Settings.lastReadOK && val !== undefined && val !== null) {
         set[key] = ("" + val).trim();
         if (set[key]) {
-          console.writeln("[AstroBin] Loaded personal filter " + key + " = " + set[key]);
+          Console.writeln("[AstroBin] Loaded personal filter " + key + " = " + set[key]);
         }
       } else {
         set[key] = "";
       }
     }
-    console.writeln("[AstroBin] Personal filter set loaded successfully.");
+    Console.writeln("[AstroBin] Personal filter set loaded successfully.");
     return set;
   } catch (e) {
     for (var k in DEFAULT_PERSONAL_FILTER_SET) set[k] = "";
-    console.warningln("[AstroBin] Failed to load personal filter set: " + e);
+    Console.warningln("[AstroBin] Failed to load personal filter set: " + e);
     return set;
   }
 }
@@ -168,7 +179,7 @@ function loadPersonalFilterSet() {
 // Lazy loader for personal filter set - loads on first access
 function getPersonalFilterSet() {
   if (CONFIG.personalFilterSet === null) {
-    console.writeln("[AstroBin] Loading personal filter set (lazy initialization)...");
+    Console.writeln("[AstroBin] Loading personal filter set (lazy initialization)...");
     CONFIG.personalFilterSet = loadPersonalFilterSet();
   }
   return CONFIG.personalFilterSet;
@@ -177,26 +188,26 @@ function getPersonalFilterSet() {
 function savePersonalFilterSet(set) {
   try {
     if (!set) {
-      console.warningln("[AstroBin] Cannot save personal filter set - set is null/undefined");
+      Console.warningln("[AstroBin] Cannot save personal filter set - set is null/undefined");
       return;
     }
-    console.writeln("[AstroBin] Saving personal filter set...");
-    console.writeln("[AstroBin] Filter set to save: " + JSON.stringify(set));
+    Console.writeln("[AstroBin] Saving personal filter set...");
+    Console.writeln("[AstroBin] Filter set to save: " + JSON.stringify(set));
     
     for (var key in DEFAULT_PERSONAL_FILTER_SET) {
       var val = set.hasOwnProperty(key) ? (set[key] || "") : "";
       Settings.write(AB_SETTINGS_MODULE + "/personalFilters/" + key, DataType_String, val);
       if (val) {
-        console.writeln("[AstroBin] Saved personal filter " + key + " = " + val);
+        Console.writeln("[AstroBin] Saved personal filter " + key + " = " + val);
       }
     }
     Settings.write(AB_SETTINGS_MODULE + "/personalFilters/_initialized", DataType_UInt32, PERSONAL_FILTER_SET_VERSION);
-    console.writeln("[AstroBin] Personal filter set saved successfully to: " + AB_SETTINGS_MODULE + "/personalFilters/");
+    Console.writeln("[AstroBin] Personal filter set saved successfully to: " + AB_SETTINGS_MODULE + "/personalFilters/");
     
     // Update in-memory cache
     CONFIG.personalFilterSet = set;
   } catch (e) {
-    console.criticalln("[AstroBin] Error saving personal filter set: " + e);
+    Console.criticalln("[AstroBin] Error saving personal filter set: " + e);
   }
 }
 
@@ -207,12 +218,12 @@ function loadBortleScale() {
     if (Settings.lastReadOK && bortle) {
       var bortleNum = parseInt(bortle);
       if (bortleNum >= 1 && bortleNum <= 9) {
-        console.writeln("[AstroBin] Loaded Bortle scale: " + bortle);
+        Console.writeln("[AstroBin] Loaded Bortle scale: " + bortle);
         return bortle;
       }
     }
   } catch (e) {
-    console.warningln("[AstroBin] Failed to load Bortle scale: " + e);
+    Console.warningln("[AstroBin] Failed to load Bortle scale: " + e);
   }
   return "4"; // Default to Bortle 4
 }
@@ -222,10 +233,10 @@ function saveBortleScale(bortle) {
     var bortleNum = parseInt(bortle);
     if (bortleNum >= 1 && bortleNum <= 9) {
       Settings.write(AB_SETTINGS_MODULE + "/bortle", DataType_String, bortle);
-      console.writeln("[AstroBin] Saved Bortle scale: " + bortle);
+      Console.writeln("[AstroBin] Saved Bortle scale: " + bortle);
     }
   } catch (e) {
-    console.criticalln("[AstroBin] Error saving Bortle scale: " + e);
+    Console.criticalln("[AstroBin] Error saving Bortle scale: " + e);
   }
 }
 
@@ -308,16 +319,16 @@ function parseDateObs( s ){
   try {
     var d = new Date( t );
     if ( isNaN( d ) ) {
-      console.warningln("[AstroBin] Failed to parse date: '" + original + "' -> '" + t + "'");
+      Console.warningln("[AstroBin] Failed to parse date: '" + original + "' -> '" + t + "'");
       return undefined;
     }
     // Debug first few dates only
     if (Math.random() < 0.1) { // Log ~10% to avoid spam
-      console.writeln("[AstroBin] Parsed date: '" + original + "' -> " + d.toISOString());
+      Console.writeln("[AstroBin] Parsed date: '" + original + "' -> " + d.toISOString());
     }
     return d;
   } catch( err ){
-    console.warningln("[AstroBin] Exception parsing date: '" + original + "' - " + err);
+    Console.warningln("[AstroBin] Exception parsing date: '" + original + "' - " + err);
     return undefined;
   }
 }

@@ -140,7 +140,7 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath, gainGrap
    var gainGraphPath = gainGraphPathParam;
    
    // Debug: Show what paths were passed
-   console.writeln("Graph paths received - SNR: " + (snrGraphPath || "null") + ", Gain: " + (gainGraphPath || "null"));
+   Console.writeln("Graph paths received - SNR: " + (snrGraphPath || "null") + ", Gain: " + (gainGraphPath || "null"));
    
    // Try to find SNR graph if not provided
    if (!snrGraphPath) {
@@ -151,7 +151,7 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath, gainGrap
       if (!File.exists(snrGraphPath)) {
          snrGraphPath = CONFIG.graphsDir + "/snr_graph.bmp";
       }
-      console.writeln("SNR graph fallback search result: " + snrGraphPath);
+      Console.writeln("SNR graph fallback search result: " + snrGraphPath);
    }
    
    // Try to find Gain/hr graph if not provided
@@ -163,7 +163,7 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath, gainGrap
       if (!File.exists(gainGraphPath)) {
          gainGraphPath = CONFIG.graphsDir + "/gain_graph.bmp";
       }
-      console.writeln("Gain graph fallback search result: " + gainGraphPath);
+      Console.writeln("Gain graph fallback search result: " + gainGraphPath);
    }
    
    // Load both graphs
@@ -173,18 +173,18 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath, gainGrap
    if (snrGraphPath && File.exists(snrGraphPath)) {
       try {
          snrGraphBitmap = new Bitmap(snrGraphPath);
-         console.writeln("SNR graph loaded: " + snrGraphPath);
+         Console.writeln("SNR graph loaded: " + snrGraphPath);
       } catch (e) {
-         console.warningln("Failed to load SNR graph: " + e.message);
+         Console.warningln("Failed to load SNR graph: " + e.message);
       }
    }
    
    if (gainGraphPath && File.exists(gainGraphPath)) {
       try {
          gainGraphBitmap = new Bitmap(gainGraphPath);
-         console.writeln("Gain/hr graph loaded: " + gainGraphPath);
+         Console.writeln("Gain/hr graph loaded: " + gainGraphPath);
       } catch (e) {
-         console.warningln("Failed to load Gain/hr graph: " + e.message);
+         Console.warningln("Failed to load Gain/hr graph: " + e.message);
       }
    }
    
@@ -426,7 +426,7 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
       var gainGraphPath = fr.gainGraphPath;
       
       // Debug: Show what paths were passed
-      console.writeln("Multi-filter graph paths (" + fr.filterName + ") - SNR: " + (snrGraphPath || "null") + ", Gain: " + (gainGraphPath || "null"));
+      Console.writeln("Multi-filter graph paths (" + fr.filterName + ") - SNR: " + (snrGraphPath || "null") + ", Gain: " + (gainGraphPath || "null"));
       
       // Load both graphs
       var snrGraphBitmap = null;
@@ -435,18 +435,18 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
       if (snrGraphPath && File.exists(snrGraphPath)) {
          try {
             snrGraphBitmap = new Bitmap(snrGraphPath);
-            console.writeln("SNR graph loaded (" + fr.filterName + "): " + snrGraphPath);
+            Console.writeln("SNR graph loaded (" + fr.filterName + "): " + snrGraphPath);
          } catch (e) {
-            console.warningln("Failed to load SNR graph: " + e.message);
+            Console.warningln("Failed to load SNR graph: " + e.message);
          }
       }
       
       if (gainGraphPath && File.exists(gainGraphPath)) {
          try {
             gainGraphBitmap = new Bitmap(gainGraphPath);
-            console.writeln("Gain/hr graph loaded (" + fr.filterName + "): " + gainGraphPath);
+            Console.writeln("Gain/hr graph loaded (" + fr.filterName + "): " + gainGraphPath);
          } catch (e) {
-            console.warningln("Failed to load Gain/hr graph: " + e.message);
+            Console.warningln("Failed to load Gain/hr graph: " + e.message);
          }
       }
       

@@ -29,8 +29,8 @@ function scanSubframes(dirPath, pattern, groupByFilter) {
    // Recursively find files
    var files = findFilesRecursive(dirPath, extensions);
    
-   console.writeln("Found " + files.length + " files matching pattern");
-   console.writeln("Extracting metadata (this may take a moment for large datasets)...");
+   Console.writeln("Found " + files.length + " files matching pattern");
+   Console.writeln("Extracting metadata (this may take a moment for large datasets)...");
    
    // Extract metadata from each file
    var progressInterval = Math.max(1, Math.floor(files.length / 10));
@@ -38,7 +38,7 @@ function scanSubframes(dirPath, pattern, groupByFilter) {
    for (var i = 0; i < files.length; i++) {
       // Progress feedback every 10%
       if (i > 0 && i % progressInterval === 0) {
-         console.write(format("  Progress: %d%%\r", Math.floor((i / files.length) * 100)));
+         Console.write(format("  Progress: %d%%\r", Math.floor((i / files.length) * 100)));
          processEvents();
       }
       
@@ -46,13 +46,13 @@ function scanSubframes(dirPath, pattern, groupByFilter) {
          var metadata = extractSubframeMetadata(files[i]);
          
          if (!metadata) {
-            console.warningln("Skipping " + File.extractName(files[i]) + " (failed to read metadata)");
+            Console.warningln("Skipping " + File.extractName(files[i]) + " (failed to read metadata)");
             skippedInvalid++;
             continue;
          }
          
          if (!metadata.isLight) {
-            console.warningln("Skipping " + File.extractName(files[i]) + " (IMAGETYP='" + metadata.imageType + "')");
+            Console.warningln("Skipping " + File.extractName(files[i]) + " (IMAGETYP='" + metadata.imageType + "')");
             skippedNonLight++;
             continue;
          }
@@ -60,15 +60,15 @@ function scanSubframes(dirPath, pattern, groupByFilter) {
          subframes.push(metadata);
          
       } catch (error) {
-         console.warningln("Error processing " + files[i] + ": " + error.message);
+         Console.warningln("Error processing " + files[i] + ": " + error.message);
          skippedInvalid++;
       }
    }
    
-   console.writeln("  Progress: 100%");
-   console.writeln("Found " + subframes.length + " subframes");
-   if (skippedNonLight > 0) console.writeln("Skipped " + skippedNonLight + " non-light frames");
-   if (skippedInvalid > 0) console.writeln("Skipped " + skippedInvalid + " unreadable frames");
+   Console.writeln("  Progress: 100%");
+   Console.writeln("Found " + subframes.length + " subframes");
+   if (skippedNonLight > 0) Console.writeln("Skipped " + skippedNonLight + " non-light frames");
+   if (skippedInvalid > 0) Console.writeln("Skipped " + skippedInvalid + " unreadable frames");
    
    // Sort by date-obs
    subframes.sort(function(a, b) {
@@ -91,9 +91,9 @@ function scanSubframes(dirPath, pattern, groupByFilter) {
       }
       
       // Log filter groups
-      console.writeln("\nFilter groups found:");
+      Console.writeln("\nFilter groups found:");
       for (var filterName in filterGroups) {
-         console.writeln("  " + filterName + ": " + filterGroups[filterName].length + " subframes");
+         Console.writeln("  " + filterName + ": " + filterGroups[filterName].length + " subframes");
       }
       
       return filterGroups;
@@ -213,7 +213,7 @@ function extractSubframeMetadata(filePath) {
       var normalizedExposure = normalizeExposureSeconds(exposure);
       if (normalizedExposure !== exposure && !__snrExposureUnitConversionNotified) {
          __snrExposureUnitConversionNotified = true;
-         console.warningln("Exposure keyword appears to be in ms/us for some files; converting to seconds for calculations.");
+         Console.warningln("Exposure keyword appears to be in ms/us for some files; converting to seconds for calculations.");
       }
 
       exposure = normalizedExposure;

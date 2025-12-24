@@ -16,6 +16,11 @@
 
 #feature-icon  @script_icons_dir/AstroBin.svg
 
+// === SCRIPT ISOLATION WRAPPER ===
+// Wraps entire script in IIFE (Immediately Invoked Function Expression) to prevent global scope pollution
+(function() {
+"use strict";  // Enables strict mode to catch accidental global variable assignments
+
 // Include necessary PJSR libraries for UI functionality
 #include <pjsr/Sizer.jsh>
 #include <pjsr/FrameStyle.jsh>
@@ -44,29 +49,31 @@ function main(){
          return;
       }
 
-      console.show();
-      console.writeln("AstroBin Acquisitions CSV Builder v3");
-      console.writeln("=======================================");
-      console.writeln("Script starting at: " + new Date().toISOString());
+      Console.show();
+      Console.writeln("AstroBin Acquisitions CSV Builder v3");
+      Console.writeln("=======================================");
+      Console.writeln("Script starting at: " + new Date().toISOString());
 
-      console.writeln("Using JavaScript filter database...");
-      console.writeln("Filter database loaded: " + ASTROBIN_FILTERS.length + " filters available");
+      Console.writeln("Using JavaScript filter database...");
+      Console.writeln("Filter database loaded: " + ASTROBIN_FILTERS.length + " filters available");
 
       // Initialize dialog without CSV dependency
 
       // Show the dialog
-      console.writeln("Creating dialog...");
+      Console.writeln("Creating dialog...");
       var dialog = new AstroBinDialog();
-      console.writeln("Executing dialog...");
+      Console.writeln("Executing dialog...");
       dialog.execute();
-      console.writeln("Script completed successfully.");
+      Console.writeln("Script completed successfully.");
 
    } catch (e) {
-      console.criticalln("*** FATAL ERROR in main(): " + e);
-      console.criticalln("Stack trace: " + (e.stack || "No stack trace available"));
+      Console.criticalln("*** FATAL ERROR in main(): " + e);
+      Console.criticalln("Stack trace: " + (e.stack || "No stack trace available"));
       throw e; // Re-throw so PixInsight shows the error
    }
 }
 
 // Execute main function
 main();
+
+})(); // End IIFE - Script isolation wrapper

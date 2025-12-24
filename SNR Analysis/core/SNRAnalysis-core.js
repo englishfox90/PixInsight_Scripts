@@ -1,10 +1,21 @@
 /*
  * SNRAnalysis-core.js
  * Core configuration, utilities, and Settings persistence
+ * 
+ * MODULE SCOPE HYGIENE NOTES:
+ * This module is loaded via PJSR #include, which shares global scope.
+ * The following globals are INTENTIONAL and required for cross-module access:
+ *   - CONFIG: Shared configuration object (read/written by UI and processing modules)
+ *   - SCRIPT_NAME, SCRIPT_VERSION: Metadata constants
+ *   - SNR_SETTINGS_MODULE: Settings namespace constant
+ *   - Helper functions: loadSettings, saveSettings, formatTime, closeImageWindow, etc.
+ * 
+ * All other variables should be scoped to functions to avoid pollution.
+ * Entry point (main script) uses "use strict" + IIFE wrapper to catch accidental globals.
  */
 
 var SCRIPT_NAME = "SNR Analysis";
-var SCRIPT_VERSION = "1.6.5";
+var SCRIPT_VERSION = "1.6.6";  // Bumped for hygiene improvements
 var SCRIPT_DESCRIPTION = "Analyzes how SNR improves with integration depth by creating partial integrations and measuring SNR in user-defined ROIs.";
 
 // Settings module ID (unique to avoid conflicts with other tools)
@@ -178,7 +189,7 @@ function loadSettings() {
       if (Settings.lastReadOK) CONFIG.logTimings = timings;
       
    } catch (error) {
-      console.warningln("Failed to load settings: " + error.message);
+      Console.warningln("Failed to load settings: " + error.message);
    }
 }
 
@@ -234,7 +245,7 @@ function saveSettings() {
       Settings.write(SNR_SETTINGS_MODULE + "/logTimings", DataType_Boolean, CONFIG.logTimings);
       
    } catch (error) {
-      console.warningln("Failed to save settings: " + error.message);
+      Console.warningln("Failed to save settings: " + error.message);
    }
 }
 
@@ -284,7 +295,7 @@ function closeImageWindow(imageId) {
          window.forceClose();
       }
    } catch (error) {
-      console.warningln("Failed to close window " + imageId + ": " + error.message);
+      Console.warningln("Failed to close window " + imageId + ": " + error.message);
    }
 }
 
@@ -308,7 +319,7 @@ function setupOutputDirectories(baseOutputDir) {
    
    if (!File.directoryExists(CONFIG.baseAnalysisDir)) {
       File.createDirectory(CONFIG.baseAnalysisDir, true);
-      console.writeln("Created analysis directory: " + CONFIG.baseAnalysisDir);
+      Console.writeln("Created analysis directory: " + CONFIG.baseAnalysisDir);
    }
    
    // Create subdirectories
@@ -322,17 +333,17 @@ function setupOutputDirectories(baseOutputDir) {
    for (var i = 0; i < subdirs.length; i++) {
       if (!File.directoryExists(subdirs[i])) {
          File.createDirectory(subdirs[i], true);
-         console.writeln("Created subdirectory: " + subdirs[i]);
+         Console.writeln("Created subdirectory: " + subdirs[i]);
       }
    }
    
-   console.writeln("");
-   console.writeln("Output structure:");
-   console.writeln("  Data (CSV/JSON): " + CONFIG.dataDir);
-   console.writeln("  Graphs: " + CONFIG.graphsDir);
-   console.writeln("  Integrations: " + CONFIG.integrationsDir);
-   console.writeln("  Previews: " + CONFIG.previewsDir);
-   console.writeln("");
+   Console.writeln("");
+   Console.writeln("Output structure:");
+   Console.writeln("  Data (CSV/JSON): " + CONFIG.dataDir);
+   Console.writeln("  Graphs: " + CONFIG.graphsDir);
+   Console.writeln("  Integrations: " + CONFIG.integrationsDir);
+   Console.writeln("  Previews: " + CONFIG.previewsDir);
+   Console.writeln("");
 }
 
 /**
@@ -346,7 +357,7 @@ function writeTextFile(path, content) {
       f.close();
       return true;
    } catch (error) {
-      console.criticalln("Failed to write file " + path + ": " + error.message);
+      Console.criticalln("Failed to write file " + path + ": " + error.message);
       return false;
    }
 }

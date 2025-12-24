@@ -182,12 +182,12 @@ function parseCustomDepths(customList, maxSubs) {
       var val = parseInt(parts[i].trim(), 10);
       
       if (isNaN(val) || val <= 0) {
-         console.warningln("Invalid custom depth value: " + parts[i]);
+         Console.warningln("Invalid custom depth value: " + parts[i]);
          continue;
       }
       
       if (val > maxSubs) {
-         console.warningln("Custom depth " + val + " exceeds available subs (" + maxSubs + "), clamping");
+         Console.warningln("Custom depth " + val + " exceeds available subs (" + maxSubs + "), clamping");
          val = maxSubs;
       }
       

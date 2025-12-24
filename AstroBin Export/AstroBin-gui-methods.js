@@ -9,13 +9,13 @@ AstroBinDialog.prototype.scanForFiles = function()
    if (!CONFIG.rootDir) return;
    
    try {
-      console.writeln("Scanning directory: " + CONFIG.rootDir);
+      Console.writeln("Scanning directory: " + CONFIG.rootDir);
       g_imageFiles = listFiles(CONFIG.rootDir, CONFIG.includeSubdirs);
       this.fileCountLabel.text = "Files found: " + g_imageFiles.length;
       this.analysisStatusLabel.text = "Ready to analyze " + g_imageFiles.length + " files";
       this.updateUI();
    } catch (e) {
-      console.criticalln("Error scanning files: " + e);
+      Console.criticalln("Error scanning files: " + e);
       this.fileCountLabel.text = "Error scanning files";
    }
 };
@@ -23,7 +23,7 @@ AstroBinDialog.prototype.scanForFiles = function()
 AstroBinDialog.prototype.analyzeImages = function()
 {
    if (g_imageFiles.length === 0) {
-      console.warningln("No files to analyze. Please select a directory first.");
+      Console.warningln("No files to analyze. Please select a directory first.");
       return;
    }
    
@@ -37,47 +37,47 @@ AstroBinDialog.prototype.analyzeImages = function()
    
    try {
       // Filter mappings are now handled by the JavaScript database
-      console.writeln("Using JavaScript filter database...");
+      Console.writeln("Using JavaScript filter database...");
       this.analysisStatusLabel.text = "Using filter database...";
       processEvents();
       
       // Analyze files with progress updates
-      console.writeln("Analyzing image files...");
+      Console.writeln("Analyzing image files...");
       this.analysisStatusLabel.text = "Extracting metadata from images...";
       processEvents();
       
       try {
          var result = analyzeFiles(g_imageFiles);
-         console.writeln("File analysis completed");
+         Console.writeln("File analysis completed");
          var rows = result.rows;
          var globalData = result.globalData;
          
          // Populate global parameters from the first image if they're empty
-         console.writeln("Populating global parameters...");
+         Console.writeln("Populating global parameters...");
          this.populateGlobalParametersFromMetadata(globalData);
          
          // Update UI to reflect available metadata and disable auto-detected fields
          this.updateGlobalParametersFromMetadata(globalData);
          
       } catch (e) {
-         console.criticalln("Error during file analysis: " + e);
+         Console.criticalln("Error during file analysis: " + e);
          throw e;
       }
       
       // Aggregate data
-      console.writeln("Aggregating data...");
+      Console.writeln("Aggregating data...");
       this.analysisStatusLabel.text = "Grouping acquisition sessions...";
       processEvents();
       
       try {
          g_analysisData = aggregate(rows, globalData);
-         console.writeln("Data aggregation completed");
+         Console.writeln("Data aggregation completed");
       } catch (e) {
-         console.criticalln("Error during data aggregation: " + e);
+         Console.criticalln("Error during data aggregation: " + e);
          throw e;
       }
       
-      console.writeln("Populating results table...");
+      Console.writeln("Populating results table...");
       this.analysisStatusLabel.text = "Updating display...";
       processEvents();
       
@@ -90,8 +90,8 @@ AstroBinDialog.prototype.analyzeImages = function()
       this.analysisStatusLabel.text = "Analysis complete: " + g_analysisData.length + " unique sessions found" + integrationText;
       
    } catch (e) {
-      console.criticalln("Error during analysis: " + e);
-      console.criticalln("Stack trace: " + (e.stack || "No stack trace available"));
+      Console.criticalln("Error during analysis: " + e);
+      Console.criticalln("Stack trace: " + (e.stack || "No stack trace available"));
       this.analysisStatusLabel.text = "Analysis failed: " + e;
    } finally {
       this.analyzeButton.enabled = true;
@@ -109,7 +109,7 @@ AstroBinDialog.prototype.populateGlobalParametersFromMetadata = function(globalD
       var temp = Math.round(globalData.ambientTemp * 10) / 10; // Round to 1 decimal
       this.temperatureEdit.text = temp.toString();
       CONFIG.ambientTemp = temp.toString();
-      console.writeln("Populated ambient temperature: " + temp + "°C");
+      Console.writeln("Populated ambient temperature: " + temp + "°C");
    }
    
    // Try to estimate SQM from sky brightness if available
@@ -121,43 +121,43 @@ AstroBinDialog.prototype.populateGlobalParametersFromMetadata = function(globalD
       if (estimatedSqm > 15 && estimatedSqm < 23) { // Reasonable SQM range
          this.meanSqmEdit.text = estimatedSqm.toString();
          CONFIG.meanSqm = estimatedSqm.toString();
-         console.writeln("Estimated SQM from sky brightness: " + estimatedSqm + " mag/arcsec²");
+         Console.writeln("Estimated SQM from sky brightness: " + estimatedSqm + " mag/arcsec²");
       }
    }
    
    // Log other available metadata for future enhancement or manual entry
    if (globalData.focalLength !== undefined) {
-      console.writeln("Available focal length: " + globalData.focalLength + "mm");
+      Console.writeln("Available focal length: " + globalData.focalLength + "mm");
    }
    if (globalData.telescope) {
-      console.writeln("Available telescope: " + globalData.telescope);
+      Console.writeln("Available telescope: " + globalData.telescope);
    }
    if (globalData.instrument) {
-      console.writeln("Available instrument: " + globalData.instrument);
+      Console.writeln("Available instrument: " + globalData.instrument);
    }
    if (globalData.siteLatitude !== undefined) {
-      console.writeln("Available site latitude: " + globalData.siteLatitude.toFixed(4) + "°");
+      Console.writeln("Available site latitude: " + globalData.siteLatitude.toFixed(4) + "°");
    }
    if (globalData.siteLongitude !== undefined) {
-      console.writeln("Available site longitude: " + globalData.siteLongitude.toFixed(4) + "°");
+      Console.writeln("Available site longitude: " + globalData.siteLongitude.toFixed(4) + "°");
    }
    if (globalData.siteElevation !== undefined) {
-      console.writeln("Available site elevation: " + globalData.siteElevation + "m");
+      Console.writeln("Available site elevation: " + globalData.siteElevation + "m");
    }
    if (globalData.humidity !== undefined) {
-      console.writeln("Available humidity: " + globalData.humidity + "%");
+      Console.writeln("Available humidity: " + globalData.humidity + "%");
    }
    if (globalData.pressure !== undefined) {
-      console.writeln("Available air pressure: " + globalData.pressure + " hPa");
+      Console.writeln("Available air pressure: " + globalData.pressure + " hPa");
    }
    if (globalData.dewPoint !== undefined) {
-      console.writeln("Available dew point: " + globalData.dewPoint + "°C");
+      Console.writeln("Available dew point: " + globalData.dewPoint + "°C");
    }
    if (globalData.windSpeed !== undefined) {
-      console.writeln("Available wind speed: " + globalData.windSpeed + " km/h");
+      Console.writeln("Available wind speed: " + globalData.windSpeed + " km/h");
    }
    if (globalData.skyTemp !== undefined) {
-      console.writeln("Available sky temperature: " + globalData.skyTemp + "°C");
+      Console.writeln("Available sky temperature: " + globalData.skyTemp + "°C");
    }
 };
 
@@ -227,7 +227,7 @@ AstroBinDialog.prototype.populateImageTree = function()
                }
             }
          } catch (e) {
-            console.warningln("Lookup failed for filterId " + data.filterId + ": " + e);
+            Console.warningln("Lookup failed for filterId " + data.filterId + ": " + e);
          }
       }
       node.setText(2, resolvedName);
@@ -248,14 +248,14 @@ AstroBinDialog.prototype.populateImageTree = function()
 AstroBinDialog.prototype.generateCSV = function()
 {
    if (g_analysisData.length === 0) {
-      console.warningln("No data to export. Please analyze images first.");
+      Console.warningln("No data to export. Please analyze images first.");
       return;
    }
    
    try {
       // Update config with current UI values BEFORE generating CSV
       this.updateConfigFromUI();
-      console.writeln("Updated CONFIG from current UI values");
+      Console.writeln("Updated CONFIG from current UI values");
       
       // Update the existing aggregated data with current CONFIG values
       // This allows users to change global parameters without re-analyzing
@@ -290,10 +290,10 @@ AstroBinDialog.prototype.generateCSV = function()
       this.saveCSVButton.enabled = true;
       this.copyCSVButton.enabled = true;
       
-      console.noteln("CSV content generated successfully with current global parameters");
-      console.noteln("Temperature and numeric values formatted according to AstroBin CSV requirements");
+      Console.noteln("CSV content generated successfully with current global parameters");
+      Console.noteln("Temperature and numeric values formatted according to AstroBin CSV requirements");
    } catch (e) {
-      console.criticalln("Error generating CSV: " + e);
+      Console.criticalln("Error generating CSV: " + e);
    }
 };
 
@@ -422,9 +422,9 @@ AstroBinDialog.prototype.saveCSVFile = function()
    if (sfd.execute()) {
       try {
          File.writeTextFile(sfd.fileName, this.csvPreviewTextBox.text);
-         console.noteln("CSV saved to: " + sfd.fileName);
+         Console.noteln("CSV saved to: " + sfd.fileName);
       } catch (e) {
-         console.criticalln("Error saving CSV file: " + e);
+         Console.criticalln("Error saving CSV file: " + e);
       }
    }
 };
@@ -434,7 +434,7 @@ AstroBinDialog.prototype.copyCSVToClipboard = function()
    if (!this.csvPreviewTextBox.text) return;
    
    // Note: PixInsight doesn't have direct clipboard access, so we show a message
-   console.noteln("CSV content is in the preview box. Please select all text and copy manually.");
+   Console.noteln("CSV content is in the preview box. Please select all text and copy manually.");
    this.csvPreviewTextBox.selectAll();
 };
 
@@ -514,7 +514,7 @@ AstroBinDialog.prototype.copyCSVToClipboard = function()
          try {
             saveExportColumnSettings(map);
          } catch (e) {
-            console.criticalln("[AstroBin] Failed to save export columns: " + e);
+            Console.criticalln("[AstroBin] Failed to save export columns: " + e);
          }
          // Refresh CSV preview if present
          if (self.csvPreviewTextBox.text && self.csvPreviewTextBox.text.length > 0) {
@@ -575,7 +575,7 @@ AstroBinDialog.prototype.updateSQMFromBortle = function()
       var estimatedSQM = this.bortleToSQM(bortleValue);
       CONFIG.meanSqm = estimatedSQM.toFixed(1);
       this.meanSqmEdit.text = CONFIG.meanSqm;
-      console.writeln("Estimated SQM " + CONFIG.meanSqm + " mag/arcsec² from Bortle Class " + bortleValue);
+      Console.writeln("Estimated SQM " + CONFIG.meanSqm + " mag/arcsec² from Bortle Class " + bortleValue);
    }
 };
 
@@ -639,28 +639,28 @@ AstroBinDialog.prototype.showAbout = function()
 AstroBinDialog.prototype.showFilterMappingDialog = function()
 {
    if (g_analysisData.length === 0) {
-      console.warningln("No analysis data available. Please analyze images first.");
+      Console.warningln("No analysis data available. Please analyze images first.");
       return;
    }
    
-   console.writeln("Opening filter mapping dialog...");
+   Console.writeln("Opening filter mapping dialog...");
    
    // Create filter mapping dialog
    try {
       var filterDialog = new FilterMappingDialog(this);
-      console.writeln("Filter mapping dialog created successfully");
+      Console.writeln("Filter mapping dialog created successfully");
       
       // Execute the dialog and update the main tree if OK was pressed
       var result = filterDialog.execute();
-      console.writeln("Dialog result: " + result);
+      Console.writeln("Dialog result: " + result);
       if (result === 1) { // 1 = OK button pressed
          // Update the Filter ID column in the main tree and g_analysisData
          this.populateImageTree();
-         console.writeln("Filter mapping updated successfully");
+         Console.writeln("Filter mapping updated successfully");
       }
    } catch (e) {
-      console.criticalln("Error creating or executing filter mapping dialog: " + e);
-      console.criticalln("Stack trace: " + (e.stack || "No stack trace available"));
+      Console.criticalln("Error creating or executing filter mapping dialog: " + e);
+      Console.criticalln("Stack trace: " + (e.stack || "No stack trace available"));
    }
 };
 
@@ -910,7 +910,7 @@ FilterMappingDialog.prototype.savePersonalFilterSet = function(){
      if (id && id.toLowerCase() !== "invalid") set[role]=id; else set[role]="";
   }
   CONFIG.personalFilterSet = set;
-  console.writeln("[AstroBin] Personal filter set updated in memory: " + JSON.stringify(set));
+  Console.writeln("[AstroBin] Personal filter set updated in memory: " + JSON.stringify(set));
   
   // Call the global save function to persist to PixInsight Settings
   savePersonalFilterSet(set);
@@ -919,7 +919,7 @@ FilterMappingDialog.prototype.savePersonalFilterSet = function(){
 FilterMappingDialog.prototype.applyPersonalToSession = function(){
    var set = getPersonalFilterSet();
    if (!set) {
-      console.warningln("[AstroBin] No personal filter set defined.");
+      Console.warningln("[AstroBin] No personal filter set defined.");
       return;
    }
    
@@ -950,7 +950,7 @@ FilterMappingDialog.prototype.applyPersonalToSession = function(){
           if (set.SII && _astrobinValidFilterId(set.SII)) { g_analysisData[i].filterId = set.SII; appliedCount++; continue; } 
        }
    }
-   console.noteln("[AstroBin] Applied personal filter set to " + appliedCount + " filter(s) in session.");
+   Console.noteln("[AstroBin] Applied personal filter set to " + appliedCount + " filter(s) in session.");
    this.populateFilterMappings();
    
    // Refresh main dialog tree to show updated filter IDs
@@ -1295,7 +1295,7 @@ FilterMappingDialog.prototype.saveFilterMappings = function()
       }
    }
    
-   console.writeln("Applied filter mappings for " + Object.keys(this.filterMappings).length + " filters");
+   Console.writeln("Applied filter mappings for " + Object.keys(this.filterMappings).length + " filters");
 };
 
 // Integration Summary Dialog
@@ -1348,7 +1348,7 @@ AstroBinDialog.prototype.showIntegrationSummary = function()
       msgBox.execute();
       
    } catch (e) {
-      console.warningln("Error generating integration summary: " + e);
+      Console.warningln("Error generating integration summary: " + e);
    }
 };
 

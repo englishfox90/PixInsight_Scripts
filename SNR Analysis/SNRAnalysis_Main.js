@@ -4,7 +4,7 @@
  * Analyzes how SNR improves with integration depth by creating partial integrations
  * from calibrated  and registeredsubframes and measuring SNR in user-defined regions.
  * 
- * Version: 1.6.5
+ * Version: 1.6.6
  * Author: PixInsight Community
  */
 
@@ -16,6 +16,11 @@
                returns and optimal integration times.
 
 #feature-icon  @script_icons_dir/SNRAnalysis.svg
+
+// === SCRIPT ISOLATION WRAPPER ===
+// Wraps entire script in IIFE (Immediately Invoked Function Expression) to prevent global scope pollution
+(function() {
+"use strict";  // Enables strict mode to catch accidental global variable assignments
 
 // Include necessary PJSR libraries
 #include <pjsr/Sizer.jsh>
@@ -67,26 +72,26 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
    var filterLabel = isMultiFilter ? (" (" + filterName + ")") : "";
    var filterSuffix = isMultiFilter ? ("_" + filterName.replace(/[^a-zA-Z0-9]/g, "_")) : "";
    
-   console.writeln("");
-   console.writeln("========================================");
-   console.writeln("Analyzing Filter: " + filterName);
-   console.writeln("Subframes: " + subframes.length);
-   console.writeln("========================================");
+   Console.writeln("");
+   Console.writeln("========================================");
+   Console.writeln("Analyzing Filter: " + filterName);
+   Console.writeln("Subframes: " + subframes.length);
+   Console.writeln("========================================");
    
    // Step: Generate integration depth list
    progress.setStatus("Planning integration depths" + filterLabel + "...");
    var stepName = isMultiFilter ? ("plan_" + filterName) : "plan";
    progress.updateStep(stepName, progress.STATE_RUNNING);
-   console.writeln("Planning integration depths" + filterLabel + "...");
+   Console.writeln("Planning integration depths" + filterLabel + "...");
    var depthJobs = planIntegrationDepths(CONFIG.depthStrategy, subframes.length, CONFIG.customDepths, CONFIG.includeFullDepth);
    
    // Calculate total exposure for each depth
    calculateJobExposures(depthJobs, subframes);
    
    progress.updateStep(stepName, progress.STATE_SUCCESS, depthJobs.length + " depths planned");
-   console.writeln("Planned " + depthJobs.length + " integration depths:");
+   Console.writeln("Planned " + depthJobs.length + " integration depths:");
    for (var i = 0; i < depthJobs.length; i++) {
-      console.writeln("  " + depthJobs[i].label + ": " + depthJobs[i].depth + " subs (" + 
+      Console.writeln("  " + depthJobs[i].label + ": " + depthJobs[i].depth + " subs (" + 
                     formatTime(depthJobs[i].totalExposure) + ")");
    }
    progress.updateElapsed();
@@ -96,13 +101,13 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
    
    // Step: Process each depth (integrate, star removal, stretch, SNR)
    progress.setStatus("Processing integration depths" + filterLabel + "...");
-   console.writeln("Processing integration depths" + filterLabel + "...");
+   Console.writeln("Processing integration depths" + filterLabel + "...");
    var results = [];
    var startTime = new Date();
    
    for (var i = 0; i < depthJobs.length; i++) {
       if (progress.isCancelled()) {
-         console.writeln("Analysis cancelled by user.");
+         Console.writeln("Analysis cancelled by user.");
          return null;
       }
       
@@ -112,8 +117,8 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
       progress.setStatus("Processing " + job.label + filterLabel + " (" + (i + 1) + "/" + depthJobs.length + ")...");
       progress.updateElapsed();
       
-      console.writeln("");
-      console.writeln("--- Processing " + job.label + " (" + (i + 1) + "/" + depthJobs.length + ") ---");
+      Console.writeln("");
+      Console.writeln("--- Processing " + job.label + " (" + (i + 1) + "/" + depthJobs.length + ") ---");
       
       // Integrate
       var intStart = new Date();
@@ -122,7 +127,7 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
       
       if (!imageId) {
          progress.updateStep(stepName, progress.STATE_WARNING, "Integration failed");
-         console.warningln("Integration failed for " + job.label + ", skipping...");
+         Console.warningln("Integration failed for " + job.label + ", skipping...");
          continue;
       }
       
@@ -130,7 +135,7 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
       var imageWindow = ImageWindow.windowById(imageId);
       if (!imageWindow || imageWindow.isNull) {
          progress.updateStep(stepName, progress.STATE_WARNING, "Window not found");
-         console.warningln("Image window not found: " + imageId);
+         Console.warningln("Image window not found: " + imageId);
          continue;
       }
       
@@ -213,20 +218,20 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
       progress.updateStep(stepName, progress.STATE_SUCCESS, "SNR: " + job.snr.toFixed(2));
       progress.updateElapsed();
       
-      console.writeln("SNR: " + job.snr.toFixed(2) + " (bgμ: " + job.bgMean.toFixed(6) + 
+      Console.writeln("SNR: " + job.snr.toFixed(2) + " (bgμ: " + job.bgMean.toFixed(6) + 
               ", fgμ: " + job.fgMean.toFixed(6) + ", σ_bg: " + job.bgSigma.toFixed(6) + ")");
    }
    
    var totalTime = (new Date() - startTime) / 1000;
    
    if (progress.isCancelled()) {
-      console.writeln("Analysis cancelled by user.");
+      Console.writeln("Analysis cancelled by user.");
       return null;
    }
    
    // Compute reference signal from deepest integration (decision metric)
-   console.writeln("");
-   console.writeln("Computing decision SNR with fixed signal reference...");
+   Console.writeln("");
+   Console.writeln("Computing decision SNR with fixed signal reference...");
    
    // Sort by depth to find deepest
    results.sort(function(a, b) { return a.depth - b.depth; });
@@ -234,9 +239,9 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
    var signalRef = deepestResult.fgMedian - deepestResult.bgMedian;
    var refLabel = deepestResult.label;
    
-   console.writeln("Reference signal (deepest stack " + refLabel + "):");
-   console.writeln("  signalRef = fgMedian - bgMedian = " + signalRef.toFixed(8));
-   console.writeln("");
+   Console.writeln("Reference signal (deepest stack " + refLabel + "):");
+   Console.writeln("  signalRef = fgMedian - bgMedian = " + signalRef.toFixed(8));
+   Console.writeln("");
    
    // Compute snrStop for all depths using fixed signal
    for (var i = 0; i < results.length; i++) {
@@ -277,8 +282,8 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
    progress.updateStep(stepName, progress.STATE_RUNNING);
    progress.setStatus("Generating outputs" + filterLabel + "...");
    progress.updateElapsed();
-   console.writeln("");
-   console.writeln("Generating outputs" + filterLabel + "...");
+   Console.writeln("");
+   Console.writeln("Generating outputs" + filterLabel + "...");
    
    // Console summary
    printResultsSummary(results, signalRef, refLabel);
@@ -286,7 +291,7 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
    // CSV
    if (CONFIG.outputCSV) {
       writeCSV(results, CONFIG.outputDir, filterSuffix);
-      console.writeln("CSV written: snr_results" + filterSuffix + ".csv");
+      Console.writeln("CSV written: snr_results" + filterSuffix + ".csv");
    }
    
    // Insights
@@ -296,7 +301,7 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
       progress.updateStep(stepName, progress.STATE_RUNNING);
       progress.setStatus("Computing insights" + filterLabel + "...");
       progress.updateElapsed();
-      console.writeln("Computing insights" + filterLabel + "...");
+      Console.writeln("Computing insights" + filterLabel + "...");
       insights = computeInsights(results);
       printInsights(insights);
       
@@ -313,7 +318,7 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
    // JSON
    if (CONFIG.outputJSON) {
       writeJSON(results, rois, insights, CONFIG.outputDir, filterSuffix);
-      console.writeln("JSON written: snr_results" + filterSuffix + ".json");
+      Console.writeln("JSON written: snr_results" + filterSuffix + ".json");
    }
    
    progress.updateStep(stepName, progress.STATE_SUCCESS, "CSV/JSON written");
@@ -327,22 +332,22 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
       progress.updateStep(stepName, progress.STATE_RUNNING);
       progress.setStatus("Generating graphs" + filterLabel + "...");
       progress.updateElapsed();
-      console.writeln("Generating graphs" + filterLabel + "...");
+      Console.writeln("Generating graphs" + filterLabel + "...");
       
       // SNR graph
       graphPath = generateGraph(results, CONFIG.outputDir, filterSuffix, filterName);
       if (graphPath) {
-         console.writeln("SNR graph written: " + graphPath);
+         Console.writeln("SNR graph written: " + graphPath);
       } else {
-         console.warningln("SNR graph generation failed");
+         Console.warningln("SNR graph generation failed");
       }
       
       // Gain/hr graph
       gainGraphPath = generateGainGraph(results, CONFIG.outputDir, filterSuffix, filterName);
       if (gainGraphPath) {
-         console.writeln("Gain/hr graph written: " + gainGraphPath);
+         Console.writeln("Gain/hr graph written: " + gainGraphPath);
       } else {
-         console.warningln("Gain/hr graph generation failed");
+         Console.warningln("Gain/hr graph generation failed");
       }
       
       if (graphPath || gainGraphPath) {
@@ -355,12 +360,12 @@ function processFilterGroupAnalysis(filterName, subframes, refImageId, rois, pro
    
    // Timing log
    if (CONFIG.logTimings) {
-      console.writeln("");
-      console.writeln("=== TIMING SUMMARY" + filterLabel + " ===");
-      console.writeln("Total runtime: " + totalTime.toFixed(1) + "s");
+      Console.writeln("");
+      Console.writeln("=== TIMING SUMMARY" + filterLabel + " ===");
+      Console.writeln("Total runtime: " + totalTime.toFixed(1) + "s");
       for (var i = 0; i < results.length; i++) {
          var r = results[i];
-         console.writeln(r.label + ": int=" + r.integrationTime.toFixed(1) + "s, " +
+         Console.writeln(r.label + ": int=" + r.integrationTime.toFixed(1) + "s, " +
                        "star=" + r.starRemovalTime.toFixed(1) + "s, " +
                        "stretch=" + r.stretchTime.toFixed(1) + "s");
       }
@@ -387,17 +392,17 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    var filterLabel = isMultiFilter ? (" (" + filterName + ")") : "";
    var filterSuffix = isMultiFilter ? ("_" + filterName.replace(/[^a-zA-Z0-9]/g, "_")) : "";
    
-   console.writeln("");
-   console.writeln("========================================");
-   console.writeln("Processing Filter: " + filterName);
-   console.writeln("Subframes: " + subframes.length);
-   console.writeln("========================================");
+   Console.writeln("");
+   Console.writeln("========================================");
+   Console.writeln("Processing Filter: " + filterName);
+   Console.writeln("Subframes: " + subframes.length);
+   Console.writeln("========================================");
    
    // Step: Create reference master
    progress.setStatus("Creating reference master" + filterLabel + "...");
    var stepName = isMultiFilter ? ("ref_master_" + filterName) : "ref_master";
    progress.updateStep(stepName, progress.STATE_RUNNING);
-   console.writeln("Creating full-depth reference master" + filterLabel + "...");
+   Console.writeln("Creating full-depth reference master" + filterLabel + "...");
    
    // Check if reference master already exists
    var refImageId = "ref_master_full" + filterSuffix;
@@ -407,7 +412,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       // Try to load from disk if it exists
       var refPath = CONFIG.integrationsDir + "/ref_master_full" + filterSuffix + ".xisf";
       if (File.exists(refPath)) {
-         console.writeln("Found existing reference master on disk, loading...");
+         Console.writeln("Found existing reference master on disk, loading...");
          var windows = ImageWindow.open(refPath);
          if (windows && windows.length > 0) {
             refWindow = windows[0];
@@ -433,7 +438,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       }
       progress.updateStep(stepName, progress.STATE_SUCCESS, "New master created");
    } else {
-      console.writeln("Using existing reference master: " + refImageId);
+      Console.writeln("Using existing reference master: " + refImageId);
       refWindow.show();
       refWindow.zoomToFit();
       progress.updateStep(stepName, progress.STATE_SUCCESS, "Using existing master");
@@ -449,7 +454,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    
    if (CONFIG.roiMode === "rangeMask") {
       // Range Mask mode: statistics-driven auto ROI on starless reference
-      console.writeln("Range Mask ROI detection (auto, per-filter)" + filterLabel + "...");
+      Console.writeln("Range Mask ROI detection (auto, per-filter)" + filterLabel + "...");
       var refWindow = ImageWindow.windowById(refImageId);
       if (!refWindow || refWindow.isNull) {
          progress.updateStep(stepName, progress.STATE_ERROR, "Window not found");
@@ -457,7 +462,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       }
       
       // CRITICAL: Ensure star removal happens BEFORE range mask analysis
-      console.writeln("Preparing starless reference for ROI detection...");
+      Console.writeln("Preparing starless reference for ROI detection...");
       var refForROI = refImageId;
       var starlessRefId = refImageId + "_starless_for_roi";
       
@@ -477,14 +482,14 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
          if (starlessResult) {
             starlessRefId = starlessResult.id;
             starlessWindow = starlessResult.window;
-            console.writeln("Star removal completed for ROI reference");
+            Console.writeln("Star removal completed for ROI reference");
          } else {
-            console.warningln("Star removal failed - using starry reference for ROI detection");
+            Console.warningln("Star removal failed - using starry reference for ROI detection");
             starlessRefId = refImageId;
             starlessWindow = refWindow;
          }
       } else {
-         console.writeln("Using existing starless reference: " + starlessRefId);
+         Console.writeln("Using existing starless reference: " + starlessRefId);
       }
       
       // Compute range mask ROIs
@@ -497,7 +502,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       );
       
       if (rangeMaskResult) {
-         console.writeln("Range Mask ROI detection successful");
+         Console.writeln("Range Mask ROI detection successful");
          rois = {
             bg: rangeMaskResult.bgRect,
             fg: rangeMaskResult.fgRect,
@@ -509,11 +514,11 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
             createRangeMaskPreviews(refWindow, rangeMaskResult);
          }
       } else {
-         console.warningln("Range Mask ROI detection failed - falling back to auto tile mode");
+         Console.warningln("Range Mask ROI detection failed - falling back to auto tile mode");
       }
    } else if (CONFIG.roiMode === "auto") {
       // Auto-detect ROIs (original tile-based method)
-      console.writeln("Auto-detecting ROI regions" + filterLabel + "...");
+      Console.writeln("Auto-detecting ROI regions" + filterLabel + "...");
       var refWindow = ImageWindow.windowById(refImageId);
       if (!refWindow || refWindow.isNull) {
          progress.updateStep(stepName, progress.STATE_ERROR, "Window not found");
@@ -523,50 +528,50 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       var autoRects = detectAutoRois(refWindow.mainView, CONFIG.autoRoiTileSize);
       
       if (autoRects && createAutoRoiPreviews(refWindow, autoRects)) {
-         console.writeln("Auto ROI previews created successfully");
+         Console.writeln("Auto ROI previews created successfully");
          // Read back the previews we just created
          rois = readExistingROIs(refImageId);
          if (!rois) {
-            console.warningln("Failed to read auto-created previews - falling back to manual mode");
+            Console.warningln("Failed to read auto-created previews - falling back to manual mode");
          }
       } else {
-         console.warningln("Auto ROI detection/creation failed - falling back to manual mode");
+         Console.warningln("Auto ROI detection/creation failed - falling back to manual mode");
       }
    }
    
    // If auto/rangeMask mode failed or manual mode selected, use manual ROI
    if (!rois) {
-      console.writeln("Waiting for user to define ROI previews" + filterLabel + "...");
+      Console.writeln("Waiting for user to define ROI previews" + filterLabel + "...");
       var autoFailed = (CONFIG.roiMode === "auto" || CONFIG.roiMode === "rangeMask");
       rois = promptForROIs(refImageId, autoFailed, filterName);
    }
    
    if (progress.isCancelled() || !rois) {
-      console.writeln("ROI definition cancelled. Cleaning up...");
+      Console.writeln("ROI definition cancelled. Cleaning up...");
       closeImageWindow(refImageId);
       return null;
    }
    
    progress.updateStep(stepName, progress.STATE_SUCCESS, "ROIs defined");
-   console.writeln("Background ROI: " + formatRect(rois.bg));
-   console.writeln("Foreground ROI: " + formatRect(rois.fg));
-   console.writeln("Note: Reference master '" + refImageId + "' with ROI previews will remain open for reference");
+   Console.writeln("Background ROI: " + formatRect(rois.bg));
+   Console.writeln("Foreground ROI: " + formatRect(rois.fg));
+   Console.writeln("Note: Reference master '" + refImageId + "' with ROI previews will remain open for reference");
    progress.updateElapsed();
    
    // Step: Generate integration depth list
    progress.setStatus("Planning integration depths" + filterLabel + "...");
    stepName = isMultiFilter ? ("plan_" + filterName) : "plan";
    progress.updateStep(stepName, progress.STATE_RUNNING);
-   console.writeln("Planning integration depths" + filterLabel + "...");
+   Console.writeln("Planning integration depths" + filterLabel + "...");
    var depthJobs = planIntegrationDepths(CONFIG.depthStrategy, subframes.length, CONFIG.customDepths, CONFIG.includeFullDepth);
    
    // Calculate total exposure for each depth
    calculateJobExposures(depthJobs, subframes);
    
    progress.updateStep(stepName, progress.STATE_SUCCESS, depthJobs.length + " depths planned");
-   console.writeln("Planned " + depthJobs.length + " integration depths:");
+   Console.writeln("Planned " + depthJobs.length + " integration depths:");
    for (var i = 0; i < depthJobs.length; i++) {
-      console.writeln("  " + depthJobs[i].label + ": " + depthJobs[i].depth + " subs (" + 
+      Console.writeln("  " + depthJobs[i].label + ": " + depthJobs[i].depth + " subs (" + 
                     formatTime(depthJobs[i].totalExposure) + ")");
    }
    progress.updateElapsed();
@@ -574,29 +579,29 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    // Compute reference background for signal scale locking (if enabled)
    var bgRef = null;
    if (CONFIG.lockSignalScale) {
-      console.writeln("");
-      console.writeln("Computing reference background for signal normalization...");
+      Console.writeln("");
+      Console.writeln("Computing reference background for signal normalization...");
       // Use the reference master (deepest integration) - Part C
       bgRef = computeBgRef(refImageId, rois.bg);
       if (bgRef) {
          rois.bgRef = bgRef;  // Store in rois for JSON output
          rois.bgRefSourceLabel = "Reference Master (full depth)";  // Part C - track source
-         console.writeln("Signal scale locking enabled with BG_ref = " + bgRef.toFixed(8) + 
+         Console.writeln("Signal scale locking enabled with BG_ref = " + bgRef.toFixed(8) + 
                         " from " + rois.bgRefSourceLabel);
       } else {
-         console.warningln("Failed to compute BG_ref, signal scale normalization disabled for this filter");
+         Console.warningln("Failed to compute BG_ref, signal scale normalization disabled for this filter");
       }
    }
    
    // Step: Process each depth (integrate, star removal, stretch, SNR)
    progress.setStatus("Processing integration depths" + filterLabel + "...");
-   console.writeln("Processing integration depths" + filterLabel + "...");
+   Console.writeln("Processing integration depths" + filterLabel + "...");
    var results = [];
    var startTime = new Date();
    
    for (var i = 0; i < depthJobs.length; i++) {
       if (progress.isCancelled()) {
-         console.writeln("Analysis cancelled by user.");
+         Console.writeln("Analysis cancelled by user.");
          return null;
       }
       
@@ -606,8 +611,8 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       progress.setStatus("Processing " + job.label + filterLabel + " (" + (i + 1) + "/" + depthJobs.length + ")...");
       progress.updateElapsed();
       
-      console.writeln("");
-      console.writeln("--- Processing " + job.label + " (" + (i + 1) + "/" + depthJobs.length + ") ---");
+      Console.writeln("");
+      Console.writeln("--- Processing " + job.label + " (" + (i + 1) + "/" + depthJobs.length + ") ---");
       
       // Integrate
       var intStart = new Date();
@@ -616,7 +621,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       
       if (!imageId) {
          progress.updateStep(stepName, progress.STATE_WARNING, "Integration failed");
-         console.warningln("Integration failed for " + job.label + ", skipping...");
+         Console.warningln("Integration failed for " + job.label + ", skipping...");
          continue;
       }
       
@@ -624,7 +629,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       var imageWindow = ImageWindow.windowById(imageId);
       if (!imageWindow || imageWindow.isNull) {
          progress.updateStep(stepName, progress.STATE_WARNING, "Window not found");
-         console.warningln("Image window not found: " + imageId);
+         Console.warningln("Image window not found: " + imageId);
          continue;
       }
       
@@ -706,20 +711,20 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       progress.updateStep(stepName, progress.STATE_SUCCESS, "SNR: " + job.snr.toFixed(2));
       progress.updateElapsed();
       
-      console.writeln("SNR: " + job.snr.toFixed(2) + " (bgμ: " + job.bgMean.toFixed(6) + 
+      Console.writeln("SNR: " + job.snr.toFixed(2) + " (bgμ: " + job.bgMean.toFixed(6) + 
               ", fgμ: " + job.fgMean.toFixed(6) + ", σ_bg: " + job.bgSigma.toFixed(6) + ")");
    }
    
    var totalTime = (new Date() - startTime) / 1000;
    
    if (progress.isCancelled()) {
-      console.writeln("Analysis cancelled by user.");
+      Console.writeln("Analysis cancelled by user.");
       return null;
    }
    
    // Compute reference signal from deepest integration (decision metric)
-   console.writeln("");
-   console.writeln("Computing decision SNR with fixed signal reference...");
+   Console.writeln("");
+   Console.writeln("Computing decision SNR with fixed signal reference...");
    
    // Sort by depth to find deepest
    results.sort(function(a, b) { return a.depth - b.depth; });
@@ -727,9 +732,9 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    var signalRef = deepestResult.fgMedian - deepestResult.bgMedian;
    var refLabel = deepestResult.label;
    
-   console.writeln("Reference signal (deepest stack " + refLabel + "):");
-   console.writeln("  signalRef = fgMedian - bgMedian = " + signalRef.toFixed(8));
-   console.writeln("");
+   Console.writeln("Reference signal (deepest stack " + refLabel + "):");
+   Console.writeln("  signalRef = fgMedian - bgMedian = " + signalRef.toFixed(8));
+   Console.writeln("");
    
    // Compute snrStop for all depths using fixed signal
    for (var i = 0; i < results.length; i++) {
@@ -770,8 +775,8 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    progress.updateStep(stepName, progress.STATE_RUNNING);
    progress.setStatus("Generating outputs" + filterLabel + "...");
    progress.updateElapsed();
-   console.writeln("");
-   console.writeln("Generating outputs" + filterLabel + "...");
+   Console.writeln("");
+   Console.writeln("Generating outputs" + filterLabel + "...");
    
    // Console summary
    printResultsSummary(results, signalRef, refLabel);
@@ -779,7 +784,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    // CSV
    if (CONFIG.outputCSV) {
       writeCSV(results, CONFIG.outputDir, filterSuffix);
-      console.writeln("CSV written: snr_results" + filterSuffix + ".csv");
+      Console.writeln("CSV written: snr_results" + filterSuffix + ".csv");
    }
    
    // Insights
@@ -789,7 +794,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       progress.updateStep(stepName, progress.STATE_RUNNING);
       progress.setStatus("Computing insights" + filterLabel + "...");
       progress.updateElapsed();
-      console.writeln("Computing insights" + filterLabel + "...");
+      Console.writeln("Computing insights" + filterLabel + "...");
       insights = computeInsights(results);
       printInsights(insights);
       
@@ -806,7 +811,7 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    // JSON
    if (CONFIG.outputJSON) {
       writeJSON(results, rois, insights, CONFIG.outputDir, filterSuffix);
-      console.writeln("JSON written: snr_results" + filterSuffix + ".json");
+      Console.writeln("JSON written: snr_results" + filterSuffix + ".json");
    }
    
    progress.updateStep(stepName, progress.STATE_SUCCESS, "CSV/JSON written");
@@ -820,22 +825,22 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
       progress.updateStep(stepName, progress.STATE_RUNNING);
       progress.setStatus("Generating graphs" + filterLabel + "...");
       progress.updateElapsed();
-      console.writeln("Generating graphs" + filterLabel + "...");
+      Console.writeln("Generating graphs" + filterLabel + "...");
       
       // SNR graph
       graphPath = generateGraph(results, CONFIG.outputDir, filterSuffix, filterName);
       if (graphPath) {
-         console.writeln("SNR graph written: " + graphPath);
+         Console.writeln("SNR graph written: " + graphPath);
       } else {
-         console.warningln("SNR graph generation failed");
+         Console.warningln("SNR graph generation failed");
       }
       
       // Gain/hr graph
       gainGraphPath = generateGainGraph(results, CONFIG.outputDir, filterSuffix, filterName);
       if (gainGraphPath) {
-         console.writeln("Gain/hr graph written: " + gainGraphPath);
+         Console.writeln("Gain/hr graph written: " + gainGraphPath);
       } else {
-         console.warningln("Gain/hr graph generation failed");
+         Console.warningln("Gain/hr graph generation failed");
       }
       
       if (graphPath || gainGraphPath) {
@@ -848,12 +853,12 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
    
    // Timing log
    if (CONFIG.logTimings) {
-      console.writeln("");
-      console.writeln("=== TIMING SUMMARY" + filterLabel + " ===");
-      console.writeln("Total runtime: " + totalTime.toFixed(1) + "s");
+      Console.writeln("");
+      Console.writeln("=== TIMING SUMMARY" + filterLabel + " ===");
+      Console.writeln("Total runtime: " + totalTime.toFixed(1) + "s");
       for (var i = 0; i < results.length; i++) {
          var r = results[i];
-         console.writeln(r.label + ": int=" + r.integrationTime.toFixed(1) + "s, " +
+         Console.writeln(r.label + ": int=" + r.integrationTime.toFixed(1) + "s, " +
                        "star=" + r.starRemovalTime.toFixed(1) + "s, " +
                        "stretch=" + r.stretchTime.toFixed(1) + "s");
       }
@@ -876,19 +881,19 @@ function processFilterGroup(filterName, subframes, progress, isMultiFilter) {
  */
 function SNRAnalysisEngine() {
    this.execute = function() {
-      console.show();
-      console.writeln("========================================");
-      console.writeln("SNR vs Integration Time Analysis Tool");
-      console.writeln("Version: " + SCRIPT_VERSION);
-      console.writeln("========================================");
-      console.writeln("");
+      Console.show();
+      Console.writeln("========================================");
+      Console.writeln("SNR vs Integration Time Analysis Tool");
+      Console.writeln("Version: " + SCRIPT_VERSION);
+      Console.writeln("========================================");
+      Console.writeln("");
       
       try {
          // Step 1: Show configuration dialog
-         console.writeln("[1/3] Loading configuration dialog...");
+         Console.writeln("[1/3] Loading configuration dialog...");
          var dialog = new SNRAnalysisDialog();
          if (!dialog.execute()) {
-            console.writeln("Analysis cancelled by user.");
+            Console.writeln("Analysis cancelled by user.");
             return;
          }
          
@@ -903,13 +908,13 @@ function SNRAnalysisEngine() {
          progress.addStep("scan", "Scanning subframes");
          progress.setStatus("Scanning subframes from: " + CONFIG.inputDir);
          progress.updateStep("scan", progress.STATE_RUNNING);
-         console.writeln("[2/3] Scanning subframes from: " + CONFIG.inputDir);
+         Console.writeln("[2/3] Scanning subframes from: " + CONFIG.inputDir);
          
          var scanResult = scanSubframes(CONFIG.inputDir, CONFIG.filePattern, CONFIG.analyzeAllFilters);
          
          if (progress.isCancelled()) {
             progress.close();
-            console.writeln("Analysis cancelled by user.");
+            Console.writeln("Analysis cancelled by user.");
             return;
          }
          
@@ -957,7 +962,7 @@ function SNRAnalysisEngine() {
          // Add steps for each filter
          for (var filterName in filterGroups) {
             var subs = filterGroups[filterName];
-            console.writeln("Total exposure for " + filterName + ": " + formatTime(getTotalExposure(subs)));
+            Console.writeln("Total exposure for " + filterName + ": " + formatTime(getTotalExposure(subs)));
             
             if (isMultiFilter) {
                progress.addStep("ref_master_" + filterName, "Reference master (" + filterName + ")");
@@ -992,13 +997,13 @@ function SNRAnalysisEngine() {
          
          // Step 3a: Create all reference masters first (for multi-filter)
          if (isMultiFilter) {
-            console.writeln("[3/4] Creating reference masters for all filters...");
+            Console.writeln("[3/4] Creating reference masters for all filters...");
             var refMasters = {};
             
             for (var filterName in filterGroups) {
                if (progress.isCancelled()) {
                   progress.close();
-                  console.writeln("Analysis cancelled by user.");
+                  Console.writeln("Analysis cancelled by user.");
                   return;
                }
                
@@ -1008,7 +1013,7 @@ function SNRAnalysisEngine() {
                
                progress.setStatus("Creating reference master (" + filterName + ")...");
                progress.updateStep(stepName, progress.STATE_RUNNING);
-               console.writeln("Creating reference master for " + filterName + "...");
+               Console.writeln("Creating reference master for " + filterName + "...");
                
                var refImageId = "ref_master_full" + filterSuffix;
                var refWindow = ImageWindow.windowById(refImageId);
@@ -1016,7 +1021,7 @@ function SNRAnalysisEngine() {
                if (!refWindow || refWindow.isNull) {
                   var refPath = CONFIG.integrationsDir + "/ref_master_full" + filterSuffix + ".xisf";
                   if (File.exists(refPath)) {
-                     console.writeln("Loading existing reference master from disk...");
+                     Console.writeln("Loading existing reference master from disk...");
                      var windows = ImageWindow.open(refPath);
                      if (windows && windows.length > 0) {
                         refWindow = windows[0];
@@ -1041,7 +1046,7 @@ function SNRAnalysisEngine() {
                   }
                   progress.updateStep(stepName, progress.STATE_SUCCESS, "New master created");
                } else {
-                  console.writeln("Using existing reference master: " + refImageId);
+                  Console.writeln("Using existing reference master: " + refImageId);
                   refWindow.show();
                   refWindow.zoomToFit();
                   progress.updateStep(stepName, progress.STATE_SUCCESS, "Using existing master");
@@ -1056,14 +1061,14 @@ function SNRAnalysisEngine() {
             }
             
             // Step 3b: Check ROIs for ALL filters
-            console.writeln("[3/4] Checking ROI previews for all filters...");
+            Console.writeln("[3/4] Checking ROI previews for all filters...");
             var allROIs = {};
             var missingROIs = [];
             
             for (var filterName in filterGroups) {
                if (progress.isCancelled()) {
                   progress.close();
-                  console.writeln("Analysis cancelled by user.");
+                  Console.writeln("Analysis cancelled by user.");
                   return;
                }
                
@@ -1078,11 +1083,11 @@ function SNRAnalysisEngine() {
                   
                   if (CONFIG.roiMode === "rangeMask") {
                      // Range Mask mode: statistics-driven auto ROI on starless reference
-                     console.writeln("Range Mask ROI detection (auto, per-filter) for " + filterName + "...");
+                     Console.writeln("Range Mask ROI detection (auto, per-filter) for " + filterName + "...");
                      var refWindow = ImageWindow.windowById(refId);
                      if (refWindow && !refWindow.isNull) {
                         // CRITICAL: Ensure star removal happens BEFORE range mask analysis
-                        console.writeln("Preparing starless reference for ROI detection (" + filterName + ")...");
+                        Console.writeln("Preparing starless reference for ROI detection (" + filterName + ")...");
                         var starlessRefId = refId + "_starless_for_roi";
                         
                         // Check if starless version already exists
@@ -1103,14 +1108,14 @@ function SNRAnalysisEngine() {
                            if (starlessResult) {
                               starlessRefId = starlessResult.id;
                               starlessWindow = starlessResult.window;
-                              console.writeln("Star removal completed for ROI reference (" + filterName + ")");
+                              Console.writeln("Star removal completed for ROI reference (" + filterName + ")");
                            } else {
-                              console.warningln("Star removal failed - using starry reference for ROI detection (" + filterName + ")");
+                              Console.warningln("Star removal failed - using starry reference for ROI detection (" + filterName + ")");
                               starlessRefId = refId;
                               starlessWindow = refWindow;
                            }
                         } else {
-                           console.writeln("Using existing starless reference: " + starlessRefId);
+                           Console.writeln("Using existing starless reference: " + starlessRefId);
                         }
                         
                         // Compute range mask ROIs
@@ -1123,7 +1128,7 @@ function SNRAnalysisEngine() {
                         );
                         
                         if (rangeMaskResult) {
-                           console.writeln(filterName + " - Range Mask ROI detection successful");
+                           Console.writeln(filterName + " - Range Mask ROI detection successful");
                            rois = {
                               bg: rangeMaskResult.bgRect,
                               fg: rangeMaskResult.fgRect,
@@ -1133,25 +1138,25 @@ function SNRAnalysisEngine() {
                            // Create previews on the reference for visualization
                            createRangeMaskPreviews(refWindow, rangeMaskResult);
                         } else {
-                           console.warningln(filterName + " - Range Mask ROI detection failed - falling back to manual mode");
+                           Console.warningln(filterName + " - Range Mask ROI detection failed - falling back to manual mode");
                         }
                      }
                   } else if (CONFIG.roiMode === "auto") {
                      // Auto-detect ROIs
-                     console.writeln("Auto-detecting ROI regions for " + filterName + "...");
+                     Console.writeln("Auto-detecting ROI regions for " + filterName + "...");
                      var refWindow = ImageWindow.windowById(refId);
                      if (refWindow && !refWindow.isNull) {
                         var autoRects = detectAutoRois(refWindow.mainView, CONFIG.autoRoiTileSize);
                         
                         if (autoRects && createAutoRoiPreviews(refWindow, autoRects)) {
-                           console.writeln(filterName + " - Auto ROI previews created successfully");
+                           Console.writeln(filterName + " - Auto ROI previews created successfully");
                            // Read back the previews we just created
                            rois = readExistingROIs(refId);
                            if (!rois) {
-                              console.warningln(filterName + " - Failed to read auto-created previews - falling back to manual mode");
+                              Console.warningln(filterName + " - Failed to read auto-created previews - falling back to manual mode");
                            }
                         } else {
-                           console.warningln(filterName + " - Auto ROI detection/creation failed - falling back to manual mode");
+                           Console.warningln(filterName + " - Auto ROI detection/creation failed - falling back to manual mode");
                         }
                      }
                   }
@@ -1164,22 +1169,22 @@ function SNRAnalysisEngine() {
                   
                   // Compute reference background for signal scale locking (if enabled)
                   if (rois && CONFIG.lockSignalScale) {
-                     console.writeln("Computing reference background for signal normalization (" + filterName + ")...");
+                     Console.writeln("Computing reference background for signal normalization (" + filterName + ")...");
                      var bgRef = computeBgRef(refId, rois.bg);
                      if (bgRef) {
                         rois.bgRef = bgRef;
                         rois.bgRefSourceLabel = "Reference Master (full depth)";  // Part C
-                        console.writeln(filterName + " - Signal scale locking enabled with BG_ref = " + bgRef.toFixed(8) +
+                        Console.writeln(filterName + " - Signal scale locking enabled with BG_ref = " + bgRef.toFixed(8) +
                                       " from " + rois.bgRefSourceLabel);
                      } else {
-                        console.warningln(filterName + " - Failed to compute BG_ref, signal scale normalization disabled");
+                        Console.warningln(filterName + " - Failed to compute BG_ref, signal scale normalization disabled");
                      }
                   }
                   
                   allROIs[filterName] = rois;
                   progress.updateStep(stepName, progress.STATE_SUCCESS, "ROIs defined");
-                  console.writeln(filterName + " - Background ROI: " + formatRect(rois.bg));
-                  console.writeln(filterName + " - Foreground ROI: " + formatRect(rois.fg));
+                  Console.writeln(filterName + " - Background ROI: " + formatRect(rois.bg));
+                  Console.writeln(filterName + " - Foreground ROI: " + formatRect(rois.fg));
                } catch (e) {
                   // ROIs missing for this filter
                   missingROIs.push(filterName);
@@ -1202,7 +1207,7 @@ function SNRAnalysisEngine() {
                msg += "Create the missing previews and re-run the script.\n\n";
                msg += "The reference masters are saved to disk and will be reloaded automatically.";
                
-               console.warningln(msg);
+               Console.warningln(msg);
                
                progress.markComplete();
                progress.setStatus("Waiting for ROI creation - " + missingROIs.length + " filter(s) need previews");
@@ -1220,13 +1225,13 @@ function SNRAnalysisEngine() {
          }
          
          // Step 4: Process each filter group
-         console.writeln("[4/4] Processing filter groups...");
+         Console.writeln("[4/4] Processing filter groups...");
          var allFilterResults = [];
          
          for (var filterName in filterGroups) {
             if (progress.isCancelled()) {
                progress.close();
-               console.writeln("Analysis cancelled by user.");
+               Console.writeln("Analysis cancelled by user.");
                return;
             }
             
@@ -1253,18 +1258,18 @@ function SNRAnalysisEngine() {
          progress.setProgress(100);
          progress.setStatus("Analysis complete!");
          
-         console.writeln("");
-         console.writeln("Analysis complete!");
-         console.writeln("Results saved to: " + CONFIG.outputDir);
-         console.writeln("");
-         console.writeln("=== REFERENCE MASTERS ===");
+         Console.writeln("");
+         Console.writeln("Analysis complete!");
+         Console.writeln("Results saved to: " + CONFIG.outputDir);
+         Console.writeln("");
+         Console.writeln("=== REFERENCE MASTERS ===");
          for (var i = 0; i < allFilterResults.length; i++) {
             if (allFilterResults[i].refImageId) {
-               console.writeln("  " + allFilterResults[i].filterName + ": " + 
+               Console.writeln("  " + allFilterResults[i].filterName + ": " + 
                               allFilterResults[i].refImageId + " (with ROI previews - left open)");
             }
          }
-         console.writeln("");
+         Console.writeln("");
          
          // Mark complete to stop live timer
          progress.markComplete();
@@ -1294,8 +1299,8 @@ function SNRAnalysisEngine() {
             
             progress.close();
          }
-         console.criticalln("ERROR: " + error.message);
-         console.criticalln(error.stack || "");
+         Console.criticalln("ERROR: " + error.message);
+         Console.criticalln(error.stack || "");
       }
    };
 }
@@ -1306,7 +1311,7 @@ function SNRAnalysisEngine() {
 function main() {
    // Script should not run in global mode
    if (Parameters.isGlobalTarget) {
-      console.criticalln("SNR Analysis should not run in global context.");
+      Console.criticalln("SNR Analysis should not run in global context.");
       return;
    }
    
@@ -1316,3 +1321,5 @@ function main() {
 
 // Execute main
 main();
+
+})(); // End IIFE - Script isolation wrapper

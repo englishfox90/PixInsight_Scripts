@@ -21,27 +21,27 @@
  */
 function detectAutoRois(view, tileSize) {
    if (!view || view.isNull) {
-      console.warningln("Auto ROI: Invalid view provided");
+      Console.warningln("Auto ROI: Invalid view provided");
       return null;
    }
    
    tileSize = tileSize || 96;
    
-   console.writeln("");
-   console.writeln("=== AUTO ROI DETECTION ===");
-   console.writeln("Tile size: " + tileSize + " pixels");
+   Console.writeln("");
+   Console.writeln("=== AUTO ROI DETECTION ===");
+   Console.writeln("Tile size: " + tileSize + " pixels");
    
    var image = view.image;
    var width = image.width;
    var height = image.height;
    
    if (width < tileSize * 3 || height < tileSize * 3) {
-      console.warningln("Auto ROI: Image too small for tile size " + tileSize);
+      Console.warningln("Auto ROI: Image too small for tile size " + tileSize);
       return null;
    }
    
    // Step 1: Tile the image and collect statistics
-   console.writeln("Analyzing tiles...");
+   Console.writeln("Analyzing tiles...");
    var tiles = [];
    var tileCount = 0;
    
@@ -65,10 +65,10 @@ function detectAutoRois(view, tileSize) {
       }
    }
    
-   console.writeln("Analyzed " + tileCount + " tiles");
+   Console.writeln("Analyzed " + tileCount + " tiles");
    
    if (tiles.length < 10) {
-      console.warningln("Auto ROI: Too few tiles (" + tiles.length + ") - need at least 10");
+      Console.warningln("Auto ROI: Too few tiles (" + tiles.length + ") - need at least 10");
       return null;
    }
    
@@ -91,11 +91,11 @@ function detectAutoRois(view, tileSize) {
    // Typical noise: median of sigmas
    var bgSigmaEstimate = sigmas[Math.floor(sigmas.length * 0.5)];
    
-   console.writeln("Background median estimate: " + bgMedianEstimate.toFixed(6));
-   console.writeln("Background sigma estimate: " + bgSigmaEstimate.toFixed(6));
+   Console.writeln("Background median estimate: " + bgMedianEstimate.toFixed(6));
+   Console.writeln("Background sigma estimate: " + bgSigmaEstimate.toFixed(6));
    
    // Step 3: Select BG tile
-   console.writeln("Selecting background tile...");
+   Console.writeln("Selecting background tile...");
    
    var bgCandidates = [];
    
@@ -119,7 +119,7 @@ function detectAutoRois(view, tileSize) {
    }
    
    if (bgCandidates.length === 0) {
-      console.warningln("Auto ROI: No suitable background tiles found");
+      Console.warningln("Auto ROI: No suitable background tiles found");
       return null;
    }
    
@@ -127,13 +127,13 @@ function detectAutoRois(view, tileSize) {
    bgCandidates.sort(function(a, b) { return b.score - a.score; });
    
    var bgTile = bgCandidates[0].tile;
-   console.writeln("Selected BG tile at (" + bgTile.x + ", " + bgTile.y + ")");
-   console.writeln("  Median: " + bgTile.median.toFixed(6) + 
+   Console.writeln("Selected BG tile at (" + bgTile.x + ", " + bgTile.y + ")");
+   Console.writeln("  Median: " + bgTile.median.toFixed(6) + 
                    ", Sigma: " + bgTile.sigma.toFixed(6) + 
                    ", Max: " + bgTile.max.toFixed(6));
    
    // Step 4: Select FG tile
-   console.writeln("Selecting foreground tile...");
+   Console.writeln("Selecting foreground tile...");
    
    var fgCandidates = [];
    
@@ -194,17 +194,17 @@ function detectAutoRois(view, tileSize) {
       
       if (fgCandidates.length > 0) {
          selectedAttempt = attempt.name;
-         console.writeln("Found " + fgCandidates.length + " FG candidates using " + attempt.name + " criteria");
+         Console.writeln("Found " + fgCandidates.length + " FG candidates using " + attempt.name + " criteria");
          break;
       }
    }
    
    if (fgCandidates.length === 0) {
-      console.warningln("Auto ROI: No suitable foreground tiles found even with relaxed criteria");
-      console.warningln("  Background median: " + bgMedianEstimate.toFixed(6));
-      console.warningln("  Background sigma: " + bgSigmaEstimate.toFixed(6));
-      console.warningln("  Image may have very low contrast or be mostly background");
-      console.warningln("  Consider using manual mode for this target");
+      Console.warningln("Auto ROI: No suitable foreground tiles found even with relaxed criteria");
+      Console.warningln("  Background median: " + bgMedianEstimate.toFixed(6));
+      Console.warningln("  Background sigma: " + bgSigmaEstimate.toFixed(6));
+      Console.warningln("  Image may have very low contrast or be mostly background");
+      Console.warningln("  Consider using manual mode for this target");
       return null;
    }
    
@@ -212,26 +212,26 @@ function detectAutoRois(view, tileSize) {
    fgCandidates.sort(function(a, b) { return b.score - a.score; });
    
    var fgTile = fgCandidates[0].tile;
-   console.writeln("Selected FG tile at (" + fgTile.x + ", " + fgTile.y + ")");
-   console.writeln("  Median: " + fgTile.median.toFixed(6) + 
+   Console.writeln("Selected FG tile at (" + fgTile.x + ", " + fgTile.y + ")");
+   Console.writeln("  Median: " + fgTile.median.toFixed(6) + 
                    ", Sigma: " + fgTile.sigma.toFixed(6) + 
                    ", Max: " + fgTile.max.toFixed(6));
-   console.writeln("  Signal: " + fgCandidates[0].signal.toFixed(2) + " sigma above background");
+   Console.writeln("  Signal: " + fgCandidates[0].signal.toFixed(2) + " sigma above background");
    
    // Ensure BG and FG are not the same tile
    if (bgTile.x === fgTile.x && bgTile.y === fgTile.y) {
-      console.warningln("Auto ROI: BG and FG selected the same tile - trying next best FG");
+      Console.warningln("Auto ROI: BG and FG selected the same tile - trying next best FG");
       if (fgCandidates.length > 1) {
          fgTile = fgCandidates[1].tile;
-         console.writeln("Selected alternate FG tile at (" + fgTile.x + ", " + fgTile.y + ")");
+         Console.writeln("Selected alternate FG tile at (" + fgTile.x + ", " + fgTile.y + ")");
       } else {
-         console.warningln("Auto ROI: No alternate FG tile available");
+         Console.warningln("Auto ROI: No alternate FG tile available");
          return null;
       }
    }
    
-   console.writeln("Auto ROI detection successful");
-   console.writeln("");
+   Console.writeln("Auto ROI detection successful");
+   Console.writeln("");
    
    return {
       bgRect: bgTile.rect,
@@ -291,23 +291,23 @@ function measureTileStats(image, rect) {
  */
 function createAutoRoiPreviews(window, rects) {
    if (!window || window.isNull) {
-      console.warningln("Auto ROI: Invalid window for preview creation");
+      Console.warningln("Auto ROI: Invalid window for preview creation");
       return false;
    }
    
    if (!rects || !rects.bgRect || !rects.fgRect) {
-      console.warningln("Auto ROI: Invalid rectangles provided");
+      Console.warningln("Auto ROI: Invalid rectangles provided");
       return false;
    }
    
    try {
-      console.writeln("Creating auto-detected ROI previews...");
+      Console.writeln("Creating auto-detected ROI previews...");
       
       // Remove existing BG/FG previews if they exist
       for (var i = window.previews.length - 1; i >= 0; i--) {
          var preview = window.previews[i];
          if (preview.id.toUpperCase() === "BG" || preview.id.toUpperCase() === "FG") {
-            console.writeln("Removing existing preview: " + preview.id);
+            Console.writeln("Removing existing preview: " + preview.id);
             window.deletePreview(preview);
          }
       }
@@ -316,18 +316,18 @@ function createAutoRoiPreviews(window, rects) {
       var bgRect = rects.bgRect;
       var bgPreview = window.createPreview(bgRect.x0, bgRect.y0, bgRect.x1, bgRect.y1);
       bgPreview.id = "BG";
-      console.writeln("Created BG preview: " + formatRect(bgRect));
+      Console.writeln("Created BG preview: " + formatRect(bgRect));
       
       // Create FG preview
       var fgRect = rects.fgRect;
       var fgPreview = window.createPreview(fgRect.x0, fgRect.y0, fgRect.x1, fgRect.y1);
       fgPreview.id = "FG";
-      console.writeln("Created FG preview: " + formatRect(fgRect));
+      Console.writeln("Created FG preview: " + formatRect(fgRect));
       
       return true;
       
    } catch (error) {
-      console.warningln("Auto ROI: Failed to create previews: " + error.message);
+      Console.warningln("Auto ROI: Failed to create previews: " + error.message);
       return false;
    }
 }

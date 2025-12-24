@@ -19,30 +19,30 @@ var BUILTIN_FILTER_ALIASES = [
 function readFiltersCsv( path ){
   var map = {};
   if ( !path || path.length === 0 ) {
-    console.warningln("Filter CSV path is empty");
+    Console.warningln("Filter CSV path is empty");
     return map;
   }
   
-  console.writeln("Checking filter CSV at: " + path);
-  console.writeln("File exists check result: " + File.exists( path ));
+  Console.writeln("Checking filter CSV at: " + path);
+  Console.writeln("File exists check result: " + File.exists( path ));
   
   if ( !File.exists( path ) ) {
-    console.warningln("Filter CSV file not found: " + path);
+    Console.warningln("Filter CSV file not found: " + path);
     return map;
   }
   
   // Use the original path
   var workingPath = path;
-  console.writeln("Using working path: " + workingPath);
+  Console.writeln("Using working path: " + workingPath);
   
   try {
     // Use PixInsight's built-in File.readLines method
-    console.writeln("Reading CSV lines...");
+    Console.writeln("Reading CSV lines...");
     var lines = File.readLines( workingPath, ReadTextOptions_RemoveEmptyLines | ReadTextOptions_TrimLines );
-    console.writeln("Read " + lines.length + " lines from CSV");
+    Console.writeln("Read " + lines.length + " lines from CSV");
     
     if ( lines.length < 2 ) {
-      console.warningln("CSV file has insufficient data (less than 2 lines)");
+      Console.warningln("CSV file has insufficient data (less than 2 lines)");
       return map;
     }
     
@@ -67,7 +67,7 @@ function readFiltersCsv( path ){
       idxName = 2;
     }
     
-    console.writeln("Using column indices - ID: " + idxId + ", Name: " + idxName);
+    Console.writeln("Using column indices - ID: " + idxId + ", Name: " + idxName);
     
     // Process data lines
     for ( var lineIdx = 1; lineIdx < lines.length; lineIdx++ ) {
@@ -108,10 +108,10 @@ function readFiltersCsv( path ){
       }
     }
     
-    console.writeln("Created " + Object.keys(map).length + " filter mappings");
+    Console.writeln("Created " + Object.keys(map).length + " filter mappings");
     
   } catch(e) {
-    console.warningln("Error reading filters CSV: " + e);
+    Console.warningln("Error reading filters CSV: " + e);
   }
   
   return map;

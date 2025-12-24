@@ -170,14 +170,14 @@ function promptForROIs(refImageId, autoModeFailed, filterName) {
 function computeBgRef(imageId, bgRect) {
    var window = ImageWindow.windowById(imageId);
    if (!window || window.isNull) {
-      console.warningln("computeBgRef: Image window not found: " + imageId);
+      Console.warningln("computeBgRef: Image window not found: " + imageId);
       return null;
    }
    
    var image = window.mainView.image;
    var bgStats = measureROI(image, bgRect);
    
-   console.writeln("Reference background computed: BG_ref = " + bgStats.median.toFixed(8));
+   Console.writeln("Reference background computed: BG_ref = " + bgStats.median.toFixed(8));
    return bgStats.median;
 }
 
@@ -192,12 +192,12 @@ function computeBgRef(imageId, bgRect) {
  */
 function scaleForMeasurement(window, bgRef, bgRect) {
    if (!window || window.isNull) {
-      console.warningln("scaleForMeasurement: Invalid window");
+      Console.warningln("scaleForMeasurement: Invalid window");
       return null;
    }
    
    if (!bgRef || bgRef <= 0) {
-      console.warningln("scaleForMeasurement: Invalid BG_ref (" + bgRef + "), skipping normalization");
+      Console.warningln("scaleForMeasurement: Invalid BG_ref (" + bgRef + "), skipping normalization");
       return null;
    }
    
@@ -207,7 +207,7 @@ function scaleForMeasurement(window, bgRef, bgRect) {
    var bgMeasured = bgStats.median;
    
    if (!bgMeasured || bgMeasured <= 0) {
-      console.warningln("scaleForMeasurement: Invalid BG measurement (" + bgMeasured + "), skipping normalization");
+      Console.warningln("scaleForMeasurement: Invalid BG measurement (" + bgMeasured + "), skipping normalization");
       return null;
    }
    
@@ -219,7 +219,7 @@ function scaleForMeasurement(window, bgRef, bgRect) {
    scaleFactor = Math.max(0.25, Math.min(4.0, scaleFactor));
    
    if (scaleFactor !== originalScale) {
-      console.warningln("Scale factor clamped: " + originalScale.toFixed(4) + " → " + scaleFactor.toFixed(4));
+      Console.warningln("Scale factor clamped: " + originalScale.toFixed(4) + " → " + scaleFactor.toFixed(4));
    }
    
    // Create scaled copy for measurement (do not modify original)
@@ -287,7 +287,7 @@ function measureSNR(imageId, bgRect, fgRect, bgRef) {
          scaleFactor = Math.max(0.25, Math.min(4.0, scaleFactor));
          
          if (Math.abs(scaleFactor - originalScale) > 0.001) {
-            console.warningln("[LockScale][WARN] Scale factor clamped: " + 
+            Console.warningln("[LockScale][WARN] Scale factor clamped: " + 
                             originalScale.toFixed(4) + " → " + scaleFactor.toFixed(4));
          }
          
@@ -348,18 +348,18 @@ function measureSNR(imageId, bgRect, fgRect, bgRef) {
          // VALIDATION: Check if scaling worked
          var driftPct = ((bgMedianScaled - bgRef) / bgRef) * 100.0;
          
-         console.writeln("[LockScale] bgRef=" + bgRef.toFixed(8) + 
+         Console.writeln("[LockScale] bgRef=" + bgRef.toFixed(8) + 
                         " bgRaw=" + bgMedianRaw.toFixed(8) + 
                         " scale=" + scaleFactor.toFixed(6) + 
                         " bgScaled=" + bgMedianScaled.toFixed(8) + 
                         " driftPct=" + driftPct.toFixed(3) + "%");
          
          if (Math.abs(driftPct) > 1.0) {
-            console.warningln("[LockScale][WARN] bgScaled differs from bgRef by " + 
+            Console.warningln("[LockScale][WARN] bgScaled differs from bgRef by " + 
                             driftPct.toFixed(2) + "% - verify ROI consistency");
          }
       } else {
-         console.warningln("[LockScale][WARN] Invalid bgMedianRaw (" + bgMedianRaw + 
+         Console.warningln("[LockScale][WARN] Invalid bgMedianRaw (" + bgMedianRaw + 
                           "), disabling scaling for this depth");
          bgRef = null;  // Disable scaling for this measurement
       }

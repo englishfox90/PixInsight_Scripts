@@ -72,7 +72,7 @@ function addIntegrationMetadata(window, subframes, depth) {
  */
 function performFullIntegration(subframes, outputDir, filterSuffix) {
    filterSuffix = filterSuffix || "";
-   console.writeln("Integrating all " + subframes.length + " subframes...");
+   Console.writeln("Integrating all " + subframes.length + " subframes...");
    
    ensureDirectory(outputDir);
    
@@ -151,14 +151,14 @@ function performFullIntegration(subframes, outputDir, filterSuffix) {
    // Save to disk
    var outputPath = CONFIG.integrationsDir + "/ref_master_full" + filterSuffix + ".xisf";
    if (!window.saveAs(outputPath, false, false, false, false)) {
-      console.warningln("Failed to save reference master to disk");
+      Console.warningln("Failed to save reference master to disk");
    }
    
    // Show the window to the user
    window.show();
    window.zoomToFit();
    
-   console.writeln("Full integration complete: " + window.mainView.id);
+   Console.writeln("Full integration complete: " + window.mainView.id);
    
    return window.mainView.id;
 }
@@ -174,16 +174,16 @@ function selectRejectionAlgorithm(depth) {
    if (algo === "Auto") {
       // WBPP Auto mode logic: adapt based on image count
       if (depth < 5) {
-         console.writeln("  Auto mode: Using PercentileClip (depth < 5)");
+         Console.writeln("  Auto mode: Using PercentileClip (depth < 5)");
          return ImageIntegration.prototype.PercentileClip;
       } else if (depth < 15) {
-         console.writeln("  Auto mode: Using PercentileClip (depth < 15)");
+         Console.writeln("  Auto mode: Using PercentileClip (depth < 15)");
          return ImageIntegration.prototype.PercentileClip;
       } else if (depth < 25) {
-         console.writeln("  Auto mode: Using WinsorizedSigmaClip (depth 15-24)");
+         Console.writeln("  Auto mode: Using WinsorizedSigmaClip (depth 15-24)");
          return ImageIntegration.prototype.WinsorizedSigmaClip;
       } else {
-         console.writeln("  Auto mode: Using LinearFit (depth >= 25)");
+         Console.writeln("  Auto mode: Using LinearFit (depth >= 25)");
          return ImageIntegration.prototype.LinearFit;
       }
    }
@@ -197,7 +197,7 @@ function selectRejectionAlgorithm(depth) {
    }
    
    // Fallback
-   console.warningln("  Unknown rejection algorithm '" + algo + "', using WinsorizedSigmaClip");
+   Console.warningln("  Unknown rejection algorithm '" + algo + "', using WinsorizedSigmaClip");
    return ImageIntegration.prototype.WinsorizedSigmaClip;
 }
 
@@ -215,7 +215,7 @@ function integrateDepth(job, subframes, outputDir, filterSuffix) {
       
       // Try to use existing reference master window
       if (refWindow && !refWindow.isNull) {
-         console.writeln("Reusing reference master for " + job.label + " (depth = " + job.depth + ")");
+         Console.writeln("Reusing reference master for " + job.label + " (depth = " + job.depth + ")");
          
          // Clone the reference to create a new window with appropriate naming
          var newWindow = new ImageWindow(
@@ -238,19 +238,19 @@ function integrateDepth(job, subframes, outputDir, filterSuffix) {
          // Save the cloned image
          var outputPath = CONFIG.integrationsDir + "/int_" + job.label + filterSuffix + ".xisf";
          if (!newWindow.saveAs(outputPath, false, false, false, false)) {
-            console.warningln("Failed to save " + newWindow.mainView.id + " to disk");
+            Console.warningln("Failed to save " + newWindow.mainView.id + " to disk");
          }
          
          newWindow.show();
          
-         console.writeln("Reference master reused successfully (saved integration time)");
+         Console.writeln("Reference master reused successfully (saved integration time)");
          return newWindow.mainView.id;
       }
       
       // If reference master window not available, try loading from disk
       var refPath = CONFIG.integrationsDir + "/ref_master_full" + filterSuffix + ".xisf";
       if (File.exists(refPath)) {
-         console.writeln("Loading reference master from disk for " + job.label + "...");
+         Console.writeln("Loading reference master from disk for " + job.label + "...");
          var windows = ImageWindow.open(refPath);
          if (windows && windows.length > 0) {
             var loadedWindow = windows[0];
@@ -259,18 +259,18 @@ function integrateDepth(job, subframes, outputDir, filterSuffix) {
             // Save as the depth integration file
             var outputPath = CONFIG.integrationsDir + "/int_" + job.label + filterSuffix + ".xisf";
             if (!loadedWindow.saveAs(outputPath, false, false, false, false)) {
-               console.warningln("Failed to save " + loadedWindow.mainView.id + " to disk");
+               Console.warningln("Failed to save " + loadedWindow.mainView.id + " to disk");
             }
             
-            console.writeln("Reference master loaded and reused (saved integration time)");
+            Console.writeln("Reference master loaded and reused (saved integration time)");
             return loadedWindow.mainView.id;
          }
       }
       
-      console.writeln("Reference master not available, proceeding with full integration for " + job.label + "...");
+      Console.writeln("Reference master not available, proceeding with full integration for " + job.label + "...");
    }
    
-   console.writeln("Integrating " + job.depth + " subframes...");
+   Console.writeln("Integrating " + job.depth + " subframes...");
    
    var P = new ImageIntegration();
    
@@ -328,14 +328,14 @@ function integrateDepth(job, subframes, outputDir, filterSuffix) {
    var result = P.executeGlobal();
    
    if (!result) {
-      console.warningln("Integration failed for " + job.label);
+      Console.warningln("Integration failed for " + job.label);
       return null;
    }
    
    // Get result window
    var window = ImageWindow.activeWindow;
    if (!window || window.isNull) {
-      console.warningln("No active window after integration");
+      Console.warningln("No active window after integration");
       return null;
    }
    
@@ -349,7 +349,7 @@ function integrateDepth(job, subframes, outputDir, filterSuffix) {
    // Save
    var outputPath = CONFIG.integrationsDir + "/" + id + ".xisf";
    if (!window.saveAs(outputPath, false, false, false, false)) {
-      console.warningln("Failed to save " + id + " to disk");
+      Console.warningln("Failed to save " + id + " to disk");
    }
    
    return id;

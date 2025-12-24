@@ -436,25 +436,25 @@ function generateInsightsSummary(results, insights) {
 }
 
 /**
- * Print insights to console
+ * Print insights to Console
  */
 function printInsights(insights) {
    if (!insights) return;
    
-   console.writeln("");
+   Console.writeln("");
    
    // Print Gain/hr stop recommendation
    if (insights.gainPerHourStop) {
-      console.writeln("=== GAIN PER HOUR RECOMMENDATION ===");
-      console.writeln("");
-      console.writeln("Recommended stop point: " + insights.gainPerHourStop.stopLabel);
-      console.writeln("  (Based on Gain/hr falling below " + insights.gainPerHourStop.threshold.toFixed(1) + "% per hour");
-      console.writeln("   for " + insights.gainPerHourStop.confirmSteps + " consecutive integration steps)");
-      console.writeln("");
+      Console.writeln("=== GAIN PER HOUR RECOMMENDATION ===");
+      Console.writeln("");
+      Console.writeln("Recommended stop point: " + insights.gainPerHourStop.stopLabel);
+      Console.writeln("  (Based on Gain/hr falling below " + insights.gainPerHourStop.threshold.toFixed(1) + "% per hour");
+      Console.writeln("   for " + insights.gainPerHourStop.confirmSteps + " consecutive integration steps)");
+      Console.writeln("");
    }
    
-   console.writeln(insights.summary);
-   console.writeln("");
+   Console.writeln(insights.summary);
+   Console.writeln("");
 }
 
 /**

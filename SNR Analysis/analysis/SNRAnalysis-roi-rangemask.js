@@ -16,23 +16,23 @@
  */
 function createRangeMaskPreviews(window, rangeMaskResult) {
    if (!window || window.isNull) {
-      console.warningln("Range Mask: Invalid window for preview creation");
+      Console.warningln("Range Mask: Invalid window for preview creation");
       return false;
    }
    
    if (!rangeMaskResult || !rangeMaskResult.bgRect || !rangeMaskResult.fgRect) {
-      console.warningln("Range Mask: Invalid result provided");
+      Console.warningln("Range Mask: Invalid result provided");
       return false;
    }
    
    try {
-      console.writeln("Creating Range Mask ROI previews...");
+      Console.writeln("Creating Range Mask ROI previews...");
       
       // Remove existing BG/FG previews if they exist
       for (var i = window.previews.length - 1; i >= 0; i--) {
          var preview = window.previews[i];
          if (preview.id.toUpperCase() === "BG" || preview.id.toUpperCase() === "FG") {
-            console.writeln("Removing existing preview: " + preview.id);
+            Console.writeln("Removing existing preview: " + preview.id);
             window.deletePreview(preview);
          }
       }
@@ -41,18 +41,18 @@ function createRangeMaskPreviews(window, rangeMaskResult) {
       var bgRect = rangeMaskResult.bgRect;
       var bgPreview = window.createPreview(bgRect.x0, bgRect.y0, bgRect.x1, bgRect.y1);
       bgPreview.id = "BG";
-      console.writeln("Created BG preview: " + formatRect(bgRect));
+      Console.writeln("Created BG preview: " + formatRect(bgRect));
       
       // Create FG preview
       var fgRect = rangeMaskResult.fgRect;
       var fgPreview = window.createPreview(fgRect.x0, fgRect.y0, fgRect.x1, fgRect.y1);
       fgPreview.id = "FG";
-      console.writeln("Created FG preview: " + formatRect(fgRect));
+      Console.writeln("Created FG preview: " + formatRect(fgRect));
       
       return true;
       
    } catch (error) {
-      console.warningln("Range Mask: Failed to create previews: " + error.message);
+      Console.warningln("Range Mask: Failed to create previews: " + error.message);
       return false;
    }
 }
@@ -78,51 +78,51 @@ function createRangeMaskPreviews(window, rangeMaskResult) {
  */
 function computeRangeMaskROIs(image, tileSize, saveDebug, outputDir, filterName) {
    if (!image) {
-      console.warningln("Range Mask ROI: Invalid image provided");
+      Console.warningln("Range Mask ROI: Invalid image provided");
       return null;
    }
    
    try {
       tileSize = tileSize || 96;
       
-      console.writeln("");
-      console.writeln("=== RANGE MASK ROI DETECTION ===");
-      console.writeln("Filter: " + (filterName || "All"));
-      console.writeln("Tile size: " + tileSize + " pixels");
-      console.writeln("Image size: " + image.width + "x" + image.height);
+      Console.writeln("");
+      Console.writeln("=== RANGE MASK ROI DETECTION ===");
+      Console.writeln("Filter: " + (filterName || "All"));
+      Console.writeln("Tile size: " + tileSize + " pixels");
+      Console.writeln("Image size: " + image.width + "x" + image.height);
    
    var width = image.width;
    var height = image.height;
    var minDim = Math.min(width, height);
    
    if (width < tileSize * 3 || height < tileSize * 3) {
-      console.warningln("Range Mask ROI: Image too small for tile size " + tileSize);
+      Console.warningln("Range Mask ROI: Image too small for tile size " + tileSize);
       return null;
    }
    
    // Step 1: Compute robust background statistics
-   console.writeln("Computing robust image statistics...");
+   Console.writeln("Computing robust image statistics...");
    
    var globalMedian = image.median();
    var globalMAD = image.MAD();
    var globalSigma = 1.4826 * globalMAD;
    
-   console.writeln("  Global median: " + globalMedian.toFixed(6));
-   console.writeln("  Global MAD: " + globalMAD.toFixed(6));
-   console.writeln("  Robust sigma: " + globalSigma.toFixed(6));
+   Console.writeln("  Global median: " + globalMedian.toFixed(6));
+   Console.writeln("  Global MAD: " + globalMAD.toFixed(6));
+   Console.writeln("  Robust sigma: " + globalSigma.toFixed(6));
    
    if (globalSigma < 1e-8) {
-      console.warningln("Range Mask ROI: Image has near-zero variation (flat)");
+      Console.warningln("Range Mask ROI: Image has near-zero variation (flat)");
       return null;
    }
    
    // Step 2: Define safe zone (exclude borders)
    var borderMargin = Math.round(minDim * 0.03);
    borderMargin = Math.max(20, Math.min(200, borderMargin));
-   console.writeln("Border margin: " + borderMargin + " pixels");
+   Console.writeln("Border margin: " + borderMargin + " pixels");
    
    // Step 3: Search for optimal threshold
-   console.writeln("Searching for optimal foreground threshold...");
+   Console.writeln("Searching for optimal foreground threshold...");
    
    var kCandidates = [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 6.0];
    var bestCandidate = null;
@@ -154,24 +154,24 @@ function computeRangeMaskROIs(image, tileSize, saveDebug, outputDir, filterName)
       var maxArea = 0.40;
       
       if (fgArea < minArea || fgArea > maxArea) {
-         console.writeln("  k=" + k.toFixed(1) + ": FG area " + (fgArea*100).toFixed(1) + "% out of range [" + (minArea*100) + "%, " + (maxArea*100) + "%]");
+         Console.writeln("  k=" + k.toFixed(1) + ": FG area " + (fgArea*100).toFixed(1) + "% out of range [" + (minArea*100) + "%, " + (maxArea*100) + "%]");
          continue;
       }
       
       if (bgArea < 0.1) {
-         console.writeln("  k=" + k.toFixed(1) + ": BG area too small (" + (bgArea*100).toFixed(1) + "%)");
+         Console.writeln("  k=" + k.toFixed(1) + ": BG area too small (" + (bgArea*100).toFixed(1) + "%)");
          continue;
       }
       
       if (bgSigma < 1e-8) {
-         console.writeln("  k=" + k.toFixed(1) + ": BG sigma too low");
+         Console.writeln("  k=" + k.toFixed(1) + ": BG sigma too low");
          continue;
       }
       
       // Compute score: signal contrast
       var score = (fgMedian - bgMedian) / bgSigma;
       
-      console.writeln("  k=" + k.toFixed(1) + ": threshold=" + threshold.toFixed(6) + 
+      Console.writeln("  k=" + k.toFixed(1) + ": threshold=" + threshold.toFixed(6) + 
                      ", FG area=" + (fgArea*100).toFixed(1) + "%" +
                      ", score=" + score.toFixed(2));
       
@@ -193,7 +193,7 @@ function computeRangeMaskROIs(image, tileSize, saveDebug, outputDir, filterName)
    
    // Fallback with relaxed constraints if no candidate found
    if (!bestCandidate) {
-      console.writeln("No candidates with standard constraints, trying relaxed...");
+      Console.writeln("No candidates with standard constraints, trying relaxed...");
       
       for (var ki = 0; ki < kCandidates.length; ki++) {
          var k = kCandidates[ki];
@@ -231,22 +231,22 @@ function computeRangeMaskROIs(image, tileSize, saveDebug, outputDir, filterName)
    }
    
    if (!bestCandidate) {
-      console.warningln("Range Mask ROI: No valid threshold found");
-      console.warningln("  Image may have very low contrast or unusual structure");
-      console.warningln("  Consider using Manual ROIs or Auto-detect BG/FG mode");
+      Console.warningln("Range Mask ROI: No valid threshold found");
+      Console.warningln("  Image may have very low contrast or unusual structure");
+      Console.warningln("  Consider using Manual ROIs or Auto-detect BG/FG mode");
       return null;
    }
    
-   console.writeln("Selected threshold: k=" + bestCandidate.k.toFixed(1) + 
+   Console.writeln("Selected threshold: k=" + bestCandidate.k.toFixed(1) + 
                   ", T=" + bestCandidate.threshold.toFixed(6));
-   console.writeln("  FG area: " + (bestCandidate.fgArea*100).toFixed(1) + "%");
-   console.writeln("  FG median: " + bestCandidate.fgMedian.toFixed(6));
-   console.writeln("  BG median: " + bestCandidate.bgMedian.toFixed(6));
-   console.writeln("  BG sigma: " + bestCandidate.bgSigma.toFixed(6));
-   console.writeln("  Signal contrast: " + bestCandidate.score.toFixed(2) + " sigma");
+   Console.writeln("  FG area: " + (bestCandidate.fgArea*100).toFixed(1) + "%");
+   Console.writeln("  FG median: " + bestCandidate.fgMedian.toFixed(6));
+   Console.writeln("  BG median: " + bestCandidate.bgMedian.toFixed(6));
+   Console.writeln("  BG sigma: " + bestCandidate.bgSigma.toFixed(6));
+   Console.writeln("  Signal contrast: " + bestCandidate.score.toFixed(2) + " sigma");
    
    // Step 4: Select BG tile
-   console.writeln("Selecting background tile...");
+   Console.writeln("Selecting background tile...");
    
    var bufferPx = Math.max(32, Math.round(minDim * 0.02));
    var bgMask = createBGCandidateMask(bestCandidate.fgMask, borderMargin, bufferPx);
@@ -254,15 +254,15 @@ function computeRangeMaskROIs(image, tileSize, saveDebug, outputDir, filterName)
    var bgTile = selectBGTile(image, bgMask, tileSize);
    
    if (!bgTile) {
-      console.warningln("Range Mask ROI: No valid BG tile found");
+      Console.warningln("Range Mask ROI: No valid BG tile found");
       return null;
    }
    
-   console.writeln("Selected BG tile at (" + bgTile.x + ", " + bgTile.y + ")");
-   console.writeln("  Sigma: " + bgTile.sigma.toFixed(6));
+   Console.writeln("Selected BG tile at (" + bgTile.x + ", " + bgTile.y + ")");
+   Console.writeln("  Sigma: " + bgTile.sigma.toFixed(6));
    
    // Step 5: Select FG tile
-   console.writeln("Selecting foreground tile...");
+   Console.writeln("Selecting foreground tile...");
    
    var erodePx = Math.max(2, Math.round(tileSize * 0.05));
    var fgInnerMask = erodeMask(bestCandidate.fgMask, erodePx);
@@ -273,24 +273,24 @@ function computeRangeMaskROIs(image, tileSize, saveDebug, outputDir, filterName)
    var fgTile = selectFGTile(image, fgInnerMask, bestCandidate.fgMask, tileSize, bestCandidate.bgMedian, bgTile, minSeparation);
    
    if (!fgTile) {
-      console.warningln("Range Mask ROI: No valid FG tile found");
+      Console.warningln("Range Mask ROI: No valid FG tile found");
       return null;
    }
    
-   console.writeln("Selected FG tile at (" + fgTile.x + ", " + fgTile.y + ")");
-   console.writeln("  Median: " + fgTile.median.toFixed(6));
+   Console.writeln("Selected FG tile at (" + fgTile.x + ", " + fgTile.y + ")");
+   Console.writeln("  Median: " + fgTile.median.toFixed(6));
    
    // Calculate actual separation
    var actualSeparation = Math.sqrt(
       Math.pow(fgTile.x + tileSize/2 - bgTile.x - tileSize/2, 2) +
       Math.pow(fgTile.y + tileSize/2 - bgTile.y - tileSize/2, 2)
    );
-   console.writeln("  BG-FG separation: " + Math.round(actualSeparation) + " pixels (" + 
+   Console.writeln("  BG-FG separation: " + Math.round(actualSeparation) + " pixels (" + 
                   (actualSeparation / Math.sqrt(width*width + height*height) * 100).toFixed(1) + "% of diagonal)");
    
    // Ensure BG and FG are not the same tile
    if (bgTile.x === fgTile.x && bgTile.y === fgTile.y) {
-      console.warningln("Range Mask ROI: BG and FG selected the same tile");
+      Console.warningln("Range Mask ROI: BG and FG selected the same tile");
       return null;
    }
    
@@ -313,16 +313,16 @@ function computeRangeMaskROIs(image, tileSize, saveDebug, outputDir, filterName)
       saveDebugOverlay(image, bestCandidate.fgMask, result, outputDir, filterName);
    }
    
-   console.writeln("Range Mask ROI detection successful");
-   console.writeln("");
+   Console.writeln("Range Mask ROI detection successful");
+   Console.writeln("");
    
    return result;
    
    } catch (error) {
-      console.criticalln("Range Mask ROI detection failed with error:");
-      console.criticalln("  " + error.message);
+      Console.criticalln("Range Mask ROI detection failed with error:");
+      Console.criticalln("  " + error.message);
       if (error.stack) {
-         console.criticalln("  Stack: " + error.stack);
+         Console.criticalln("  Stack: " + error.stack);
       }
       return null;
    }
@@ -409,8 +409,8 @@ function cleanupMask(mask) {
       return cleaned;
       
    } catch (error) {
-      console.warningln("Mask cleanup failed: " + error.message);
-      console.warningln("Using uncleaned mask");
+      Console.warningln("Mask cleanup failed: " + error.message);
+      Console.warningln("Using uncleaned mask");
       if (typeof tempWindow !== 'undefined' && !tempWindow.isNull) {
          tempWindow.forceClose();
       }
@@ -671,7 +671,7 @@ function selectFGTile(image, fgInnerMask, fgFullMask, tileSize, bgMedian, bgTile
    
    // Fallback: tiles with >80% overlap with full FG
    if (!bestTile) {
-      console.writeln("  No tiles fully in eroded FG, trying fallback (>80% overlap)...");
+      Console.writeln("  No tiles fully in eroded FG, trying fallback (>80% overlap)...");
       
       for (var y = 0; y + tileSize <= height; y += tileSize) {
          for (var x = 0; x + tileSize <= width; x += tileSize) {
@@ -723,7 +723,7 @@ function selectFGTile(image, fgInnerMask, fgFullMask, tileSize, bgMedian, bgTile
  */
 function saveDebugOverlay(image, fgMask, result, outputDir, filterName) {
    try {
-      console.writeln("Saving debug overlay...");
+      Console.writeln("Saving debug overlay...");
       
       // Create RGB visualization
       var debugImage = new Image(Math.floor(image.width), Math.floor(image.height), 3, 1, 32, 1);
@@ -791,13 +791,13 @@ function saveDebugOverlay(image, fgMask, result, outputDir, filterName) {
       window.mainView.endProcess();
       
       if (window.saveAs(debugPath, false, false, false, false)) {
-         console.writeln("Debug overlay saved: " + debugPath);
+         Console.writeln("Debug overlay saved: " + debugPath);
       }
       
       window.forceClose();
       
    } catch (error) {
-      console.warningln("Failed to save debug overlay: " + error.message);
+      Console.warningln("Failed to save debug overlay: " + error.message);
    }
 }
 

@@ -46,18 +46,18 @@ function runStarRemoval(method, config, job, imageWindow, filterSuffix) {
    }
    
    if (!imageWindow || imageWindow.isNull) {
-      console.warningln("Invalid image window for star removal");
+      Console.warningln("Invalid image window for star removal");
       return null;
    }
    
-   console.writeln("Removing stars using " + method + "...");
+   Console.writeln("Removing stars using " + method + "...");
    
    if (method === "StarXTerminator") {
       return removeStarsWithStarX(config, job, imageWindow, filterSuffix);
    } else if (method === "StarNet2") {
       return removeStarsWithStarNet(config, job, imageWindow, filterSuffix);
    } else {
-      console.warningln("Unknown star removal method: " + method);
+      Console.warningln("Unknown star removal method: " + method);
       return null;
    }
 }
@@ -77,8 +77,8 @@ function removeStarsWithStarX(config, job, imageWindow, filterSuffix) {
    try {
       P = new StarXTerminator();
    } catch (e) {
-      console.warningln("StarXTerminator not installed. Install from Process > All Processes.");
-      console.warningln("Continuing without star removal for " + job.label);
+      Console.warningln("StarXTerminator not installed. Install from Process > All Processes.");
+      Console.warningln("Continuing without star removal for " + job.label);
       return null;
    }
    
@@ -108,7 +108,7 @@ function removeStarsWithStarX(config, job, imageWindow, filterSuffix) {
       }
       if (P.hasOwnProperty("ai_file")) P.ai_file = "";
    } else {
-      console.warningln("Unknown StarXTerminator version - attempting with defaults");
+      Console.warningln("Unknown StarXTerminator version - attempting with defaults");
    }
    
    // Execute with timing
@@ -118,8 +118,8 @@ function removeStarsWithStarX(config, job, imageWindow, filterSuffix) {
    try {
       executeSuccess = P.executeOn(imageWindow.mainView);
    } catch (e) {
-      console.warningln("StarXTerminator execution error (" + job.label + "): " + e.message);
-      console.warningln("This may be due to swap file permissions. Check Edit > Preferences > Directories.");
+      Console.warningln("StarXTerminator execution error (" + job.label + "): " + e.message);
+      Console.warningln("This may be due to swap file permissions. Check Edit > Preferences > Directories.");
       return null;
    }
    
@@ -128,7 +128,7 @@ function removeStarsWithStarX(config, job, imageWindow, filterSuffix) {
    job.starRemovalTimeSec = elapsedSec;
    
    if (!executeSuccess) {
-      console.warningln("StarXTerminator execution failed for " + job.label);
+      Console.warningln("StarXTerminator execution failed for " + job.label);
       return null;
    }
    
@@ -150,7 +150,7 @@ function removeStarsWithStarX(config, job, imageWindow, filterSuffix) {
       starlessWindow = ImageWindow.windowById(possibleIds[i]);
       if (starlessWindow && !starlessWindow.isNull) {
          foundId = possibleIds[i];
-         console.writeln("Found StarXTerminator output: " + foundId);
+         Console.writeln("Found StarXTerminator output: " + foundId);
          break;
       }
    }
@@ -167,7 +167,7 @@ function removeStarsWithStarX(config, job, imageWindow, filterSuffix) {
              (candidateLower.indexOf(baseNormalized) !== -1 || candidateLower.indexOf(labelNormalized) !== -1)) {
             starlessWindow = allWindows[j];
             foundId = candidateId;
-            console.writeln("Found StarXTerminator output (fuzzy match): " + foundId);
+            Console.writeln("Found StarXTerminator output (fuzzy match): " + foundId);
             break;
          }
       }
@@ -176,18 +176,18 @@ function removeStarsWithStarX(config, job, imageWindow, filterSuffix) {
    if (!starlessWindow || starlessWindow.isNull) {
       // Check if StarXTerminator modified the original image in-place (newer versions)
       // Original window should still exist and now contains the starless image
-      console.writeln("No separate starless window created - checking if original was modified in-place");
+      Console.writeln("No separate starless window created - checking if original was modified in-place");
       if (imageWindow && !imageWindow.isNull) {
-         console.writeln("Using original window (stars removed in-place): " + imageWindow.mainView.id);
+         Console.writeln("Using original window (stars removed in-place): " + imageWindow.mainView.id);
          starlessWindow = imageWindow;
          foundId = imageWindow.mainView.id;
       } else {
-         console.warningln("StarXTerminator output window not found for " + job.label);
-         console.warningln("Tried IDs: " + possibleIds.join(", "));
-         console.warningln("Available windows:");
+         Console.warningln("StarXTerminator output window not found for " + job.label);
+         Console.warningln("Tried IDs: " + possibleIds.join(", "));
+         Console.warningln("Available windows:");
          var allWindows = ImageWindow.windows;
          for (var i = 0; i < allWindows.length; i++) {
-            console.warningln("  - " + allWindows[i].mainView.id);
+            Console.warningln("  - " + allWindows[i].mainView.id);
          }
          return null;
       }
@@ -201,7 +201,7 @@ function removeStarsWithStarX(config, job, imageWindow, filterSuffix) {
    // Save to disk
    var outputPath = CONFIG.previewsDir + "/" + finalId + ".xisf";
    if (!starlessWindow.saveAs(outputPath, false, false, false, false)) {
-      console.warningln("Failed to save starless image: " + outputPath);
+      Console.warningln("Failed to save starless image: " + outputPath);
    }
    
    return {
@@ -227,8 +227,8 @@ function removeStarsWithStarNet(config, job, imageWindow, filterSuffix) {
    try {
       P = new StarNet();
    } catch (e) {
-      console.warningln("StarNet2 not installed. Install from Process > All Processes.");
-      console.warningln("Continuing without star removal for " + job.label);
+      Console.warningln("StarNet2 not installed. Install from Process > All Processes.");
+      Console.warningln("Continuing without star removal for " + job.label);
       return null;
    }
    
@@ -260,7 +260,7 @@ function removeStarsWithStarNet(config, job, imageWindow, filterSuffix) {
    try {
       executeSuccess = P.executeOn(imageWindow.mainView);
    } catch (e) {
-      console.warningln("StarNet execution error (" + job.label + "): " + e.message);
+      Console.warningln("StarNet execution error (" + job.label + "): " + e.message);
       return null;
    }
    
@@ -269,7 +269,7 @@ function removeStarsWithStarNet(config, job, imageWindow, filterSuffix) {
    job.starRemovalTimeSec = elapsedSec;
    
    if (!executeSuccess) {
-      console.warningln("StarNet execution failed for " + job.label);
+      Console.warningln("StarNet execution failed for " + job.label);
       return null;
    }
    
@@ -278,8 +278,8 @@ function removeStarsWithStarNet(config, job, imageWindow, filterSuffix) {
    var starlessWindow = ImageWindow.windowById(starlessId);
    
    if (!starlessWindow || starlessWindow.isNull) {
-      console.warningln("StarNet output window not found for " + job.label);
-      console.warningln("Expected ID: " + starlessId);
+      Console.warningln("StarNet output window not found for " + job.label);
+      Console.warningln("Expected ID: " + starlessId);
       return null;
    }
    
@@ -289,7 +289,7 @@ function removeStarsWithStarNet(config, job, imageWindow, filterSuffix) {
    // Save to disk
    var outputPath = CONFIG.previewsDir + "/" + finalId + ".xisf";
    if (!starlessWindow.saveAs(outputPath, false, false, false, false)) {
-      console.warningln("Failed to save starless image: " + outputPath);
+      Console.warningln("Failed to save starless image: " + outputPath);
    }
    
    return {
@@ -305,11 +305,11 @@ function removeStarsWithStarNet(config, job, imageWindow, filterSuffix) {
  * @deprecated Use runStarRemoval() instead
  */
 function removeStars(imageId, label, method, outputDir) {
-   console.warningln("DEPRECATED: removeStars() called. Use runStarRemoval() instead.");
+   Console.warningln("DEPRECATED: removeStars() called. Use runStarRemoval() instead.");
    
    var window = ImageWindow.windowById(imageId);
    if (!window || window.isNull) {
-      console.warningln("Image window not found: " + imageId);
+      Console.warningln("Image window not found: " + imageId);
       return null;
    }
    

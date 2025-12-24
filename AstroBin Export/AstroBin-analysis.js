@@ -62,7 +62,7 @@ function analyzeFiles( files ){
   };
   
   // First pass: scan all files to detect calibration frames and available metadata
-  console.writeln("Scanning " + files.length + " files for calibration frames and metadata...");
+  Console.writeln("Scanning " + files.length + " files for calibration frames and metadata...");
   
   for ( var i=0; i<files.length; i++ ){
     var p = files[i];
@@ -105,7 +105,7 @@ function analyzeFiles( files ){
     }
   }
   
-  console.writeln("Calibration frames found: " + calibrationCounts.bias + " bias, " + 
+  Console.writeln("Calibration frames found: " + calibrationCounts.bias + " bias, " + 
                   calibrationCounts.darks + " darks, " + calibrationCounts.flats + " flats, " + 
                   calibrationCounts.flatDarks + " flat darks");
   
@@ -116,7 +116,7 @@ function analyzeFiles( files ){
 
     // Show progress every 10 files (only for candidates)
     if (i % 10 === 0 || i === files.length - 1) {
-      console.writeln("Processing file " + (i + 1) + " of " + files.length + ": " + File.extractName(p));
+      Console.writeln("Processing file " + (i + 1) + " of " + files.length + ": " + File.extractName(p));
     }
 
     try {
@@ -133,7 +133,7 @@ function analyzeFiles( files ){
       // If no filter found in header, try to extract from filename
       if (!filter || filter === "" || filter === "None") {
         var filename = File.extractName(p);
-        console.writeln("No filter in header, trying filename: " + filename);
+        Console.writeln("No filter in header, trying filename: " + filename);
         
         // Split filename by underscores and look for filter pattern
         var parts = filename.split("_");
@@ -161,7 +161,7 @@ function analyzeFiles( files ){
               // Use the component as-is if it looks like a filter
               filter = potentialFilter;
             }
-            console.writeln("Extracted filter from filename: " + filter);
+            Console.writeln("Extracted filter from filename: " + filter);
           }
         }
       }
@@ -212,7 +212,7 @@ function analyzeFiles( files ){
            if (!isNaN(sqmValue) && isFinite(sqmValue)) {
               // Clamp direct SQM readings to realistic range (15.0 to 22.2)
               globalData.meanSqm = Math.min(22.2, Math.max(15.0, sqmValue));
-              console.writeln("Using direct SQM: " + globalData.meanSqm.toFixed(2) + " mag/arcsec²");
+              Console.writeln("Using direct SQM: " + globalData.meanSqm.toFixed(2) + " mag/arcsec²");
            }
         } else if (skyBrightnessStr) {
            // Convert from lux to mag/arcsec² using corrected formula
@@ -224,7 +224,7 @@ function analyzeFiles( files ){
               var calculatedSqm = 14.18 - 2.5 * Math.log10(luxValue);
               // Clamp to realistic SQM range to avoid impossible values
               globalData.meanSqm = Math.min(22.2, Math.max(15.0, calculatedSqm));
-              console.writeln("Converted sky brightness " + luxValue + " lux to SQM: " + globalData.meanSqm.toFixed(2) + " mag/arcsec² (approx)");
+              Console.writeln("Converted sky brightness " + luxValue + " lux to SQM: " + globalData.meanSqm.toFixed(2) + " mag/arcsec² (approx)");
            }
         } else if (bortleStr) {
            // Estimate SQM from Bortle scale as fallback
@@ -233,7 +233,7 @@ function analyzeFiles( files ){
               var estimatedSqm = bortleToSQM(bortleValue);
               globalData.meanSqm = Math.min(22.2, Math.max(15.0, estimatedSqm));
               globalData.bortle = bortleValue;
-              console.writeln("Estimated SQM " + globalData.meanSqm.toFixed(2) + " mag/arcsec² from Bortle Class " + bortleValue);
+              Console.writeln("Estimated SQM " + globalData.meanSqm.toFixed(2) + " mag/arcsec² from Bortle Class " + bortleValue);
            }
         }
         
@@ -280,7 +280,7 @@ function analyzeFiles( files ){
         ambientTemp: ambTempStr ? parseFloat(ambTempStr) : null  // Store per-image ambient temp
       });
     }catch(e){
-      console.warningln( "[WARN] Skipping file due to error: " + p + "\n  " + e );
+      Console.warningln( "[WARN] Skipping file due to error: " + p + "\n  " + e );
     }
   }
   

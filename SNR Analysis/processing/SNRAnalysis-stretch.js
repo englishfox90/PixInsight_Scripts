@@ -9,11 +9,11 @@
  * @param {string} imageId - Image window ID
  */
 function applySTFStretch(imageId) {
-   console.writeln("Applying STF-based stretch...");
+   Console.writeln("Applying STF-based stretch...");
    
    var window = ImageWindow.windowById(imageId);
    if (!window || window.isNull) {
-      console.warningln("Image window not found: " + imageId);
+      Console.warningln("Image window not found: " + imageId);
       return;
    }
    
@@ -22,7 +22,7 @@ function applySTFStretch(imageId) {
       var stf = computeAutoSTF(window.mainView);
       
       if (!stf) {
-         console.warningln("Failed to compute STF");
+         Console.warningln("Failed to compute STF");
          return;
       }
       
@@ -40,10 +40,10 @@ function applySTFStretch(imageId) {
       // Execute transformation
       HT.executeOn(window.mainView, false);
       
-      console.writeln("Stretch applied successfully");
+      Console.writeln("Stretch applied successfully");
       
    } catch (error) {
-      console.warningln("Stretch failed: " + error.message);
+      Console.warningln("Stretch failed: " + error.message);
    }
 }
 
