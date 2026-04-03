@@ -76,35 +76,5 @@
         </ul>
       </description>
     </package>
-
-    <package fileName="SubReviewer-1.0.0-20260402.zip"
-             sha1="579c2f85e46251baeaf510e6cbe905b0d91a9492"
-             type="script"
-             releaseDate="20260402">
-      <title>
-        Sub Reviewer
-      </title>
-      <description>
-        <p>
-          Sub Reviewer v1.0.0
-        </p>
-        <p>
-          A tool for reviewing and culling subframe images before stacking. Recursively scans directories for FITS/XISF files, displays images with auto-stretch for easy quality assessment, allows marking bad frames, and performs batch deletion.
-        </p>
-        <p>
-          <b>Key Features:</b>
-        </p>
-        <ul>
-          <li>Recursive directory scanning for deep folder hierarchies</li>
-          <li>Auto-stretch preview for easy frame quality assessment</li>
-          <li>Keyboard navigation (arrows, home, end, M to mark)</li>
-          <li>Visual marking system for bad frames</li>
-          <li>Batch deletion with confirmation</li>
-          <li>Persistent settings (directory, auto-stretch preferences)</li>
-          <li>Supports FITS, XISF, and FIT file formats</li>
-          <li>Real-time image statistics display</li>
-        </ul>
-      </description>
-    </package>
   </platform>
 </xri>
