@@ -5,21 +5,21 @@
       PixInsight Custom Scripts
     </p>
     <p>
-      This repository provides multiple tools: AstroBin Export, SNR Analysis.
+      This repository provides multiple tools: AstroBin Export, SNR Analysis, Sub Reviewer.
     </p>
   </description>
 
   <platform os="all" arch="noarch" version="1.8.0:2.0.0">
-    <package fileName="AstroBinExport-3.2.4-20251223.zip"
-             sha1="b899281fad830e80fc78c9ef4ad90bfcc93d52be"
+    <package fileName="AstroBinExport-3.3.0-20260402.zip"
+             sha1="ddf6cb876407bf19575dff0c61f150f57dff394c"
              type="script"
-             releaseDate="20251223">
+             releaseDate="20260402">
       <title>
         AstroBin Export
       </title>
       <description>
         <p>
-          AstroBin Export v3.2.4
+          AstroBin Export v3.3.0
         </p>
         <p>
           Generates CSV files compatible with AstroBin&apos;s bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.
@@ -40,10 +40,10 @@
       </description>
     </package>
 
-    <package fileName="SNRAnalysis-1.6.6-20251223.zip"
+    <package fileName="SNRAnalysis-1.6.6-20260402.zip"
              sha1="2da5e11c294ab81ef3ea6ec5d63f2746b4a512c9"
              type="script"
-             releaseDate="20251223">
+             releaseDate="20260402">
       <title>
         SNR Analysis
       </title>
@@ -73,6 +73,36 @@
           <li>CSV and JSON output with full metadata and timing logs</li>
           <li>Automated insights (diminishing returns, scaling exponent, T+10 hours analysis)</li>
           <li>Reference master window visibility for verification</li>
+        </ul>
+      </description>
+    </package>
+
+    <package fileName="SubReviewer-1.0.0-20260402.zip"
+             sha1="579c2f85e46251baeaf510e6cbe905b0d91a9492"
+             type="script"
+             releaseDate="20260402">
+      <title>
+        Sub Reviewer
+      </title>
+      <description>
+        <p>
+          Sub Reviewer v1.0.0
+        </p>
+        <p>
+          A tool for reviewing and culling subframe images before stacking. Recursively scans directories for FITS/XISF files, displays images with auto-stretch for easy quality assessment, allows marking bad frames, and performs batch deletion.
+        </p>
+        <p>
+          <b>Key Features:</b>
+        </p>
+        <ul>
+          <li>Recursive directory scanning for deep folder hierarchies</li>
+          <li>Auto-stretch preview for easy frame quality assessment</li>
+          <li>Keyboard navigation (arrows, home, end, M to mark)</li>
+          <li>Visual marking system for bad frames</li>
+          <li>Batch deletion with confirmation</li>
+          <li>Persistent settings (directory, auto-stretch preferences)</li>
+          <li>Supports FITS, XISF, and FIT file formats</li>
+          <li>Real-time image statistics display</li>
         </ul>
       </description>
     </package>

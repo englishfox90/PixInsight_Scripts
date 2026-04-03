@@ -1,6 +1,12 @@
 # Ignore PJSR directory (PixInsight JavaScript Runtime library)
 PJSR/
 
+# Ignore other plugins not for git
+SHO-AIP-v1.2.6/
+SHO-AIP-v1.2.6.zip
+SubReviewer/
+DNALinearFit/
+
 # Ignore Archive folder in AstroBin Export
 AstroBin Export/archive/
 
@@ -27,6 +33,8 @@ desktop.ini
 .idea/
 *.swp
 *.swo
+.claude/
+CLAUDE.md
 
 # Local signature files
 *.xsgn

@@ -7,17 +7,67 @@
 AstroBinDialog.prototype.scanForFiles = function()
 {
    if (!CONFIG.rootDir) return;
-   
+
    try {
       Console.writeln("Scanning directory: " + CONFIG.rootDir);
       g_imageFiles = listFiles(CONFIG.rootDir, CONFIG.includeSubdirs);
       this.fileCountLabel.text = "Files found: " + g_imageFiles.length;
       this.analysisStatusLabel.text = "Ready to analyze " + g_imageFiles.length + " files";
+
+      // Validate and preview exclude pattern
+      if (CONFIG.excludePattern && CONFIG.excludePattern.trim().length > 0) {
+         try {
+            var re = new RegExp(CONFIG.excludePattern.trim(), "i");
+            var matchCount = 0;
+            for (var i = 0; i < g_imageFiles.length; i++) {
+               if (re.test(g_imageFiles[i])) matchCount++;
+            }
+            this.excludeStatusLabel.text = matchCount + " file(s) will be excluded";
+            this.excludeStatusLabel.styleSheet = matchCount > 0
+               ? "QLabel { color: #CC6600; font-size: 9pt; }"
+               : "QLabel { color: #666; font-size: 9pt; }";
+         } catch (e) {
+            this.excludeStatusLabel.text = "Invalid regex";
+            this.excludeStatusLabel.styleSheet = "QLabel { color: red; font-size: 9pt; }";
+         }
+      } else {
+         this.excludeStatusLabel.text = "";
+      }
+
       this.updateUI();
    } catch (e) {
       Console.criticalln("Error scanning files: " + e);
       this.fileCountLabel.text = "Error scanning files";
    }
+};
+
+AstroBinDialog.prototype.showExcludePatternHelp = function()
+{
+   var msg =
+      "<b>Exclude Pattern Help</b><br><br>" +
+      "Regex matched against each file's full path (<b>case-insensitive</b>). " +
+      "Use <tt>|</tt> to combine multiple patterns (OR).<br><br>" +
+
+      "<table cellpadding='2' cellspacing='0'>" +
+      "<tr><td><tt>DARK</tt></td><td>&nbsp;Paths containing DARK</td></tr>" +
+      "<tr><td><tt>DARK|FLAT|BIAS</tt></td><td>&nbsp;Calibration frame folders</td></tr>" +
+      "<tr><td><tt>reject|bad_night</tt></td><td>&nbsp;Rejected frames or a bad session</td></tr>" +
+      "<tr><td><tt>master|calibrated</tt></td><td>&nbsp;Processed/master output folders</td></tr>" +
+      "<tr><td><tt>_preview</tt></td><td>&nbsp;Files with _preview in the name</td></tr>" +
+      "<tr><td><tt>_c\\.xisf$</tt></td><td>&nbsp;Files ending in _c.xisf</td></tr>" +
+      "<tr><td><tt>2025-01-15</tt></td><td>&nbsp;A specific date folder</td></tr>" +
+      "</table><br>" +
+
+      "<b>Regex basics:</b> " +
+      "<tt>.</tt> = any char, " +
+      "<tt>\\.</tt> = literal dot, " +
+      "<tt>$</tt> = end of path, " +
+      "<tt>( )</tt> = grouping<br><br>" +
+
+      "<i>Leave empty to include all files. Applied on Analyze Images.</i>";
+
+   var msgBox = new MessageBox(msg, "Exclude Pattern Help", StdIcon_Information, StdButton_Ok);
+   msgBox.execute();
 };
 
 AstroBinDialog.prototype.analyzeImages = function()
@@ -237,7 +287,14 @@ AstroBinDialog.prototype.populateImageTree = function()
       node.setText(6, String(data.binning || "N/A"));
       node.setText(7, String(data.gain || "N/A"));
       node.setText(8, data.sensorCooling ? String(data.sensorCooling) : "N/A");
-      
+
+      // Visual indication of excluded rows
+      if (data.excluded) {
+         for (var col = 0; col < 9; col++) {
+            node.setTextColor(col, 0xFF999999);
+         }
+      }
+
       // Store data index for editing
       node.dataIndex = i;
    }
@@ -317,6 +374,8 @@ AstroBinDialog.prototype.createCSVContent = function(data)
    // Data rows
    for (var i = 0; i < data.length; i++) {
       var a = data[i];
+      // Skip excluded filters
+      if (a.excluded) continue;
       var durationStr = "";
       if (a.duration !== '') {
         durationStr = Number(a.duration).toFixed(4);
@@ -711,7 +770,8 @@ FilterMappingDialog.prototype.createFilterMappingUI = function()
    this.instructionsLabel.text = "Map your detected filters to AstroBin filter IDs:\n" +
                                 "• Select brand and filter from database, OR\n" +
                                 "• Choose \"Manual Entry\" to enter an AstroBin filter ID directly\n" +
-                                "• You can paste full AstroBin URLs (e.g., app.astrobin.com/equipment/explorer/filter/4359/) - the ID will be extracted automatically\n\n" +
+                                "• You can paste full AstroBin URLs (e.g., app.astrobin.com/equipment/explorer/filter/4359/) - the ID will be extracted automatically\n" +
+                                "• Tick the checkbox on the left to exclude a filter from the CSV export\n\n" +
                                 "Personal Filter Set: Define your preferred LRGB + SHO filter IDs once; they will auto-apply when brand is Auto.";
    this.instructionsLabel.wordWrapping = true;
    this.instructionsLabel.minHeight = 60;
@@ -963,7 +1023,21 @@ FilterMappingDialog.prototype.createFilterMappingRow = function(filterName)
 {
    var rowSizer = new HorizontalSizer;
    rowSizer.spacing = 4;
-   
+
+   // Exclude checkbox
+   var excludeCheckBox = new CheckBox(this.filterMappingGroupBox);
+   excludeCheckBox.text = "";
+   excludeCheckBox.toolTip = "Exclude '" + filterName + "' from analysis and CSV export";
+   excludeCheckBox.checked = false;
+
+   // Check if this filter is already excluded in analysis data
+   for (var ei = 0; ei < g_analysisData.length; ei++) {
+      if (g_analysisData[ei].filter === filterName && g_analysisData[ei].excluded) {
+         excludeCheckBox.checked = true;
+         break;
+      }
+   }
+
    // Filter name label
    var filterLabel = new Label(this.filterMappingGroupBox);
    filterLabel.text = filterName + ":";
@@ -1053,6 +1127,25 @@ FilterMappingDialog.prototype.createFilterMappingRow = function(filterName)
       return false;
    };
    
+   // Dim the row controls when excluded
+   var rowControls = [filterLabel, brandCombo, filterCombo, manualIdEdit, validateIdButton, filterIdLabel];
+   function setRowEnabled(enabled) {
+      for (var rc = 0; rc < rowControls.length; rc++) {
+         rowControls[rc].enabled = enabled;
+      }
+      if (!enabled) {
+         filterLabel.styleSheet = "QLabel { color: #999; }";
+      } else {
+         filterLabel.styleSheet = "";
+      }
+   }
+   if (excludeCheckBox.checked) setRowEnabled(false);
+
+   excludeCheckBox.onCheck = function(checked) {
+      setRowEnabled(!checked);
+   };
+
+   rowSizer.add(excludeCheckBox);
    rowSizer.add(filterLabel);
    rowSizer.add(brandCombo);
    rowSizer.add(filterCombo);
@@ -1060,9 +1153,9 @@ FilterMappingDialog.prototype.createFilterMappingRow = function(filterName)
    rowSizer.add(validateIdButton);
    rowSizer.add(filterIdLabel);
    rowSizer.addStretch();
-   
+
    this.filterMappingGroupBox.sizer.add(rowSizer);
-   
+
    // Store references
    this.filterControls.push({
       filterName: filterName,
@@ -1070,7 +1163,8 @@ FilterMappingDialog.prototype.createFilterMappingRow = function(filterName)
       filterCombo: filterCombo,
       filterIdLabel: filterIdLabel,
       manualIdEdit: manualIdEdit,
-      validateIdButton: validateIdButton
+      validateIdButton: validateIdButton,
+      excludeCheckBox: excludeCheckBox
    });
 };
 
@@ -1282,11 +1376,29 @@ FilterMappingDialog.prototype.selectFilterById = function(control, filterId)
 
 FilterMappingDialog.prototype.saveFilterMappings = function()
 {
-   // Apply mappings to all analysis data
+   // Build set of excluded filter names
+   var excludedFilters = {};
+   for (var c = 0; c < this.filterControls.length; c++) {
+      var ctrl = this.filterControls[c];
+      if (ctrl.excludeCheckBox.checked) {
+         excludedFilters[ctrl.filterName] = true;
+      }
+   }
+
+   var excludedCount = 0;
+   // Apply mappings and exclude state to all analysis data
    for (var i = 0; i < g_analysisData.length; i++) {
       var data = g_analysisData[i];
       var filterName = data.filter || "(No Filter)";
-      
+
+      // Set excluded flag
+      if (excludedFilters[filterName]) {
+         data.excluded = true;
+         excludedCount++;
+      } else {
+         data.excluded = false;
+      }
+
       if (this.filterMappings[filterName]) {
          data.filterId = this.filterMappings[filterName];
       } else {
@@ -1294,8 +1406,11 @@ FilterMappingDialog.prototype.saveFilterMappings = function()
          data.filterId = "";
       }
    }
-   
+
    Console.writeln("Applied filter mappings for " + Object.keys(this.filterMappings).length + " filters");
+   if (excludedCount > 0) {
+      Console.noteln("[AstroBin] Excluded " + excludedCount + " session(s) from " + Object.keys(excludedFilters).length + " filter(s)");
+   }
 };
 
 // Integration Summary Dialog
@@ -1386,6 +1501,7 @@ AstroBinDialog.prototype.calculateIntegrationStats = function()
    // Process each session
    for (var i = 0; i < g_analysisData.length; i++) {
       var session = g_analysisData[i];
+      if (session.excluded) continue;
       var sessionTime = parseFloat(session.duration || 0) * parseInt(session.number || 0);
       
       stats.totalIntegrationTime += sessionTime;
@@ -1573,8 +1689,9 @@ AstroBinDialog.prototype.calculateTotalIntegrationTime = function()
    var totalSeconds = 0;
    for (var i = 0; i < g_analysisData.length; i++) {
       var data = g_analysisData[i];
-      var exposure = parseFloat(data.duration) || 0; // Use 'duration' instead of 'exposure'
-      var count = parseInt(data.number, 10) || 0;    // Use 'number' instead of 'count'
+      if (data.excluded) continue;
+      var exposure = parseFloat(data.duration) || 0;
+      var count = parseInt(data.number, 10) || 0;
       totalSeconds += exposure * count;
    }
    

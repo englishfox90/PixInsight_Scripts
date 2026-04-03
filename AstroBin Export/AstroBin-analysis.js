@@ -60,14 +60,50 @@ function analyzeFiles( files ){
     hasFWHM: false,
     hasBortle: false
   };
-  
+
+  // Apply user exclude pattern to filter out matching files
+  var excludeRegex = null;
+  var excludedCount = 0;
+  if (CONFIG.excludePattern && CONFIG.excludePattern.trim().length > 0) {
+    try {
+      excludeRegex = new RegExp(CONFIG.excludePattern.trim(), "i");
+      Console.writeln("[AstroBin] Using exclude pattern: " + CONFIG.excludePattern);
+    } catch (e) {
+      Console.warningln("[AstroBin] Invalid exclude regex '" + CONFIG.excludePattern + "': " + e);
+    }
+  }
+  if (excludeRegex) {
+    var filtered = [];
+    for (var fi = 0; fi < files.length; fi++) {
+      if (excludeRegex.test(files[fi])) {
+        excludedCount++;
+      } else {
+        filtered.push(files[fi]);
+      }
+    }
+    if (excludedCount > 0) {
+      Console.noteln("[AstroBin] Exclude pattern matched " + excludedCount + " file(s), " + filtered.length + " remaining");
+    }
+    files = filtered;
+  }
+
   // First pass: scan all files to detect calibration frames and available metadata
-  Console.writeln("Scanning " + files.length + " files for calibration frames and metadata...");
-  
+  Console.writeln("Pass 1/2: Classifying " + files.length + " files...");
+  var lastPct1 = -1;
+  var skippedOutput = 0;
+
   for ( var i=0; i<files.length; i++ ){
     var p = files[i];
+    // Progress: update at every 5% interval
+    var pct1 = Math.floor((i + 1) / files.length * 100);
+    if (pct1 >= lastPct1 + 5 || i === files.length - 1) {
+      Console.writeln("  Pass 1/2: " + (i + 1) + " / " + files.length + "  (" + pct1 + "%)");
+      processEvents();
+      lastPct1 = pct1;
+    }
+
     // Skip known output/integration folders entirely
-    if (isExcludedOutputPath(p)) continue;
+    if (isExcludedOutputPath(p)) { skippedOutput++; continue; }
     try {
       var ff = openForKeywords( p );
       var imageTypeStr = readKeyword( ff, 'IMAGETYP' ) || readKeyword( ff, 'IMGTYPE' );
@@ -104,19 +140,29 @@ function analyzeFiles( files ){
       // Continue scanning other files
     }
   }
-  
-  Console.writeln("Calibration frames found: " + calibrationCounts.bias + " bias, " + 
-                  calibrationCounts.darks + " darks, " + calibrationCounts.flats + " flats, " + 
-                  calibrationCounts.flatDarks + " flat darks");
-  
+
+  Console.writeln("Pass 1 complete: " +
+    calibrationCounts.bias + " bias, " +
+    calibrationCounts.darks + " darks, " +
+    calibrationCounts.flats + " flats, " +
+    calibrationCounts.flatDarks + " flat darks" +
+    (skippedOutput > 0 ? " (" + skippedOutput + " output/master files skipped)" : ""));
+
   // Second pass: process LIGHT images for data extraction
+  Console.writeln("Pass 2/2: Extracting LIGHT frame metadata...");
+  var lastPct2 = -1;
+  var lightCount = 0;
+
   for ( var i=0; i<files.length; i++ ){
     var p = files[i];
     if (isExcludedOutputPath(p)) continue; // Skip integration-like outputs
 
-    // Show progress every 10 files (only for candidates)
-    if (i % 10 === 0 || i === files.length - 1) {
-      Console.writeln("Processing file " + (i + 1) + " of " + files.length + ": " + File.extractName(p));
+    // Progress: update at every 5% interval
+    var pct2 = Math.floor((i + 1) / files.length * 100);
+    if (pct2 >= lastPct2 + 5 || i === files.length - 1) {
+      Console.writeln("  Pass 2/2: " + (i + 1) + " / " + files.length + "  (" + pct2 + "%)  [" + lightCount + " lights found]");
+      processEvents();
+      lastPct2 = pct2;
     }
 
     try {
@@ -279,11 +325,14 @@ function analyzeFiles( files ){
         fNumber:fNumber,
         ambientTemp: ambTempStr ? parseFloat(ambTempStr) : null  // Store per-image ambient temp
       });
+      lightCount++;
     }catch(e){
       Console.warningln( "[WARN] Skipping file due to error: " + p + "\n  " + e );
     }
   }
-  
+
+  Console.noteln("Analysis complete: " + lightCount + " LIGHT frames extracted from " + files.length + " files");
+
   // Return both rows and global data
   return { rows: rows, globalData: globalData };
 }

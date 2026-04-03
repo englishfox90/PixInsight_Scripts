@@ -7,9 +7,105 @@ A collection of custom PixInsight JavaScript (PJSR) scripts for astrophotography
 ```
 ├── AstroBin Export/          # AstroBin CSV export tools
 ├── SNR Analysis/             # SNR vs Integration Time analysis tool
+├── SubReviewer/              # Subframe review and culling tool
 ├── Signature/                # Image signature and export tools
 └── .gitignore                # Git ignore rules
 ```
+
+---
+
+## 🔍 SubReviewer - Subframe Review and Culling Tool
+
+Located in `SubReviewer/` directory.
+
+### Main Script: `SubReviewer_Main.js`
+
+**Purpose:** Review and cull subframe images before stacking. Solves the problem of reviewing images stored in deep folder hierarchies without loading folders one-by-one.
+
+### 📦 Installation
+
+**Via Update Repository (Recommended):**
+1. **Open PixInsight** 
+2. **Go to** `Resources → Updates → Manage Repositories...`
+3. **Add repository URL:**
+   ```
+   https://raw.githubusercontent.com/englishfox90/PixInsight_Scripts/main/updates/
+   ```
+4. **Update** and install **Sub Reviewer**
+5. **Find it** under `Script → PFRAstro → Sub Reviewer`
+
+**Manual Installation:**
+1. Copy all `SubReviewer*.js` files to PixInsight's scripts directory
+2. Maintain the folder structure (all files in `SubReviewer/` folder)
+
+### ✅ Key Features:
+
+- **Recursive Directory Scanning**: Automatically finds all image files in deep folder hierarchies (5+ levels)
+- **Auto-Stretch Preview**: Applies histogram stretch similar to Blink/STF for easy quality assessment
+- **Keyboard Navigation**: Arrow keys, Home/End for quick navigation; M key to mark/unmark
+- **Visual Marking System**: Mark bad frames as you review, see marked count in real-time
+- **Batch Deletion**: Delete all marked files at once with confirmation dialog
+- **Persistent Settings**: Remembers directory, auto-stretch preferences between sessions
+- **Image Statistics**: View dimensions, mean, median, and other stats for each image
+- **File Format Support**: FITS (.fits, .fit, .fts) and XISF (.xisf)
+
+### 🎯 Use Case:
+
+Perfect for astrophotographers who organize images in hierarchical structures:
+```
+D:\Astrophotography\
+├── 2024-12-20\
+│   ├── M42\
+│   │   ├── Light\
+│   │   │   ├── Red\...
+│   │   │   ├── Green\...
+│   │   │   └── Blue\...
+│   │   └── Dark\...
+│   └── NGC7000\...
+└── 2024-12-21\...
+```
+
+Instead of loading each folder individually in Blink, point SubReviewer at the root and review all images in one session.
+
+### ⌨️ Keyboard Shortcuts:
+
+| Key | Action |
+|-----|--------|
+| **M** | Mark/unmark current image for deletion |
+| **Left Arrow** | Previous image |
+| **Right Arrow** | Next image |
+| **Home** | First image |
+| **End** | Last image |
+
+### 🔧 Workflow:
+
+1. **Launch** SubReviewer from Feature Scripts menu
+2. **Select directory** (your root image folder)
+3. **Enable recursive scan** to include all subfolders
+4. **Click "Scan Directory"** to load file list
+5. **Review images** using keyboard navigation
+6. **Press M** to mark bad frames for deletion
+7. **Click "Delete Marked Files"** to remove all marked images at once
+
+### 🎨 Auto-Stretch Settings:
+
+- **Target Background**: Adjustable from 0.10 to 0.50 (default: 0.25)
+  - Lower values (0.15-0.20): Darker preview, better for bright nebulae
+  - Higher values (0.35-0.40): Brighter preview, better for faint targets
+- **Toggle on/off**: Compare stretched vs raw images
+- **Real-time updates**: Changes apply immediately to current image
+
+### ⚠️ Safety Features:
+
+- **Confirmation dialog** before deletion
+- **Per-file error handling** (failed deletions remain marked for retry)
+- **No undo** - deletions are permanent (keep backups!)
+- **Visual feedback** - marked images show "MARKED FOR DELETION" status
+
+### 📚 Documentation:
+
+- **[README.md](SubReviewer/README.md)** - User guide with detailed workflows
+- **[TECHNICAL_ARCHITECTURE.md](SubReviewer/TECHNICAL_ARCHITECTURE.md)** - Developer documentation
 
 ---
 

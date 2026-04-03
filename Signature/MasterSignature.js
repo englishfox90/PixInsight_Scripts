@@ -13,7 +13,7 @@
 #include <pjsr/StdButton.jsh>
 #include <pjsr/StdIcon.jsh>
 
-#define VERSION   1.1
+#define VERSION   1.2
 #define TITLE     MasterSignature
 
 var logoDir = File.fullPath(File.extractDrive(#__FILE__)+File.extractDirectory(#__FILE__)+"/logo.png")
@@ -44,12 +44,22 @@ function DrawSignatureEngine()
       this.bold = true;      // removed from UI, always true
       this.italic = false;    // removed from UI, always false
       this.stretch = 100;     // removed from UI, always 100
-      this.showLogo = true; // removed from UI, always true
+      this.showLogo = true;
       this.textColor = 0xFFFFFFFF; // always white
       this.bkgColor = 0x00000000;  // always fully transparent
       this.margin = 15;
       this.softEdges = false; // removed from UI, always false
       this.logo = logoDir;
+      
+      // Integration mode: 0 = Simple (exposure x frames), 1 = Direct entry, 2 = Detailed (per-filter)
+      this.integrationMode = 0;
+      this.directIntegration = ""; // For mode 1: direct integration time string (e.g., "5.5 h")
+      // For mode 2: array of filter details [{filter:"", exposure:"", frames:""}, ...]
+      this.filterDetails = [{filter: "", exposure: "", frames: ""}];
+      
+      // Transparency (0-100, where 100 is fully opaque)
+      this.textOpacity = 100;
+      this.logoOpacity = 100;
 
       if ( Parameters.isViewTarget || Parameters.isGlobalTarget )
       {
@@ -141,37 +151,105 @@ function DrawSignatureEngine()
       // Integration will be calculated dynamically
     };
 
-   this.calculateIntegration = function() {
-      // Calculate integration time and format as s, min, or h
-      let exp = parseFloat(this.exposure);
-      let frames = parseInt(this.frames, 10);
-      if (!isNaN(exp) && !isNaN(frames) && frames > 0) {
-         let totalSeconds = exp * frames;
-         if (totalSeconds < 60) {
-            return totalSeconds.toFixed(0) + "s";
-         } else if (totalSeconds < 3600) {
-            return (totalSeconds / 60).toFixed(1).replace(/\.0$/, "") + " min";
-         } else {
-            return (totalSeconds / 3600).toFixed(2).replace(/\.00$/, "") + " h";
-         }
+   this.formatIntegrationTime = function(totalSeconds) {
+      // Format seconds into human-readable time
+      if (totalSeconds < 60) {
+         return totalSeconds.toFixed(0) + "s";
+      } else if (totalSeconds < 3600) {
+         return (totalSeconds / 60).toFixed(1).replace(/\.0$/, "") + " min";
+      } else {
+         return (totalSeconds / 3600).toFixed(2).replace(/\.00$/, "") + " h";
       }
-      return "";
+   };
+
+   this.calculateIntegration = function() {
+      // Calculate integration time based on current mode
+      if (this.integrationMode === 1) {
+         // Direct entry mode - return as-is
+         return this.directIntegration || "";
+      } else if (this.integrationMode === 2) {
+         // Detailed mode - sum all filter integrations
+         var totalSeconds = 0;
+         for (var i = 0; i < this.filterDetails.length; i++) {
+            var detail = this.filterDetails[i];
+            var exp = parseFloat(detail.exposure);
+            var frames = parseInt(detail.frames, 10);
+            if (!isNaN(exp) && !isNaN(frames) && frames > 0) {
+               totalSeconds += exp * frames;
+            }
+         }
+         if (totalSeconds > 0) {
+            return this.formatIntegrationTime(totalSeconds);
+         }
+         return "";
+      } else {
+         // Simple mode (mode 0) - exposure x frames
+         var exp = parseFloat(this.exposure);
+         var frames = parseInt(this.frames, 10);
+         if (!isNaN(exp) && !isNaN(frames) && frames > 0) {
+            var totalSeconds = exp * frames;
+            return this.formatIntegrationTime(totalSeconds);
+         }
+         return "";
+      }
+   };
+
+   this.getExposureDetails = function() {
+      // Get exposure details string based on mode
+      if (this.integrationMode === 2) {
+         // Detailed mode - list each filter
+         var details = [];
+         for (var i = 0; i < this.filterDetails.length; i++) {
+            var d = this.filterDetails[i];
+            if (d.filter || d.exposure || d.frames) {
+               var part = "";
+               if (d.filter) part += d.filter + ": ";
+               if (d.exposure && d.frames) {
+                  part += d.exposure + "s x " + d.frames;
+               } else if (d.exposure) {
+                  part += d.exposure + "s";
+               } else if (d.frames) {
+                  part += d.frames + " frames";
+               }
+               if (part) details.push(part);
+            }
+         }
+         return details.join(", ");
+      } else if (this.integrationMode === 1) {
+         // Direct mode - no breakdown
+         return "";
+      } else {
+         // Simple mode
+         var exposure = this.exposure || "";
+         var frames = this.frames || "";
+         if (exposure && frames) {
+            return "(" + exposure + "s x " + frames + ")";
+         }
+         return "";
+      }
    };
 
    this.composeText = function() {
       // Compose the text in the requested two-line format:
-      // [Title: Name and Catalog #] | exposed [integration time] ([exposure time]x[# of Frames])
+      // [Title: Name and Catalog #] | exposed [integration time] ([exposure details])
       // [Date] | [Location of Capture]
-      let title = (this.catalog ? this.catalog + " " : " ") + (this.subject || "");
-      let integration = this.calculateIntegration();
-      let exposure = this.exposure || "";
-      let frames = this.frames || "";
-      let date = this.date || "";
-      let location = this.location || "";
+      var title = (this.catalog ? this.catalog + " " : " ") + (this.subject || "");
+      var integration = this.calculateIntegration();
+      var exposureDetails = this.getExposureDetails();
+      var date = this.date || "";
+      var location = this.location || "";
 
-      let line1 = "" + title + " | exposed " + integration +
-                  ((exposure && frames) ? " (" + exposure + "s" + "x" + frames + ")" : "");
-      let line2 = date + " | " + location;
+      var line1 = "" + title + " | exposed " + integration;
+      if (exposureDetails) {
+         if (this.integrationMode === 2) {
+            // Detailed mode - show filter breakdown on same line or wrap
+            line1 += " (" + exposureDetails + ")";
+         } else if (this.integrationMode === 0) {
+            // Simple mode - show (exposure x frames)
+            line1 += " " + exposureDetails;
+         }
+      }
+      var line2 = date + " | " + location;
 
       return line1 + "\n" + line2;
    };
@@ -202,6 +280,43 @@ function DrawSignatureEngine()
       Parameters.set( "fontSize", this.fontSize );
       Parameters.set( "margin", this.margin );
       // Do not export bold, italic, stretch, textColor, bkgColor, softEdges
+   };
+
+   /**
+    * Apply opacity to a bitmap by modifying the alpha channel
+    * @param {Bitmap} bmp - The bitmap to modify
+    * @param {Number} opacity - Opacity value 0-100
+    * @returns {Bitmap} - New bitmap with adjusted alpha
+    */
+   this.applyOpacity = function(bmp, opacity) {
+      if (opacity >= 100) return bmp;
+      if (opacity <= 0) {
+         var emptyBmp = new Bitmap(bmp.width, bmp.height);
+         emptyBmp.fill(0x00000000);
+         return emptyBmp;
+      }
+      // Create a new bitmap and apply opacity by modifying alpha in each pixel
+      var newBmp = new Bitmap(bmp.width, bmp.height);
+      var alphaScale = opacity / 100.0;
+      
+      // Copy pixels with scaled alpha
+      for (var y = 0; y < bmp.height; y++) {
+         for (var x = 0; x < bmp.width; x++) {
+            var pixel = bmp.pixel(x, y); // ARGB format as 32-bit integer
+            var a = (pixel >>> 24) & 0xFF;
+            var r = (pixel >>> 16) & 0xFF;
+            var g = (pixel >>> 8) & 0xFF;
+            var b = pixel & 0xFF;
+            
+            // Scale alpha
+            a = Math.round(a * alphaScale);
+            
+            // Reconstruct pixel
+            var newPixel = ((a << 24) | (r << 16) | (g << 8) | b) >>> 0;
+            newBmp.setPixel(x, y, newPixel);
+         }
+      }
+      return newBmp;
    };
 
    /**
@@ -314,8 +429,10 @@ function DrawSignatureEngine()
             );
          G.end();
 
+         // Apply text opacity
+         var textBmp = this.applyOpacity(bmp, this.textOpacity);
          previewImage.selectedPoint = new Point(this.margin, previewImage.height - this.margin - height);
-         previewImage.blend(bmp);
+         previewImage.blend(textBmp);
 
          // --- Overlay the logo bitmap on bottom-right ---
          if(this.showLogo){
@@ -323,11 +440,14 @@ function DrawSignatureEngine()
                 var logoBmp = new Bitmap(logoPath);
                 console.writeln("Bitmap loaded. Size: " + logoBmp.width + "x" + logoBmp.height);
 
+                // Apply logo opacity
+                var logoWithOpacity = this.applyOpacity(logoBmp, this.logoOpacity);
+
                 var x = previewImage.width - this.margin - logoBmp.width;
                 var y = previewImage.height - this.margin - logoBmp.height;
 
                 previewImage.selectedPoint = new Point(x, y);
-                previewImage.blend(logoBmp);
+                previewImage.blend(logoWithOpacity);
             } catch (e) {
                 console.criticalln("Failed to create Bitmap: " + e.toString());
             }
@@ -372,8 +492,10 @@ function DrawSignatureEngine()
          bmp.assign(simg.render());
       }
 
+      // Apply text opacity
+      var textBmp = this.applyOpacity(bmp, this.textOpacity);
       image.selectedPoint = new Point(this.margin, image.height - this.margin - height);
-      image.blend(bmp);
+      image.blend(textBmp);
 
       // --- Overlay the logo bitmap on bottom-right ---
       if(this.showLogo){
@@ -381,11 +503,14 @@ function DrawSignatureEngine()
             var logoBmp = new Bitmap(logoPath);
             console.writeln("Bitmap loaded. Size: " + logoBmp.width + "x" + logoBmp.height);
 
+            // Apply logo opacity
+            var logoWithOpacity = this.applyOpacity(logoBmp, this.logoOpacity);
+
             var x = image.width - this.margin - logoBmp.width;
             var y = image.height - this.margin - logoBmp.height;
 
             image.selectedPoint = new Point(x, y);
-            image.blend(logoBmp);
+            image.blend(logoWithOpacity);
         } catch (e) {
             console.criticalln("Failed to create Bitmap: " + e.toString());
         }
@@ -445,12 +570,13 @@ function DrawSignatureDialog()
    this.helpLabel.text = "<p><b>" + #TITLE + " v" + #VERSION +
       "</b> &mdash; This script overlays a two-line signature block and a logo on your image, inspired by the Celestron Origin output files.<br/>" +
       "<ul>" +
-      "<li><b>Signature Block:</b> Includes Subject, Catalog, Exposure, Frame Count, Integration Time, Date, and Location.</li>" +
-      "<li><b>FITS Header Integration:</b> Where possible, fields are auto-populated from the FITS header (OBJECT, CATALOG, EXPTIME, FRAMES, DATE-OBS, LOCATION, etc).</li>" +
-      "<li><b>Logo Overlay:</b> A logo is placed in the lower-right corner. You can update the logo by replacing the <code>logo.png</code> file in the same directory as this script.</li>" +
-      "<li><b>Customizable:</b> You can edit all fields, font, size, margin, and toggle the logo overlay.</li>" +
+      "<li><b>Signature Block:</b> Includes Subject, Catalog, Integration Time, Date, and Location.</li>" +
+      "<li><b>Integration Modes:</b> Choose Simple (exposure × frames), Direct entry (type total time), or Detailed (per-filter breakdown).</li>" +
+      "<li><b>FITS Header Integration:</b> Where possible, fields are auto-populated from the FITS header.</li>" +
+      "<li><b>Transparency:</b> Adjust text and logo opacity independently (0-100%).</li>" +
+      "<li><b>Logo Overlay:</b> A logo is placed in the lower-right corner. Replace <code>logo.png</code> in the script directory to customize.</li>" +
       "</ul>" +
-      "<p>To apply the script, click the OK button. To close this dialog without making any changes, click the Cancel button.</p>";
+      "<p>Click OK to apply, Cancel to close without changes.</p>";
 
    //
 
@@ -567,6 +693,80 @@ function DrawSignatureDialog()
    this.renderOptions_Sizer.addStretch();
    this.renderOptions_Sizer.add( this.logo_CheckBox );
    this.renderOptions_Sizer.addStretch();
+   
+   // === TRANSPARENCY CONTROLS ===
+   var thisDlg = this; // Store reference for callbacks
+   
+   this.textOpacity_Label = new Label(this);
+   this.textOpacity_Label.text = "Text Opacity:";
+   this.textOpacity_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   
+   this.textOpacity_Slider = new Slider(this);
+   this.textOpacity_Slider.minValue = 0;
+   this.textOpacity_Slider.maxValue = 100;
+   this.textOpacity_Slider.value = engine.textOpacity;
+   this.textOpacity_Slider.setFixedWidth(120);
+   this.textOpacity_Slider.toolTip = "Text transparency (0=invisible, 100=fully opaque)";
+   this.textOpacity_Slider.onValueUpdated = function(value) {
+      engine.textOpacity = value;
+      thisDlg.textOpacity_SpinBox.value = value;
+   };
+   
+   this.textOpacity_SpinBox = new SpinBox(this);
+   this.textOpacity_SpinBox.minValue = 0;
+   this.textOpacity_SpinBox.maxValue = 100;
+   this.textOpacity_SpinBox.value = engine.textOpacity;
+   this.textOpacity_SpinBox.setFixedWidth(50);
+   this.textOpacity_SpinBox.toolTip = "Text transparency (0=invisible, 100=fully opaque)";
+   this.textOpacity_SpinBox.onValueUpdated = function(value) {
+      engine.textOpacity = value;
+      thisDlg.textOpacity_Slider.value = value;
+   };
+   
+   this.textOpacityPercent_Label = new Label(this);
+   this.textOpacityPercent_Label.text = "%";
+   
+   this.logoOpacity_Label = new Label(this);
+   this.logoOpacity_Label.text = "Logo Opacity:";
+   this.logoOpacity_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   
+   this.logoOpacity_Slider = new Slider(this);
+   this.logoOpacity_Slider.minValue = 0;
+   this.logoOpacity_Slider.maxValue = 100;
+   this.logoOpacity_Slider.value = engine.logoOpacity;
+   this.logoOpacity_Slider.setFixedWidth(120);
+   this.logoOpacity_Slider.toolTip = "Logo transparency (0=invisible, 100=fully opaque)";
+   this.logoOpacity_Slider.onValueUpdated = function(value) {
+      engine.logoOpacity = value;
+      thisDlg.logoOpacity_SpinBox.value = value;
+   };
+   
+   this.logoOpacity_SpinBox = new SpinBox(this);
+   this.logoOpacity_SpinBox.minValue = 0;
+   this.logoOpacity_SpinBox.maxValue = 100;
+   this.logoOpacity_SpinBox.value = engine.logoOpacity;
+   this.logoOpacity_SpinBox.setFixedWidth(50);
+   this.logoOpacity_SpinBox.toolTip = "Logo transparency (0=invisible, 100=fully opaque)";
+   this.logoOpacity_SpinBox.onValueUpdated = function(value) {
+      engine.logoOpacity = value;
+      thisDlg.logoOpacity_Slider.value = value;
+   };
+   
+   this.logoOpacityPercent_Label = new Label(this);
+   this.logoOpacityPercent_Label.text = "%";
+   
+   this.opacity_Sizer = new HorizontalSizer;
+   this.opacity_Sizer.spacing = 4;
+   this.opacity_Sizer.add(this.textOpacity_Label);
+   this.opacity_Sizer.add(this.textOpacity_Slider);
+   this.opacity_Sizer.add(this.textOpacity_SpinBox);
+   this.opacity_Sizer.add(this.textOpacityPercent_Label);
+   this.opacity_Sizer.addSpacing(16);
+   this.opacity_Sizer.add(this.logoOpacity_Label);
+   this.opacity_Sizer.add(this.logoOpacity_Slider);
+   this.opacity_Sizer.add(this.logoOpacity_SpinBox);
+   this.opacity_Sizer.add(this.logoOpacityPercent_Label);
+   this.opacity_Sizer.addStretch();
 
    //
 
@@ -642,39 +842,254 @@ function DrawSignatureDialog()
    this.subject_Sizer.add(this.subject_Label);
    this.subject_Sizer.add(this.subject_Edit, 100);
 
-   // Exposure and Frames (user-editable)
+   // === INTEGRATION MODE SELECTION ===
+   var dlg = this; // Reference for callbacks
+   
+   // Integration Mode Radio Buttons
+   this.integrationMode_Label = new Label(this);
+   this.integrationMode_Label.text = "Integration Mode:";
+   this.integrationMode_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   this.integrationMode_Label.minWidth = labelWidth1 - this.logicalPixelsToPhysical( 4+1 );
+   
+   this.simpleMode_Radio = new RadioButton(this);
+   this.simpleMode_Radio.text = "Simple (Exp × Frames)";
+   this.simpleMode_Radio.checked = (engine.integrationMode === 0);
+   this.simpleMode_Radio.toolTip = "Calculate integration from single exposure time and frame count";
+   this.simpleMode_Radio.onCheck = function(checked) {
+      if (checked) {
+         engine.integrationMode = 0;
+         dlg.updateIntegrationModeUI();
+      }
+   };
+   
+   this.directMode_Radio = new RadioButton(this);
+   this.directMode_Radio.text = "Direct Entry";
+   this.directMode_Radio.checked = (engine.integrationMode === 1);
+   this.directMode_Radio.toolTip = "Enter total integration time directly (e.g., '5.5 h')";
+   this.directMode_Radio.onCheck = function(checked) {
+      if (checked) {
+         engine.integrationMode = 1;
+         dlg.updateIntegrationModeUI();
+      }
+   };
+   
+   this.detailedMode_Radio = new RadioButton(this);
+   this.detailedMode_Radio.text = "Detailed (Per Filter)";
+   this.detailedMode_Radio.checked = (engine.integrationMode === 2);
+   this.detailedMode_Radio.toolTip = "Enter exposure details for each filter separately";
+   this.detailedMode_Radio.onCheck = function(checked) {
+      if (checked) {
+         engine.integrationMode = 2;
+         dlg.updateIntegrationModeUI();
+      }
+   };
+   
+   this.integrationMode_Sizer = new HorizontalSizer;
+   this.integrationMode_Sizer.spacing = 8;
+   this.integrationMode_Sizer.add(this.integrationMode_Label);
+   this.integrationMode_Sizer.add(this.simpleMode_Radio);
+   this.integrationMode_Sizer.add(this.directMode_Radio);
+   this.integrationMode_Sizer.add(this.detailedMode_Radio);
+   this.integrationMode_Sizer.addStretch();
+   
+   // === SIMPLE MODE CONTROLS ===
+   this.simpleMode_GroupBox = new GroupBox(this);
+   this.simpleMode_GroupBox.title = "Simple Mode";
+   
    this.exposure_Label = new Label(this);
    this.exposure_Label.text = "Exposure(s):";
    this.exposure_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
-   this.exposure_Label.minWidth = labelWidth1 - this.logicalPixelsToPhysical( 4+1 );
-
+   
    this.exposure_Edit = new Edit(this);
    this.exposure_Edit.text = engine.exposure ? String(engine.exposure) : "";
    this.exposure_Edit.toolTip = "Exposure time per frame in seconds";
+   this.exposure_Edit.setFixedWidth(80);
    this.exposure_Edit.onEditCompleted = function() {
       engine.exposure = this.text;
-      // No need to update integration field, it's calculated dynamically
    };
 
    this.frames_Label = new Label(this);
    this.frames_Label.text = "Frames:";
    this.frames_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
-   this.frames_Label.minWidth = labelWidth1 - this.logicalPixelsToPhysical( 4+1 );
 
    this.frames_Edit = new Edit(this);
    this.frames_Edit.text = engine.frames ? String(engine.frames) : "";
    this.frames_Edit.toolTip = "Number of frames";
+   this.frames_Edit.setFixedWidth(80);
    this.frames_Edit.onEditCompleted = function() {
       engine.frames = this.text;
-      // No need to update integration field, it's calculated dynamically
    };
 
-   this.exposure_Sizer = new HorizontalSizer;
-   this.exposure_Sizer.spacing = 4;
-   this.exposure_Sizer.add(this.exposure_Label);
-   this.exposure_Sizer.add(this.exposure_Edit, 50);
-   this.exposure_Sizer.add(this.frames_Label);
-   this.exposure_Sizer.add(this.frames_Edit, 50);
+   this.simpleMode_Sizer = new HorizontalSizer;
+   this.simpleMode_Sizer.margin = 4;
+   this.simpleMode_Sizer.spacing = 4;
+   this.simpleMode_Sizer.add(this.exposure_Label);
+   this.simpleMode_Sizer.add(this.exposure_Edit);
+   this.simpleMode_Sizer.addSpacing(8);
+   this.simpleMode_Sizer.add(this.frames_Label);
+   this.simpleMode_Sizer.add(this.frames_Edit);
+   this.simpleMode_Sizer.addStretch();
+   this.simpleMode_GroupBox.sizer = this.simpleMode_Sizer;
+   
+   // === DIRECT MODE CONTROLS ===
+   this.directMode_GroupBox = new GroupBox(this);
+   this.directMode_GroupBox.title = "Direct Entry Mode";
+   
+   this.directIntegration_Label = new Label(this);
+   this.directIntegration_Label.text = "Total Integration:";
+   this.directIntegration_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   
+   this.directIntegration_Edit = new Edit(this);
+   this.directIntegration_Edit.text = engine.directIntegration || "";
+   this.directIntegration_Edit.toolTip = "Enter total integration time (e.g., '5.5 h', '120 min', '3600s')";
+   this.directIntegration_Edit.setFixedWidth(150);
+   this.directIntegration_Edit.onEditCompleted = function() {
+      engine.directIntegration = this.text;
+   };
+   
+   this.directMode_Sizer = new HorizontalSizer;
+   this.directMode_Sizer.margin = 4;
+   this.directMode_Sizer.spacing = 4;
+   this.directMode_Sizer.add(this.directIntegration_Label);
+   this.directMode_Sizer.add(this.directIntegration_Edit);
+   this.directMode_Sizer.addStretch();
+   this.directMode_GroupBox.sizer = this.directMode_Sizer;
+   
+   // === DETAILED MODE CONTROLS (Per-Filter) ===
+   this.detailedMode_GroupBox = new GroupBox(this);
+   this.detailedMode_GroupBox.title = "Detailed Mode (Per Filter)";
+   
+   // Container for filter rows
+   this.filterRows = [];
+   this.filterRowsSizer = new VerticalSizer;
+   this.filterRowsSizer.margin = 4;
+   this.filterRowsSizer.spacing = 4;
+   
+   // Function to create a filter row
+   this.createFilterRow = function(index) {
+      var row = {};
+      var detail = engine.filterDetails[index] || {filter: "", exposure: "", frames: ""};
+      
+      row.filter_Edit = new Edit(dlg);
+      row.filter_Edit.text = detail.filter || "";
+      row.filter_Edit.toolTip = "Filter name (e.g., L, R, G, B, Ha, OIII, SII)";
+      row.filter_Edit.setFixedWidth(60);
+      row.filter_Edit.onEditCompleted = function() {
+         engine.filterDetails[index].filter = this.text;
+      };
+      
+      row.exposure_Edit = new Edit(dlg);
+      row.exposure_Edit.text = detail.exposure || "";
+      row.exposure_Edit.toolTip = "Exposure time in seconds";
+      row.exposure_Edit.setFixedWidth(60);
+      row.exposure_Edit.onEditCompleted = function() {
+         engine.filterDetails[index].exposure = this.text;
+      };
+      
+      row.frames_Edit = new Edit(dlg);
+      row.frames_Edit.text = detail.frames || "";
+      row.frames_Edit.toolTip = "Number of frames";
+      row.frames_Edit.setFixedWidth(60);
+      row.frames_Edit.onEditCompleted = function() {
+         engine.filterDetails[index].frames = this.text;
+      };
+      
+      row.sizer = new HorizontalSizer;
+      row.sizer.spacing = 4;
+      
+      var filterLabel = new Label(dlg);
+      filterLabel.text = "Filter:";
+      var expLabel = new Label(dlg);
+      expLabel.text = "Exp(s):";
+      var framesLabel = new Label(dlg);
+      framesLabel.text = "Frames:";
+      
+      row.sizer.add(filterLabel);
+      row.sizer.add(row.filter_Edit);
+      row.sizer.addSpacing(4);
+      row.sizer.add(expLabel);
+      row.sizer.add(row.exposure_Edit);
+      row.sizer.addSpacing(4);
+      row.sizer.add(framesLabel);
+      row.sizer.add(row.frames_Edit);
+      row.sizer.addStretch();
+      
+      return row;
+   };
+   
+   // Initialize filter rows
+   this.rebuildFilterRows = function() {
+      // Clear existing rows
+      for (var i = 0; i < dlg.filterRows.length; i++) {
+         dlg.filterRowsSizer.remove(dlg.filterRows[i].sizer);
+      }
+      dlg.filterRows = [];
+      
+      // Create rows for each filter detail
+      for (var i = 0; i < engine.filterDetails.length; i++) {
+         var row = dlg.createFilterRow(i);
+         dlg.filterRows.push(row);
+         dlg.filterRowsSizer.add(row.sizer);
+      }
+   };
+   
+   // Add/Remove filter buttons
+   this.addFilter_Button = new PushButton(this);
+   this.addFilter_Button.text = "Add Filter";
+   this.addFilter_Button.toolTip = "Add another filter entry";
+   this.addFilter_Button.onClick = function() {
+      engine.filterDetails.push({filter: "", exposure: "", frames: ""});
+      var row = dlg.createFilterRow(engine.filterDetails.length - 1);
+      dlg.filterRows.push(row);
+      dlg.filterRowsSizer.add(row.sizer);
+      dlg.adjustToContents();
+   };
+   
+   this.removeFilter_Button = new PushButton(this);
+   this.removeFilter_Button.text = "Remove Last";
+   this.removeFilter_Button.toolTip = "Remove the last filter entry";
+   this.removeFilter_Button.onClick = function() {
+      if (engine.filterDetails.length > 1) {
+         engine.filterDetails.pop();
+         var row = dlg.filterRows.pop();
+         dlg.filterRowsSizer.remove(row.sizer);
+         dlg.adjustToContents();
+      }
+   };
+   
+   this.filterButtons_Sizer = new HorizontalSizer;
+   this.filterButtons_Sizer.spacing = 4;
+   this.filterButtons_Sizer.add(this.addFilter_Button);
+   this.filterButtons_Sizer.add(this.removeFilter_Button);
+   this.filterButtons_Sizer.addStretch();
+   
+   // Initialize filter rows
+   this.rebuildFilterRows();
+   
+   this.detailedMode_Sizer = new VerticalSizer;
+   this.detailedMode_Sizer.margin = 4;
+   this.detailedMode_Sizer.spacing = 4;
+   this.detailedMode_Sizer.add(this.filterRowsSizer);
+   this.detailedMode_Sizer.add(this.filterButtons_Sizer);
+   this.detailedMode_GroupBox.sizer = this.detailedMode_Sizer;
+   
+   // Function to show/hide mode controls based on selection
+   this.updateIntegrationModeUI = function() {
+      dlg.simpleMode_GroupBox.visible = (engine.integrationMode === 0);
+      dlg.directMode_GroupBox.visible = (engine.integrationMode === 1);
+      dlg.detailedMode_GroupBox.visible = (engine.integrationMode === 2);
+   };
+   
+   // Initial visibility update
+   this.updateIntegrationModeUI();
+   
+   // Combined integration section sizer
+   this.integration_Sizer = new VerticalSizer;
+   this.integration_Sizer.spacing = 4;
+   this.integration_Sizer.add(this.integrationMode_Sizer);
+   this.integration_Sizer.add(this.simpleMode_GroupBox);
+   this.integration_Sizer.add(this.directMode_GroupBox);
+   this.integration_Sizer.add(this.detailedMode_GroupBox);
 
    // Date
    this.date_Label = new Label(this);
@@ -749,11 +1164,12 @@ function DrawSignatureDialog()
    leftSizer.addSpacing(4);
    leftSizer.add(this.targetImage_Sizer);
    leftSizer.add(this.subject_Sizer);
-   leftSizer.add(this.exposure_Sizer);
+   leftSizer.add(this.integration_Sizer);
    leftSizer.add(this.date_Sizer);
    leftSizer.add(this.location_Sizer);
    leftSizer.add(this.font_GroupBox);
    leftSizer.add(this.renderOptions_Sizer);
+   leftSizer.add(this.opacity_Sizer);
    leftSizer.add(this.buttons_Sizer);
    // leftSizer.addStretch();
 
@@ -787,8 +1203,11 @@ function DrawSignatureDialog()
             lines[i]
          );
       G.end();
+      
+      // Apply text opacity
+      var textBmp = engine.applyOpacity(bmp, engine.textOpacity);
       previewImage.selectedPoint = new Point(engine.margin, previewImage.height - engine.margin - height);
-      previewImage.blend(bmp);
+      previewImage.blend(textBmp);
 
         var logoPath = logoDir;
         console.writeln("Logo path resolved to: " + logoPath);
@@ -805,11 +1224,14 @@ function DrawSignatureDialog()
                 var logoBmp = new Bitmap(logoPath);
                 console.writeln("Bitmap loaded. Size: " + logoBmp.width + "x" + logoBmp.height);
 
+                // Apply logo opacity
+                var logoWithOpacity = engine.applyOpacity(logoBmp, engine.logoOpacity);
+                
                 var x = previewImage.width - engine.margin - logoBmp.width;
                 var y = previewImage.height - engine.margin - logoBmp.height;
 
                 previewImage.selectedPoint = new Point(x, y);
-                previewImage.blend(logoBmp);
+                previewImage.blend(logoWithOpacity);
             } catch (e) {
                 console.criticalln("Failed to create Bitmap: " + e.toString());
             }

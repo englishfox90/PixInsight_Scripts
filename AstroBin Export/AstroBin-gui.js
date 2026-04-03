@@ -139,7 +139,47 @@ AstroBinDialog.prototype.createFileSelectionSection = function()
    optionsSizer.addStretch();
    optionsSizer.add(this.fileCountLabel);
 
+   // Exclude pattern row
+   var excludeSizer = new HorizontalSizer;
+   excludeSizer.spacing = 4;
+
+   this.excludeLabel = new Label(this);
+   this.excludeLabel.text = "Exclude:";
+   this.excludeLabel.minWidth = 80;
+   this.excludeLabel.textAlignment = TextAlign_VertCenter;
+
+   this.excludePatternEdit = new Edit(this);
+   this.excludePatternEdit.text = CONFIG.excludePattern;
+   this.excludePatternEdit.styleSheet = "QLineEdit[text=\"\"] { color: #999; }";
+   // Try to set placeholder text (Qt property, may not be available in all PJSR versions)
+   try { this.excludePatternEdit.placeholderText = "e.g. DARK|FLAT|BIAS   (regex, case-insensitive)"; } catch(e) {}
+   this.excludePatternEdit.toolTip = "Regex pattern to exclude files/folders. Use | to combine.\nClick ? for examples.";
+   this.excludePatternEdit.onEditCompleted = function() {
+      CONFIG.excludePattern = this.text;
+      if (CONFIG.rootDir) self.scanForFiles();
+   };
+   this.excludePatternEdit.onTextUpdated = function(text) {
+      CONFIG.excludePattern = text;
+   };
+
+   this.excludeHelpButton = new PushButton(this);
+   this.excludeHelpButton.text = "What is Regex?";
+   // this.excludeHelpButton.setFixedWidth(150);
+   this.excludeHelpButton.toolTip = "Show pattern examples and help";
+   this.excludeHelpButton.onClick = function() { self.showExcludePatternHelp(); };
+
+   this.excludeStatusLabel = new Label(this);
+   this.excludeStatusLabel.text = "";
+   this.excludeStatusLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   this.excludeStatusLabel.styleSheet = "QLabel { color: #666; font-size: 9pt; }";
+
+   excludeSizer.add(this.excludeLabel);
+   excludeSizer.add(this.excludePatternEdit, 100);
+   excludeSizer.add(this.excludeHelpButton);
+   excludeSizer.add(this.excludeStatusLabel);
+
    this.fileSelectionGroupBox.sizer.add(pathSizer);
+   this.fileSelectionGroupBox.sizer.add(excludeSizer);
    this.fileSelectionGroupBox.sizer.add(optionsSizer);
 };
 
@@ -218,7 +258,7 @@ AstroBinDialog.prototype.createGlobalParametersSection = function()
    bortleSizer.add(bortleLabel);
    
    this.bortleComboBox = new ComboBox(this);
-   this.bortleComboBox.setFixedWidth(320); // Increased width for better readability
+   this.bortleComboBox.setFixedWidth(420);
    this.bortleComboBox.toolTip = "Bortle Dark-Sky Scale - Select your sky conditions.\n" +
                                  "This dropdown shows descriptions to help you choose,\n" +
                                  "but only the number (1-9) is stored and exported.";

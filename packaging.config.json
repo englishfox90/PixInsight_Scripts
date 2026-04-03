@@ -10,7 +10,7 @@
       "name": "AstroBin Export",
       "sourceDir": "AstroBin Export",
       "zipNamePrefix": "AstroBinExport",
-      "version": "3.2.4",
+      "version": "3.3.0",
       "piScriptRoot": "src/scripts/AstroBin",
       "piResourceRoot": "rsc/icons/script/AstroBinExport",
       "description": "Generates CSV files compatible with AstroBin's bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.",
@@ -118,6 +118,40 @@
         ],
         "resources": [
           "SNRAnalysis.svg"
+        ],
+        "exclude": []
+      }
+    },
+    "SubReviewer": {
+      "ready": true,
+      "name": "Sub Reviewer",
+      "sourceDir": "SubReviewer",
+      "zipNamePrefix": "SubReviewer",
+      "version": "1.0.0",
+      "piScriptRoot": "src/scripts/SubReviewer",
+      "piResourceRoot": "rsc/icons/script/SubReviewer",
+      "description": "A tool for reviewing and culling subframe images before stacking. Recursively scans directories for FITS/XISF files, displays images with auto-stretch for easy quality assessment, allows marking bad frames, and performs batch deletion.",
+      "features": [
+        "Recursive directory scanning for deep folder hierarchies",
+        "Auto-stretch preview for easy frame quality assessment",
+        "Keyboard navigation (arrows, home, end, M to mark)",
+        "Visual marking system for bad frames",
+        "Batch deletion with confirmation",
+        "Persistent settings (directory, auto-stretch preferences)",
+        "Supports FITS, XISF, and FIT file formats",
+        "Real-time image statistics display"
+      ],
+      "files": {
+        "scripts": [
+          "SubReviewer_Main.js",
+          "SubReviewer-core.js",
+          "SubReviewer-preview.js",
+          "SubReviewer-files.js",
+          "SubReviewer-gui.js",
+          "SubReviewer-gui-methods.js"
+        ],
+        "resources": [
+          "SubReviewer.svg"
         ],
         "exclude": []
       }

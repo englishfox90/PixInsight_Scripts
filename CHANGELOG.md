@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **SubReviewer v1.0.0**: New subframe review and culling tool
+  - Recursive directory scanning for deep folder hierarchies
+  - Auto-stretch preview with adjustable target background
+  - Keyboard navigation with arrow keys and M key for marking
+  - Visual marking system for bad frames
+  - Batch deletion with confirmation
+  - Persistent settings (directory, auto-stretch preferences)
+  - Real-time image statistics display
+  - Support for FITS and XISF formats
 - Multi-project build system with `packaging.config.json`
 - `npm run build:packages` command for building all ready projects
 - Configuration-driven package management

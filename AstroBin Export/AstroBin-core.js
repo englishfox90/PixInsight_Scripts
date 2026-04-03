@@ -16,7 +16,7 @@
 
 // Script metadata
 var SCRIPT_NAME = "AstroBin Export";
-var SCRIPT_VERSION = "3.2.4";  // Bumped for hygiene improvements
+var SCRIPT_VERSION = "3.3.0";  // Added regex exclude, filter exclude checkboxes, progress logging
 var SCRIPT_DESCRIPTION = "Generates CSV files compatible with AstroBin's bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.";
 var SCRIPT_DEVELOPER = "Paul Fox-Reeks (englishfox90)";
 
@@ -44,6 +44,8 @@ var CONFIG = {
   meanFwhm: "",
   ambientTemp: "",
   preferredFilterBrand: "Auto",
+  // Regex pattern for excluding files/folders from analysis
+  excludePattern: "",
   // Which CSV columns should be populated (headers are always present)
   exportColumns: undefined,
   // User's personal mono filter set (AstroBin filter IDs as strings or "")
