@@ -39,7 +39,7 @@ function scanSubframes(dirPath, pattern, groupByFilter) {
       // Progress feedback every 10%
       if (i > 0 && i % progressInterval === 0) {
          Console.write(format("  Progress: %d%%\r", Math.floor((i / files.length) * 100)));
-         processEvents();
+         CoreApplication.processEvents();
       }
       
       try {

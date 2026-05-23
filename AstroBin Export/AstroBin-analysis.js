@@ -98,7 +98,7 @@ function analyzeFiles( files ){
     var pct1 = Math.floor((i + 1) / files.length * 100);
     if (pct1 >= lastPct1 + 5 || i === files.length - 1) {
       Console.writeln("  Pass 1/2: " + (i + 1) + " / " + files.length + "  (" + pct1 + "%)");
-      processEvents();
+      CoreApplication.processEvents();
       lastPct1 = pct1;
     }
 
@@ -161,7 +161,7 @@ function analyzeFiles( files ){
     var pct2 = Math.floor((i + 1) / files.length * 100);
     if (pct2 >= lastPct2 + 5 || i === files.length - 1) {
       Console.writeln("  Pass 2/2: " + (i + 1) + " / " + files.length + "  (" + pct2 + "%)  [" + lightCount + " lights found]");
-      processEvents();
+      CoreApplication.processEvents();
       lastPct2 = pct2;
     }
 
@@ -220,10 +220,9 @@ function analyzeFiles( files ){
       
       // Extract ambient temperature for this specific image
       var ambTempStr = readKeyword( ff, "AMBTEMP" ) || readKeyword( ff, "AMBIENTTEMP" );
-      
+
       // Extract global parameters from first LIGHT image
       if (Object.keys(globalData).length === 0) {
-        var ambTempStr = readKeyword( ff, "AMBTEMP" ) || readKeyword( ff, "AMBIENTTEMP" );
         var focalLenStr = readKeyword( ff, "FOCALLEN" );
         var telescopeStr = readKeyword( ff, "TELESCOP" );
         var instrumentStr = readKeyword( ff, "INSTRUME" );

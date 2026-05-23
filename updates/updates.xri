@@ -5,21 +5,21 @@
       PixInsight Custom Scripts
     </p>
     <p>
-      This repository provides multiple tools: AstroBin Export, SNR Analysis, Sub Reviewer.
+      This repository provides multiple tools: AstroBin Export, SNR Analysis.
     </p>
   </description>
 
-  <platform os="all" arch="noarch" version="1.8.0:2.0.0">
-    <package fileName="AstroBinExport-3.3.0-20260402.zip"
-             sha1="ddf6cb876407bf19575dff0c61f150f57dff394c"
+  <platform os="all" arch="noarch" version="1.9.4:2.0.0">
+    <package fileName="AstroBinExport-3.4.0-20260523.zip"
+             sha1="0a784892676ae29532eb24b004b75d4653e420cc"
              type="script"
-             releaseDate="20260402">
+             releaseDate="20260523">
       <title>
         AstroBin Export
       </title>
       <description>
         <p>
-          AstroBin Export v3.3.0
+          AstroBin Export v3.4.0
         </p>
         <p>
           Generates CSV files compatible with AstroBin&apos;s bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.

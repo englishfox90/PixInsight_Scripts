@@ -38,7 +38,7 @@ function readFiltersCsv( path ){
   try {
     // Use PixInsight's built-in File.readLines method
     Console.writeln("Reading CSV lines...");
-    var lines = File.readLines( workingPath, ReadTextOptions_RemoveEmptyLines | ReadTextOptions_TrimLines );
+    var lines = File.readLines( workingPath, ReadTextOption.RemoveEmptyLines | ReadTextOption.TrimLines );
     Console.writeln("Read " + lines.length + " lines from CSV");
     
     if ( lines.length < 2 ) {

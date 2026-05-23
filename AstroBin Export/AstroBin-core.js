@@ -16,7 +16,7 @@
 
 // Script metadata
 var SCRIPT_NAME = "AstroBin Export";
-var SCRIPT_VERSION = "3.3.0";  // Added regex exclude, filter exclude checkboxes, progress logging
+var SCRIPT_VERSION = "3.4.0";  // V8 engine migration (PixInsight 1.9.4+)
 var SCRIPT_DESCRIPTION = "Generates CSV files compatible with AstroBin's bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.";
 var SCRIPT_DEVELOPER = "Paul Fox-Reeks (englishfox90)";
 
@@ -83,7 +83,7 @@ function loadExportColumnSettings() {
   var cols = {};
   try {
     Console.writeln("[AstroBin] Loading export column settings...");
-    var init = Settings.read(AB_SETTINGS_MODULE + "/exportColumns/_initialized", DataType_UInt32);
+    var init = Settings.read(AB_SETTINGS_MODULE + "/exportColumns/_initialized", DataType.Uint32);
     var initialized = Settings.lastReadOK && (init === 1);
 
     if (!initialized) {
@@ -97,7 +97,7 @@ function loadExportColumnSettings() {
 
     // Initialized: read stored values (UInt32 0/1)
     for (var key in DEFAULT_EXPORT_COLUMNS) {
-      var ret = Settings.read(AB_SETTINGS_MODULE + "/exportColumns/" + key, DataType_UInt32);
+      var ret = Settings.read(AB_SETTINGS_MODULE + "/exportColumns/" + key, DataType.Uint32);
       if (Settings.lastReadOK) {
         cols[key] = (ret === 1);
       } else {
@@ -124,10 +124,10 @@ function saveExportColumnSettings(columns) {
       var val = columns.hasOwnProperty(key) ? !!columns[key] : DEFAULT_EXPORT_COLUMNS[key];
       // Enforce required columns saved as true
       if (key === 'number' || key === 'duration') val = true;
-      Settings.write(AB_SETTINGS_MODULE + "/exportColumns/" + key, DataType_UInt32, val ? 1 : 0);
+      Settings.write(AB_SETTINGS_MODULE + "/exportColumns/" + key, DataType.Uint32, val ? 1 : 0);
     }
     // Mark as initialized
-    Settings.write(AB_SETTINGS_MODULE + "/exportColumns/_initialized", DataType_UInt32, EXPORT_COLUMNS_VERSION);
+    Settings.write(AB_SETTINGS_MODULE + "/exportColumns/_initialized", DataType.Uint32, EXPORT_COLUMNS_VERSION);
     Console.writeln("[AstroBin] Export column settings saved successfully to: " + AB_SETTINGS_MODULE);
   } catch (e) {
     // Non-fatal; continue
@@ -149,7 +149,7 @@ function loadPersonalFilterSet() {
   var set = {};
   try {
     Console.writeln("[AstroBin] Loading personal filter set...");
-    var init = Settings.read(AB_SETTINGS_MODULE + "/personalFilters/_initialized", DataType_UInt32);
+    var init = Settings.read(AB_SETTINGS_MODULE + "/personalFilters/_initialized", DataType.Uint32);
     var initialized = Settings.lastReadOK && (init === 1);
     
     if (!initialized) {
@@ -159,7 +159,7 @@ function loadPersonalFilterSet() {
     }
     
     for (var key in DEFAULT_PERSONAL_FILTER_SET) {
-      var val = Settings.read(AB_SETTINGS_MODULE + "/personalFilters/" + key, DataType_String);
+      var val = Settings.read(AB_SETTINGS_MODULE + "/personalFilters/" + key, DataType.String);
       if (Settings.lastReadOK && val !== undefined && val !== null) {
         set[key] = ("" + val).trim();
         if (set[key]) {
@@ -198,12 +198,12 @@ function savePersonalFilterSet(set) {
     
     for (var key in DEFAULT_PERSONAL_FILTER_SET) {
       var val = set.hasOwnProperty(key) ? (set[key] || "") : "";
-      Settings.write(AB_SETTINGS_MODULE + "/personalFilters/" + key, DataType_String, val);
+      Settings.write(AB_SETTINGS_MODULE + "/personalFilters/" + key, DataType.String, val);
       if (val) {
         Console.writeln("[AstroBin] Saved personal filter " + key + " = " + val);
       }
     }
-    Settings.write(AB_SETTINGS_MODULE + "/personalFilters/_initialized", DataType_UInt32, PERSONAL_FILTER_SET_VERSION);
+    Settings.write(AB_SETTINGS_MODULE + "/personalFilters/_initialized", DataType.Uint32, PERSONAL_FILTER_SET_VERSION);
     Console.writeln("[AstroBin] Personal filter set saved successfully to: " + AB_SETTINGS_MODULE + "/personalFilters/");
     
     // Update in-memory cache
@@ -216,7 +216,7 @@ function savePersonalFilterSet(set) {
 // Bortle Scale Settings
 function loadBortleScale() {
   try {
-    var bortle = Settings.read(AB_SETTINGS_MODULE + "/bortle", DataType_String);
+    var bortle = Settings.read(AB_SETTINGS_MODULE + "/bortle", DataType.String);
     if (Settings.lastReadOK && bortle) {
       var bortleNum = parseInt(bortle);
       if (bortleNum >= 1 && bortleNum <= 9) {
@@ -234,7 +234,7 @@ function saveBortleScale(bortle) {
   try {
     var bortleNum = parseInt(bortle);
     if (bortleNum >= 1 && bortleNum <= 9) {
-      Settings.write(AB_SETTINGS_MODULE + "/bortle", DataType_String, bortle);
+      Settings.write(AB_SETTINGS_MODULE + "/bortle", DataType.String, bortle);
       Console.writeln("[AstroBin] Saved Bortle scale: " + bortle);
     }
   } catch (e) {
@@ -259,7 +259,7 @@ function listFiles( dirPath, includeSubdirs ){
     // Search for each file extension
     for (var i = 0; i < FILE_EXTS.length; i++) {
       var pattern = dirPath + "/*" + FILE_EXTS[i];
-      var files = searchDirectory(pattern, includeSubdirs);
+      var files = File.searchDirectory(pattern, includeSubdirs);
       list = list.concat(files);
     }
   } catch (e) {

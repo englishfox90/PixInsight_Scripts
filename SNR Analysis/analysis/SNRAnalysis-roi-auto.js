@@ -3,8 +3,6 @@
  * Automatic ROI detection for background and faint signal regions
  */
 
-#include <pjsr/ImageOp.jsh>
-
 /**
  * Attempt to auto-detect BG and FG rectangles on the given view.
  * 

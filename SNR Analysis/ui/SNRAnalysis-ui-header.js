@@ -24,7 +24,7 @@ function buildHeaderSection(dialog) {
    
    var copyrightLabel = new Label(dialog);
    copyrightLabel.text = "Paul Fox-Reeks (englishfox90)";
-   copyrightLabel.textAlignment = TextAlign_Right;
+   copyrightLabel.textAlignment = TextAlignment.Right;
    
    titleSizer.add(titleLabel);
    titleSizer.addStretch();
@@ -95,11 +95,11 @@ function buildInfoSection(dialog) {
       // Force dialog to resize properly both ways (expand and collapse)
       // Multiple passes are needed to ensure proper resize
       dialog.setFixedSize();
-      processEvents();
+      CoreApplication.processEvents();
       dialog.adjustToContents();
-      processEvents();
+      CoreApplication.processEvents();
       dialog.setVariableSize();
-      processEvents();
+      CoreApplication.processEvents();
       dialog.adjustToContents();
    };
    

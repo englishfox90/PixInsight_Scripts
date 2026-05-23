@@ -237,8 +237,8 @@ function removeStarsWithStarNet(config, job, imageWindow, filterSuffix) {
    // Configure parameters (version-safe)
    if (P.hasOwnProperty("stride")) {
       // Typical values: Stride_128, Stride_256
-      if (StarNet.prototype.Stride_128 !== undefined) {
-         P.stride = StarNet.prototype.Stride_128;
+      if (StarNet.Stride_128 !== undefined) {
+         P.stride = StarNet.Stride_128;
       } else if (P.stride !== undefined) {
          P.stride = 128;  // Fallback numeric value
       }

@@ -3,9 +3,6 @@
  * Graph generation for SNR vs integration time
  */
 
-#include <pjsr/ColorSpace.jsh>
-#include <pjsr/SampleType.jsh>
-
 /**
  * Generate SNR vs integration time graph
  * @param {Array} results - Array of depth results
@@ -38,7 +35,7 @@ function generateGraph(results, outputDir, filterSuffix, filterName) {
    var bmp = new Bitmap(width, height);
    bmp.fill(0xFFFFFFFF);  // White
    
-   var g = new VectorGraphics(bmp);
+   var g = new Graphics(bmp);
    g.antialiasing = true;
    
    // Calculate data ranges
@@ -292,7 +289,7 @@ function generateGainGraph(results, outputDir, filterSuffix, filterName) {
    var bmp = new Bitmap(width, height);
    bmp.fill(0xFFFFFFFF);  // White
    
-   var g = new VectorGraphics(bmp);
+   var g = new Graphics(bmp);
    g.antialiasing = true;
    
    // Calculate data ranges
