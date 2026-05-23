@@ -9,10 +9,11 @@ var g_analysisData = [];
 var g_filterMapping = {};
 
 // Base dialog class
-function AstroBinDialog()
+class AstroBinDialog extends Dialog
 {
-   this.__base__ = Dialog;
-   this.__base__();
+constructor()
+{
+   super();
    
    // Set dialog properties
    this.windowTitle = SCRIPT_NAME + " v" + SCRIPT_VERSION;
@@ -41,10 +42,8 @@ function AstroBinDialog()
    this.updateUI();
 }
 
-AstroBinDialog.prototype = new Dialog;
-
 // Script Info Section
-AstroBinDialog.prototype.createScriptInfoSection = function()
+createScriptInfoSection()
 {
    this.scriptInfoGroupBox = new GroupBox(this);
    this.scriptInfoGroupBox.title = ""; // No title for signature box
@@ -63,7 +62,7 @@ AstroBinDialog.prototype.createScriptInfoSection = function()
    
    this.copyrightLabel = new Label(this);
    this.copyrightLabel.text = "© " + SCRIPT_DEVELOPER;
-   this.copyrightLabel.textAlignment = TextAlign_Right;
+   this.copyrightLabel.textAlignment = TextAlignment.Right;
    
    titleSizer.add(this.titleLabel);
    titleSizer.addStretch();
@@ -77,10 +76,10 @@ AstroBinDialog.prototype.createScriptInfoSection = function()
 
    this.scriptInfoGroupBox.sizer.add(titleSizer);
    this.scriptInfoGroupBox.sizer.add(this.descriptionLabel);
-};
+}
 
 // File Selection Section
-AstroBinDialog.prototype.createFileSelectionSection = function()
+createFileSelectionSection()
 {
    this.fileSelectionGroupBox = new GroupBox(this);
    this.fileSelectionGroupBox.title = "Image Files";
@@ -109,7 +108,7 @@ AstroBinDialog.prototype.createFileSelectionSection = function()
       var gdd = new GetDirectoryDialog;
       gdd.caption = "Select Directory Containing Image Files";
       if (gdd.execute()) {
-         CONFIG.rootDir = gdd.directory;
+         CONFIG.rootDir = gdd.directoryPath;
          self.directoryEdit.text = CONFIG.rootDir;
          self.scanForFiles();
       }
@@ -146,7 +145,7 @@ AstroBinDialog.prototype.createFileSelectionSection = function()
    this.excludeLabel = new Label(this);
    this.excludeLabel.text = "Exclude:";
    this.excludeLabel.minWidth = 80;
-   this.excludeLabel.textAlignment = TextAlign_VertCenter;
+   this.excludeLabel.textAlignment = TextAlignment.VertCenter;
 
    this.excludePatternEdit = new Edit(this);
    this.excludePatternEdit.text = CONFIG.excludePattern;
@@ -170,7 +169,7 @@ AstroBinDialog.prototype.createFileSelectionSection = function()
 
    this.excludeStatusLabel = new Label(this);
    this.excludeStatusLabel.text = "";
-   this.excludeStatusLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   this.excludeStatusLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
    this.excludeStatusLabel.styleSheet = "QLabel { color: #666; font-size: 9pt; }";
 
    excludeSizer.add(this.excludeLabel);
@@ -181,10 +180,10 @@ AstroBinDialog.prototype.createFileSelectionSection = function()
    this.fileSelectionGroupBox.sizer.add(pathSizer);
    this.fileSelectionGroupBox.sizer.add(excludeSizer);
    this.fileSelectionGroupBox.sizer.add(optionsSizer);
-};
+}
 
 // Global Parameters Section
-AstroBinDialog.prototype.createGlobalParametersSection = function()
+createGlobalParametersSection()
 {
    this.globalParametersGroupBox = new GroupBox(this);
    this.globalParametersGroupBox.title = "Global Acquisition Parameters";
@@ -200,7 +199,7 @@ AstroBinDialog.prototype.createGlobalParametersSection = function()
    var darksLabel = new Label(this);
    darksLabel.text = "Darks:";
    darksLabel.minWidth = 70;
-   darksLabel.textAlignment = TextAlign_VertCenter;
+   darksLabel.textAlignment = TextAlignment.VertCenter;
    calibrationSizer.add(darksLabel);
    this.darksEdit = new Edit(this);
    this.darksEdit.text = CONFIG.darks;
@@ -212,7 +211,7 @@ AstroBinDialog.prototype.createGlobalParametersSection = function()
    var flatsLabel = new Label(this);
    flatsLabel.text = "Flats:";
    flatsLabel.minWidth = 70;
-   flatsLabel.textAlignment = TextAlign_VertCenter;
+   flatsLabel.textAlignment = TextAlignment.VertCenter;
    calibrationSizer.add(flatsLabel);
    this.flatsEdit = new Edit(this);
    this.flatsEdit.text = CONFIG.flats;
@@ -224,7 +223,7 @@ AstroBinDialog.prototype.createGlobalParametersSection = function()
    var flatDarksLabel = new Label(this);
    flatDarksLabel.text = "Flat Darks:";
    flatDarksLabel.minWidth = 70;
-   flatDarksLabel.textAlignment = TextAlign_VertCenter;
+   flatDarksLabel.textAlignment = TextAlignment.VertCenter;
    calibrationSizer.add(flatDarksLabel);
    this.flatDarksEdit = new Edit(this);
    this.flatDarksEdit.text = CONFIG.flatDarks;
@@ -236,7 +235,7 @@ AstroBinDialog.prototype.createGlobalParametersSection = function()
    var biasLabel = new Label(this);
    biasLabel.text = "Bias:";
    biasLabel.minWidth = 70;
-   biasLabel.textAlignment = TextAlign_VertCenter;
+   biasLabel.textAlignment = TextAlignment.VertCenter;
    calibrationSizer.add(biasLabel);
    this.biasEdit = new Edit(this);
    this.biasEdit.text = CONFIG.bias;
@@ -254,7 +253,7 @@ AstroBinDialog.prototype.createGlobalParametersSection = function()
    var bortleLabel = new Label(this);
    bortleLabel.text = "Bortle Scale:";
    bortleLabel.minWidth = 100;
-   bortleLabel.textAlignment = TextAlign_VertCenter;
+   bortleLabel.textAlignment = TextAlignment.VertCenter;
    bortleSizer.add(bortleLabel);
    
    this.bortleComboBox = new ComboBox(this);
@@ -306,7 +305,7 @@ AstroBinDialog.prototype.createGlobalParametersSection = function()
    var filterBrandLabel = new Label(this);
    filterBrandLabel.text = "Filter Brand:";
    filterBrandLabel.minWidth = 100;
-   filterBrandLabel.textAlignment = TextAlign_VertCenter;
+   filterBrandLabel.textAlignment = TextAlignment.VertCenter;
    filterBrandSizer.add(filterBrandLabel);
    
    this.filterBrandCombo = new ComboBox(this);
@@ -316,7 +315,7 @@ AstroBinDialog.prototype.createGlobalParametersSection = function()
    this.filterBrandCombo.addItem("Auto"); // Default option
    
    // Populate with available brands from filter database
-   var brands = this.getUniqueBrands();
+   var brands = getFilterBrands();
    for (var i = 0; i < brands.length; i++) {
       this.filterBrandCombo.addItem(brands[i]);
    }
@@ -343,7 +342,7 @@ AstroBinDialog.prototype.createGlobalParametersSection = function()
    var meanSqmLabel = new Label(this);
    meanSqmLabel.text = "Mean SQM:";
    meanSqmLabel.minWidth = 90;
-   meanSqmLabel.textAlignment = TextAlign_VertCenter;
+   meanSqmLabel.textAlignment = TextAlignment.VertCenter;
    environmentSizer.add(meanSqmLabel);
    this.meanSqmEdit = new Edit(this);
    this.meanSqmEdit.text = CONFIG.meanSqm;
@@ -365,7 +364,7 @@ AstroBinDialog.prototype.createGlobalParametersSection = function()
    var meanFwhmLabel = new Label(this);
    meanFwhmLabel.text = "Mean FWHM:";
    meanFwhmLabel.minWidth = 90;
-   meanFwhmLabel.textAlignment = TextAlign_VertCenter;
+   meanFwhmLabel.textAlignment = TextAlignment.VertCenter;
    environmentSizer.add(meanFwhmLabel);
    this.meanFwhmEdit = new Edit(this);
    this.meanFwhmEdit.text = CONFIG.meanFwhm;
@@ -385,7 +384,7 @@ AstroBinDialog.prototype.createGlobalParametersSection = function()
    var temperatureLabel = new Label(this);
    temperatureLabel.text = "Temperature (°C):";
    temperatureLabel.minWidth = 120;
-   temperatureLabel.textAlignment = TextAlign_VertCenter;
+   temperatureLabel.textAlignment = TextAlignment.VertCenter;
    environmentSizer.add(temperatureLabel);
    this.temperatureEdit = new Edit(this);
    this.temperatureEdit.text = CONFIG.ambientTemp;
@@ -417,27 +416,10 @@ AstroBinDialog.prototype.createGlobalParametersSection = function()
    this.metadataInfoLabel.wordWrapping = true;
    this.metadataInfoLabel.styleSheet = "QLabel { color: #666; font-size: 9pt; }";
    this.globalParametersGroupBox.sizer.add(this.metadataInfoLabel);
-};
-
-// Helper method to get unique brands from filter database
-AstroBinDialog.prototype.getUniqueBrands = function()
-{
-   var brands = [];
-   var seen = {};
-   
-   for (var i = 0; i < ASTROBIN_FILTERS.length; i++) {
-      var brand = ASTROBIN_FILTERS[i].brand;
-      if (!seen[brand]) {
-         brands.push(brand);
-         seen[brand] = true;
-      }
-   }
-   
-   return brands.sort();
-};
+}
 
 // Update global parameters UI based on available FITS metadata
-AstroBinDialog.prototype.updateGlobalParametersFromMetadata = function(globalData)
+updateGlobalParametersFromMetadata(globalData)
 {
    if (!globalData) return;
    
@@ -520,10 +502,10 @@ AstroBinDialog.prototype.updateGlobalParametersFromMetadata = function(globalDat
                                    "Manual calibration frame counts and environmental data can be entered above.";
       this.metadataInfoLabel.styleSheet = "QLabel { color: #FFA500; font-size: 9pt; }"; // Orange for warning
    }
-};
+}
 
 // Image Analysis Section
-AstroBinDialog.prototype.createImageAnalysisSection = function()
+createImageAnalysisSection()
 {
    this.imageAnalysisGroupBox = new GroupBox(this);
    this.imageAnalysisGroupBox.title = "Image Analysis Results";
@@ -573,16 +555,15 @@ AstroBinDialog.prototype.createImageAnalysisSection = function()
    this.imageTreeBox.setHeaderText(7, "Gain");
    this.imageTreeBox.setHeaderText(8, "Temp (°C)");
    
-   // Set column widths: Date(100), Filter(75), Filter Name(150), rest 75
-   this.imageTreeBox.setColumnWidth(0, 100); // Date
-   this.imageTreeBox.setColumnWidth(1, 50);  // Filter (raw FITS)
-   this.imageTreeBox.setColumnWidth(2, 250); // Filter Name (brand + display)
-   this.imageTreeBox.setColumnWidth(3, 75);  // Filter ID
-   this.imageTreeBox.setColumnWidth(4, 50);  // Count
-   this.imageTreeBox.setColumnWidth(5, 75);  // Duration
-   this.imageTreeBox.setColumnWidth(6, 50);  // Binning
-   this.imageTreeBox.setColumnWidth(7, 50);  // Gain
-   this.imageTreeBox.setColumnWidth(8, 75);  // Temp (°C)
+   this.imageTreeBox.setColumnWidth(0, 130); // Date
+   this.imageTreeBox.setColumnWidth(1, 80);  // Filter (raw FITS)
+   this.imageTreeBox.setColumnWidth(2, 175); // Filter Name (brand + display)
+   this.imageTreeBox.setColumnWidth(3, 85);  // Filter ID
+   this.imageTreeBox.setColumnWidth(4, 70);  // Count
+   this.imageTreeBox.setColumnWidth(5, 95);  // Duration
+   this.imageTreeBox.setColumnWidth(6, 90);  // Binning
+   this.imageTreeBox.setColumnWidth(7, 65);  // Gain
+   this.imageTreeBox.setColumnWidth(8, 110); // Temp (°C)
    
    // Enable editing on all columns except first column (make column 2 editable)
    this.imageTreeBox.editEnabled = true;
@@ -627,10 +608,10 @@ AstroBinDialog.prototype.createImageAnalysisSection = function()
 
    this.imageAnalysisGroupBox.sizer.add(analysisSizer);
    this.imageAnalysisGroupBox.sizer.add(this.imageTreeBox, 100);
-};
+}
 
 // CSV Preview Section
-AstroBinDialog.prototype.createCSVPreviewSection = function()
+createCSVPreviewSection()
 {
    this.csvPreviewGroupBox = new GroupBox(this);
    this.csvPreviewGroupBox.title = "CSV Export Preview";
@@ -679,10 +660,10 @@ AstroBinDialog.prototype.createCSVPreviewSection = function()
 
    this.csvPreviewGroupBox.sizer.add(exportSizer);
    this.csvPreviewGroupBox.sizer.add(this.csvPreviewTextBox, 100);
-};
+}
 
 // Button Section
-AstroBinDialog.prototype.createButtonSection = function()
+createButtonSection()
 {
    this.buttonSizer = new HorizontalSizer;
    this.buttonSizer.spacing = 4;
@@ -708,4 +689,6 @@ AstroBinDialog.prototype.createButtonSection = function()
    this.okButton.defaultButton = true;
    
    this.buttonSizer.add(this.okButton);
-};
+}
+
+// AstroBinDialog class body continues in AstroBin-gui-methods.js

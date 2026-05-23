@@ -1,3 +1,4 @@
+#engine v8
 #feature-id    MasterSignature : PFRAstro > Master Signature
 
 #feature-info  Addes image details to the bottom left hand corner of the image \
@@ -7,14 +8,13 @@
 
 #feature-icon  DrawSignature.xpm
 
-#include <pjsr/Sizer.jsh>
-#include <pjsr/FrameStyle.jsh>
-#include <pjsr/TextAlign.jsh>
-#include <pjsr/StdButton.jsh>
-#include <pjsr/StdIcon.jsh>
-
-#define VERSION   1.2
+#define VERSION   1.3
 #define TITLE     MasterSignature
+
+(function() {
+"use strict";
+
+CoreApplication.ensureMinimumVersion(1, 9, 4);
 
 var logoDir = File.fullPath(File.extractDrive(#__FILE__)+File.extractDirectory(#__FILE__)+"/logo.png")
 
@@ -98,17 +98,17 @@ function DrawSignatureEngine()
     if (view) {
         var win = view.window;
         if (!view.keywords || view.keywords.length === 0) {
-            console.warningln("view.keywords is empty or undefined.");
+            Console.warningln("view.keywords is empty or undefined.");
             if (win && win.keywords && win.keywords.length > 0) {
-                console.writeln("Found " + win.keywords.length + " keywords in ImageWindow. Using those.");
+                Console.writeln("Found " + win.keywords.length + " keywords in ImageWindow. Using those.");
                 view.keywords = win.keywords;
             } else {
-                console.warningln("No keywords in view or window.");
+                Console.warningln("No keywords in view or window.");
             }
         }
 
         if (view.keywords && view.keywords.length > 0) {
-            console.writeln("Using " + view.keywords.length + " FITS keywords.");
+            Console.writeln("Using " + view.keywords.length + " FITS keywords.");
 
             this.subject  = getFITSKeyword(view, "SUBJECT");
             this.catalog  = getFITSKeyword(view, "OBJECT");
@@ -136,15 +136,15 @@ function DrawSignatureEngine()
             this.date     = dateObs || "";
             this.location = loc || "";
 
-            console.writeln("FITS auto-fill:");
-            console.writeln("  Subject : " + this.subject);
-            console.writeln("  Catalog : " + this.catalog);
-            console.writeln("  Exposure: " + this.exposure);
-            console.writeln("  Frames  : " + this.frames);
-            console.writeln("  Date    : " + this.date);
-            console.writeln("  Location: " + this.location);
+            Console.writeln("FITS auto-fill:");
+            Console.writeln("  Subject : " + this.subject);
+            Console.writeln("  Catalog : " + this.catalog);
+            Console.writeln("  Exposure: " + this.exposure);
+            Console.writeln("  Frames  : " + this.frames);
+            Console.writeln("  Date    : " + this.date);
+            Console.writeln("  Location: " + this.location);
         } else {
-            console.warningln("No usable FITS keywords found.");
+            Console.warningln("No usable FITS keywords found.");
         }
     }
 
@@ -290,32 +290,13 @@ function DrawSignatureEngine()
     */
    this.applyOpacity = function(bmp, opacity) {
       if (opacity >= 100) return bmp;
-      if (opacity <= 0) {
-         var emptyBmp = new Bitmap(bmp.width, bmp.height);
-         emptyBmp.fill(0x00000000);
-         return emptyBmp;
-      }
-      // Create a new bitmap and apply opacity by modifying alpha in each pixel
       var newBmp = new Bitmap(bmp.width, bmp.height);
-      var alphaScale = opacity / 100.0;
-      
-      // Copy pixels with scaled alpha
-      for (var y = 0; y < bmp.height; y++) {
-         for (var x = 0; x < bmp.width; x++) {
-            var pixel = bmp.pixel(x, y); // ARGB format as 32-bit integer
-            var a = (pixel >>> 24) & 0xFF;
-            var r = (pixel >>> 16) & 0xFF;
-            var g = (pixel >>> 8) & 0xFF;
-            var b = pixel & 0xFF;
-            
-            // Scale alpha
-            a = Math.round(a * alphaScale);
-            
-            // Reconstruct pixel
-            var newPixel = ((a << 24) | (r << 16) | (g << 8) | b) >>> 0;
-            newBmp.setPixel(x, y, newPixel);
-         }
-      }
+      newBmp.fill(0x00000000);
+      if (opacity <= 0) return newBmp;
+      var G = new Graphics(newBmp);
+      G.opacity = opacity / 100;
+      G.drawBitmap(0, 0, bmp);
+      G.end();
       return newBmp;
    };
 
@@ -352,124 +333,27 @@ function DrawSignatureEngine()
     * softEdges   If true, the text will be drawn with extra soft edges;
     *             normal edges otherwise.
     */
-   this.draw = function()
+   this.renderSignature = function(image, applySoftEdges)
    {
-      // To execute with diagnostics messages, #define the __DEBUG__ macro; e.g.:
-      //    run -D=__DEBUG__ signature.js
-#ifdef __DEBUG__
-      console.writeln(         "text      : ",   this.text );
-      console.writeln(         "font      : ",   this.fontFace );
-      console.writeln(         "fontSize  : ",   this.fontSize );
-      console.writeln(         "stretch   : ",   this.stretch );
-      console.writeln(         "bold      : ",   this.bold );
-      console.writeln(         "italic    : ",   this.italic );
-      console.writeln( format( "textColor : %X", this.textColor ) );
-      console.writeln( format( "bgColor   : %X", this.bkgColor ) );
-      console.writeln(         "margin    : ",   this.margin );
-      console.writeln(         "soft      : ",   this.softEdges );
-#endif
-
-      // Create the font
-      var font = new Font( this.fontFace );
+      var font = new Font(this.fontFace);
       font.pixelSize = this.fontSize;
-      var linePadding = 10; // Add 10px padding between lines
+      var linePadding = 10;
+      var innerMargin = Math.round(font.pixelSize/5);
 
-
-#ifdef __DEBUG__
-      console.writeln( "Exact font match : ", font.isExactMatch );
-      console.writeln( "Font point size  : ", font.pointSize );
-#endif
-
-      // Calculate a reasonable inner margin in pixels
-      var innerMargin = Math.round( font.pixelSize/5 );
-
-      // Calculate the sizes of our drawing box
-      var text = this.composeText();
-      // Calculate width and height for multiline text
-      var lines = text.split("\n");
+      var lines = this.composeText().split("\n");
       var maxWidth = 0;
       for (var i = 0; i < lines.length; ++i)
          maxWidth = Math.max(maxWidth, font.width(lines[i]));
       var width = maxWidth + 2*innerMargin;
       var height = font.ascent*lines.length + font.descent + 2*innerMargin + (lines.length > 1 ? (lines.length-1)*linePadding : 0);
 
-#ifdef __DEBUG__
-      console.writeln( "Drawing box sizes : w=", width, ", h=", height );
-#endif
-
-      var logoPath = logoDir;
-      console.writeln("Logo path resolved to: " + logoPath);
-      
-      //check if the logo file exists
-      if (!File.exists(logoPath)) {
-        console.criticalln("Logo file not found!");
-    } else {
-        console.writeln("Logo file exists. Trying to load bitmap...");
-    }
-
-      // --- Only do preview if called from dialog preview control ---
-      if (typeof this.previewControl !== "undefined" && this.previewControl !== null) {
-         var previewImage = new Image(this.targetView.image);
-         var bmp = new Bitmap(width, height);
-         bmp.fill(0x00000000);
-         var G = new Graphics(bmp);
-
-        // Select the required drawing tools: font and pen.
-         G.font = font;
-         G.pen = new Pen(0xFFFFFFFF);
-         G.transparentBackground = true;
-         G.textAntialiasing = true;
-
-         // Now draw the signature
-         for (var i = 0; i < lines.length; ++i)
-            G.drawText(
-               innerMargin,
-               height - font.descent - innerMargin - (lines.length-1-i)*(font.ascent + linePadding),
-               lines[i]
-            );
-         G.end();
-
-         // Apply text opacity
-         var textBmp = this.applyOpacity(bmp, this.textOpacity);
-         previewImage.selectedPoint = new Point(this.margin, previewImage.height - this.margin - height);
-         previewImage.blend(textBmp);
-
-         // --- Overlay the logo bitmap on bottom-right ---
-         if(this.showLogo){
-            try {
-                var logoBmp = new Bitmap(logoPath);
-                console.writeln("Bitmap loaded. Size: " + logoBmp.width + "x" + logoBmp.height);
-
-                // Apply logo opacity
-                var logoWithOpacity = this.applyOpacity(logoBmp, this.logoOpacity);
-
-                var x = previewImage.width - this.margin - logoBmp.width;
-                var y = previewImage.height - this.margin - logoBmp.height;
-
-                previewImage.selectedPoint = new Point(x, y);
-                previewImage.blend(logoWithOpacity);
-            } catch (e) {
-                console.criticalln("Failed to create Bitmap: " + e.toString());
-            }
-        }
-
-         this.previewControl.doUpdateImage(previewImage);
-         return;
-      }
-
-      // --- ACTUAL IMAGE DRAW ---
-      var image = this.targetView.image;
       var bmp = new Bitmap(width, height);
       bmp.fill(0x00000000);
       var G = new Graphics(bmp);
-
-      // Select the required drawing tools: font and pen.
       G.font = font;
       G.pen = new Pen(0xFFFFFFFF);
       G.transparentBackground = true;
       G.textAntialiasing = true;
-
-      // Now draw the signature
       for (var i = 0; i < lines.length; ++i)
          G.drawText(
             innerMargin,
@@ -478,9 +362,7 @@ function DrawSignatureEngine()
          );
       G.end();
 
-      // If soft text has been requested, we apply a convolution with a mild
-      // low-pass filter to soften text edges.
-      if (this.softEdges) {
+      if (applySoftEdges && this.softEdges) {
          var simg = new Image(width, height, 4, 1);
          simg.firstSelectedChannel = 0;
          simg.lastSelectedChannel = 3;
@@ -490,31 +372,48 @@ function DrawSignatureEngine()
                         0.15, 1.00, 0.15,
                         0.05, 0.15, 0.05]);
          bmp.assign(simg.render());
+         simg.free();
       }
 
-      // Apply text opacity
       var textBmp = this.applyOpacity(bmp, this.textOpacity);
       image.selectedPoint = new Point(this.margin, image.height - this.margin - height);
       image.blend(textBmp);
+      if (textBmp !== bmp) textBmp.clear();
+      bmp.clear();
 
-      // --- Overlay the logo bitmap on bottom-right ---
-      if(this.showLogo){
+      if (this.showLogo) {
          try {
-            var logoBmp = new Bitmap(logoPath);
-            console.writeln("Bitmap loaded. Size: " + logoBmp.width + "x" + logoBmp.height);
-
-            // Apply logo opacity
+            var logoBmp = new Bitmap(logoDir);
             var logoWithOpacity = this.applyOpacity(logoBmp, this.logoOpacity);
-
             var x = image.width - this.margin - logoBmp.width;
             var y = image.height - this.margin - logoBmp.height;
-
             image.selectedPoint = new Point(x, y);
             image.blend(logoWithOpacity);
-        } catch (e) {
-            console.criticalln("Failed to create Bitmap: " + e.toString());
-        }
-    }
+            if (logoWithOpacity !== logoBmp) logoWithOpacity.clear();
+            logoBmp.clear();
+         } catch (e) {
+            Console.criticalln("Failed to load logo bitmap from " + logoDir + ": " + e.toString());
+         }
+      }
+   };
+
+   this.draw = function()
+   {
+      // To execute with diagnostics messages, #define the __DEBUG__ macro; e.g.:
+      //    run -D=__DEBUG__ signature.js
+#ifdef __DEBUG__
+      Console.writeln(         "text      : ",   this.text );
+      Console.writeln(         "font      : ",   this.fontFace );
+      Console.writeln(         "fontSize  : ",   this.fontSize );
+      Console.writeln(         "stretch   : ",   this.stretch );
+      Console.writeln(         "bold      : ",   this.bold );
+      Console.writeln(         "italic    : ",   this.italic );
+      Console.writeln( format( "textColor : %X", this.textColor ) );
+      Console.writeln( format( "bgColor   : %X", this.bkgColor ) );
+      Console.writeln(         "margin    : ",   this.margin );
+      Console.writeln(         "soft      : ",   this.softEdges );
+#endif
+      this.renderSignature(this.targetView.image, true);
    };
 
    // Append missing FITS keywords to the view
@@ -528,7 +427,7 @@ function DrawSignatureEngine()
                 break;
             }
     if (!exists && value) {
-        console.writeln("Appending FITS keyword: " + name + " = " + value);
+        Console.writeln("Appending FITS keyword: " + name + " = " + value);
         view.window.setKeyword(name, value, "Added by MasterSignature.js");
     }
     }
@@ -550,10 +449,11 @@ var engine = new DrawSignatureEngine;
  * DrawSignatureDialog is a graphical user interface to define
  * DrawSignature parameters.
  */
-function DrawSignatureDialog()
-{
-   this.__base__ = Dialog;
-   this.__base__();
+class DrawSignatureDialog extends Dialog {
+   constructor() {
+      super();
+
+   const self = this;
 
    //
 
@@ -563,7 +463,7 @@ function DrawSignatureDialog()
    //
 
    this.helpLabel = new Label( this );
-   this.helpLabel.frameStyle = FrameStyle_Box;
+   this.helpLabel.frameStyle = FrameStyle.Box;
    this.helpLabel.margin = 4;
    this.helpLabel.wordWrapping = true;
    this.helpLabel.useRichText = true;
@@ -582,16 +482,16 @@ function DrawSignatureDialog()
 
    this.targetImage_Label = new Label( this );
    this.targetImage_Label.text = "Target image:";
-   this.targetImage_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   this.targetImage_Label.textAlignment = TextAlignment.Right|TextAlignment.VertCenter;
    this.targetImage_Label.minWidth = labelWidth1;
 
    this.targetImage_ViewList = new ViewList( this );
    this.targetImage_ViewList.getAll();
    this.targetImage_ViewList.currentView = engine.targetView;
    this.targetImage_ViewList.toolTip = "Select the image to draw the text over";
-   this.targetImage_ViewList.onViewSelected = function( view )
-   {
+   this.targetImage_ViewList.onViewSelected = function(view) {
       engine.targetView = view;
+      self.updatePreview();
    };
 
    this.targetImage_Sizer = new HorizontalSizer;
@@ -601,7 +501,7 @@ function DrawSignatureDialog()
 
    this.fontFace_Label = new Label( this );
    this.fontFace_Label.text = "Face:";
-   this.fontFace_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   this.fontFace_Label.textAlignment = TextAlignment.Right|TextAlignment.VertCenter;
    this.fontFace_Label.minWidth = labelWidth1 - this.logicalPixelsToPhysical( 4+1 );
 
    this.fontFace_ComboBox = new ComboBox( this );
@@ -631,7 +531,7 @@ function DrawSignatureDialog()
 
    this.fontSize_Label = new Label( this );
    this.fontSize_Label.text = "Size (px):";
-   this.fontSize_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   this.fontSize_Label.textAlignment = TextAlignment.Right|TextAlignment.VertCenter;
    this.fontSize_Label.minWidth = labelWidth1 - this.logicalPixelsToPhysical( 4+1 );
 
    this.fontSize_SpinBox = new SpinBox( this );
@@ -664,7 +564,7 @@ function DrawSignatureDialog()
 
    this.margin_Label = new Label( this );
    this.margin_Label.text = "Margin (px):";
-   this.margin_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   this.margin_Label.textAlignment = TextAlignment.Right|TextAlignment.VertCenter;
    this.margin_Label.minWidth = labelWidth1;
 
    this.margin_SpinBox = new SpinBox( this );
@@ -695,11 +595,9 @@ function DrawSignatureDialog()
    this.renderOptions_Sizer.addStretch();
    
    // === TRANSPARENCY CONTROLS ===
-   var thisDlg = this; // Store reference for callbacks
-   
    this.textOpacity_Label = new Label(this);
    this.textOpacity_Label.text = "Text Opacity:";
-   this.textOpacity_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   this.textOpacity_Label.textAlignment = TextAlignment.Right|TextAlignment.VertCenter;
    
    this.textOpacity_Slider = new Slider(this);
    this.textOpacity_Slider.minValue = 0;
@@ -709,18 +607,18 @@ function DrawSignatureDialog()
    this.textOpacity_Slider.toolTip = "Text transparency (0=invisible, 100=fully opaque)";
    this.textOpacity_Slider.onValueUpdated = function(value) {
       engine.textOpacity = value;
-      thisDlg.textOpacity_SpinBox.value = value;
+      self.textOpacity_SpinBox.value = value;
    };
    
    this.textOpacity_SpinBox = new SpinBox(this);
    this.textOpacity_SpinBox.minValue = 0;
    this.textOpacity_SpinBox.maxValue = 100;
    this.textOpacity_SpinBox.value = engine.textOpacity;
-   this.textOpacity_SpinBox.setFixedWidth(50);
+   this.textOpacity_SpinBox.setFixedWidth(70);
    this.textOpacity_SpinBox.toolTip = "Text transparency (0=invisible, 100=fully opaque)";
    this.textOpacity_SpinBox.onValueUpdated = function(value) {
       engine.textOpacity = value;
-      thisDlg.textOpacity_Slider.value = value;
+      self.textOpacity_Slider.value = value;
    };
    
    this.textOpacityPercent_Label = new Label(this);
@@ -728,7 +626,7 @@ function DrawSignatureDialog()
    
    this.logoOpacity_Label = new Label(this);
    this.logoOpacity_Label.text = "Logo Opacity:";
-   this.logoOpacity_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   this.logoOpacity_Label.textAlignment = TextAlignment.Right|TextAlignment.VertCenter;
    
    this.logoOpacity_Slider = new Slider(this);
    this.logoOpacity_Slider.minValue = 0;
@@ -738,18 +636,18 @@ function DrawSignatureDialog()
    this.logoOpacity_Slider.toolTip = "Logo transparency (0=invisible, 100=fully opaque)";
    this.logoOpacity_Slider.onValueUpdated = function(value) {
       engine.logoOpacity = value;
-      thisDlg.logoOpacity_SpinBox.value = value;
+      self.logoOpacity_SpinBox.value = value;
    };
    
    this.logoOpacity_SpinBox = new SpinBox(this);
    this.logoOpacity_SpinBox.minValue = 0;
    this.logoOpacity_SpinBox.maxValue = 100;
    this.logoOpacity_SpinBox.value = engine.logoOpacity;
-   this.logoOpacity_SpinBox.setFixedWidth(50);
+   this.logoOpacity_SpinBox.setFixedWidth(70);
    this.logoOpacity_SpinBox.toolTip = "Logo transparency (0=invisible, 100=fully opaque)";
    this.logoOpacity_SpinBox.onValueUpdated = function(value) {
       engine.logoOpacity = value;
-      thisDlg.logoOpacity_Slider.value = value;
+      self.logoOpacity_Slider.value = value;
    };
    
    this.logoOpacityPercent_Label = new Label(this);
@@ -806,9 +704,9 @@ function DrawSignatureDialog()
    this.refreshPreview_Button = new PushButton(this);
    this.refreshPreview_Button.text = "Refresh Preview";
    this.refreshPreview_Button.toolTip = "Manually refresh the preview image and text overlay.";
-   this.refreshPreview_Button.onClick = () => {
+   this.refreshPreview_Button.onClick = function() {
       // Always reload preview from current engine state
-      this.updatePreview();
+      self.updatePreview();
    };
    this.buttons_Sizer.add(this.refreshPreview_Button);
    this.buttons_Sizer.add( this.ok_Button );
@@ -819,7 +717,7 @@ function DrawSignatureDialog()
    // Subject Name & Catalog
    this.catalog_Label = new Label(this);
    this.catalog_Label.text = "Catalog:";
-   this.catalog_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   this.catalog_Label.textAlignment = TextAlignment.Right|TextAlignment.VertCenter;
    this.catalog_Label.minWidth = labelWidth1 - this.logicalPixelsToPhysical( 4+1 );
 
    this.catalog_Edit = new Edit(this);
@@ -828,7 +726,7 @@ function DrawSignatureDialog()
 
    this.subject_Label = new Label(this);
    this.subject_Label.text = "Subject:";
-   this.subject_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   this.subject_Label.textAlignment = TextAlignment.Right|TextAlignment.VertCenter;
    this.subject_Label.minWidth = labelWidth1 - this.logicalPixelsToPhysical( 4+1 );
 
    this.subject_Edit = new Edit(this);
@@ -843,12 +741,10 @@ function DrawSignatureDialog()
    this.subject_Sizer.add(this.subject_Edit, 100);
 
    // === INTEGRATION MODE SELECTION ===
-   var dlg = this; // Reference for callbacks
-   
    // Integration Mode Radio Buttons
    this.integrationMode_Label = new Label(this);
    this.integrationMode_Label.text = "Integration Mode:";
-   this.integrationMode_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   this.integrationMode_Label.textAlignment = TextAlignment.Right|TextAlignment.VertCenter;
    this.integrationMode_Label.minWidth = labelWidth1 - this.logicalPixelsToPhysical( 4+1 );
    
    this.simpleMode_Radio = new RadioButton(this);
@@ -858,7 +754,7 @@ function DrawSignatureDialog()
    this.simpleMode_Radio.onCheck = function(checked) {
       if (checked) {
          engine.integrationMode = 0;
-         dlg.updateIntegrationModeUI();
+         self.updateIntegrationModeUI();
       }
    };
    
@@ -869,7 +765,7 @@ function DrawSignatureDialog()
    this.directMode_Radio.onCheck = function(checked) {
       if (checked) {
          engine.integrationMode = 1;
-         dlg.updateIntegrationModeUI();
+         self.updateIntegrationModeUI();
       }
    };
    
@@ -880,7 +776,7 @@ function DrawSignatureDialog()
    this.detailedMode_Radio.onCheck = function(checked) {
       if (checked) {
          engine.integrationMode = 2;
-         dlg.updateIntegrationModeUI();
+         self.updateIntegrationModeUI();
       }
    };
    
@@ -898,7 +794,7 @@ function DrawSignatureDialog()
    
    this.exposure_Label = new Label(this);
    this.exposure_Label.text = "Exposure(s):";
-   this.exposure_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   this.exposure_Label.textAlignment = TextAlignment.Right|TextAlignment.VertCenter;
    
    this.exposure_Edit = new Edit(this);
    this.exposure_Edit.text = engine.exposure ? String(engine.exposure) : "";
@@ -910,7 +806,7 @@ function DrawSignatureDialog()
 
    this.frames_Label = new Label(this);
    this.frames_Label.text = "Frames:";
-   this.frames_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   this.frames_Label.textAlignment = TextAlignment.Right|TextAlignment.VertCenter;
 
    this.frames_Edit = new Edit(this);
    this.frames_Edit.text = engine.frames ? String(engine.frames) : "";
@@ -937,7 +833,7 @@ function DrawSignatureDialog()
    
    this.directIntegration_Label = new Label(this);
    this.directIntegration_Label.text = "Total Integration:";
-   this.directIntegration_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   this.directIntegration_Label.textAlignment = TextAlignment.Right|TextAlignment.VertCenter;
    
    this.directIntegration_Edit = new Edit(this);
    this.directIntegration_Edit.text = engine.directIntegration || "";
@@ -970,7 +866,7 @@ function DrawSignatureDialog()
       var row = {};
       var detail = engine.filterDetails[index] || {filter: "", exposure: "", frames: ""};
       
-      row.filter_Edit = new Edit(dlg);
+      row.filter_Edit = new Edit(self);
       row.filter_Edit.text = detail.filter || "";
       row.filter_Edit.toolTip = "Filter name (e.g., L, R, G, B, Ha, OIII, SII)";
       row.filter_Edit.setFixedWidth(60);
@@ -978,7 +874,7 @@ function DrawSignatureDialog()
          engine.filterDetails[index].filter = this.text;
       };
       
-      row.exposure_Edit = new Edit(dlg);
+      row.exposure_Edit = new Edit(self);
       row.exposure_Edit.text = detail.exposure || "";
       row.exposure_Edit.toolTip = "Exposure time in seconds";
       row.exposure_Edit.setFixedWidth(60);
@@ -986,7 +882,7 @@ function DrawSignatureDialog()
          engine.filterDetails[index].exposure = this.text;
       };
       
-      row.frames_Edit = new Edit(dlg);
+      row.frames_Edit = new Edit(self);
       row.frames_Edit.text = detail.frames || "";
       row.frames_Edit.toolTip = "Number of frames";
       row.frames_Edit.setFixedWidth(60);
@@ -997,11 +893,11 @@ function DrawSignatureDialog()
       row.sizer = new HorizontalSizer;
       row.sizer.spacing = 4;
       
-      var filterLabel = new Label(dlg);
+      var filterLabel = new Label(self);
       filterLabel.text = "Filter:";
-      var expLabel = new Label(dlg);
+      var expLabel = new Label(self);
       expLabel.text = "Exp(s):";
-      var framesLabel = new Label(dlg);
+      var framesLabel = new Label(self);
       framesLabel.text = "Frames:";
       
       row.sizer.add(filterLabel);
@@ -1020,16 +916,16 @@ function DrawSignatureDialog()
    // Initialize filter rows
    this.rebuildFilterRows = function() {
       // Clear existing rows
-      for (var i = 0; i < dlg.filterRows.length; i++) {
-         dlg.filterRowsSizer.remove(dlg.filterRows[i].sizer);
+      for (var i = 0; i < self.filterRows.length; i++) {
+         self.filterRowsSizer.remove(self.filterRows[i].sizer);
       }
-      dlg.filterRows = [];
+      self.filterRows = [];
       
       // Create rows for each filter detail
       for (var i = 0; i < engine.filterDetails.length; i++) {
-         var row = dlg.createFilterRow(i);
-         dlg.filterRows.push(row);
-         dlg.filterRowsSizer.add(row.sizer);
+         var row = self.createFilterRow(i);
+         self.filterRows.push(row);
+         self.filterRowsSizer.add(row.sizer);
       }
    };
    
@@ -1039,10 +935,10 @@ function DrawSignatureDialog()
    this.addFilter_Button.toolTip = "Add another filter entry";
    this.addFilter_Button.onClick = function() {
       engine.filterDetails.push({filter: "", exposure: "", frames: ""});
-      var row = dlg.createFilterRow(engine.filterDetails.length - 1);
-      dlg.filterRows.push(row);
-      dlg.filterRowsSizer.add(row.sizer);
-      dlg.adjustToContents();
+      var row = self.createFilterRow(engine.filterDetails.length - 1);
+      self.filterRows.push(row);
+      self.filterRowsSizer.add(row.sizer);
+      self.adjustToContents();
    };
    
    this.removeFilter_Button = new PushButton(this);
@@ -1051,9 +947,9 @@ function DrawSignatureDialog()
    this.removeFilter_Button.onClick = function() {
       if (engine.filterDetails.length > 1) {
          engine.filterDetails.pop();
-         var row = dlg.filterRows.pop();
-         dlg.filterRowsSizer.remove(row.sizer);
-         dlg.adjustToContents();
+         var row = self.filterRows.pop();
+         self.filterRowsSizer.remove(row.sizer);
+         self.adjustToContents();
       }
    };
    
@@ -1075,9 +971,9 @@ function DrawSignatureDialog()
    
    // Function to show/hide mode controls based on selection
    this.updateIntegrationModeUI = function() {
-      dlg.simpleMode_GroupBox.visible = (engine.integrationMode === 0);
-      dlg.directMode_GroupBox.visible = (engine.integrationMode === 1);
-      dlg.detailedMode_GroupBox.visible = (engine.integrationMode === 2);
+      self.simpleMode_GroupBox.visible = (engine.integrationMode === 0);
+      self.directMode_GroupBox.visible = (engine.integrationMode === 1);
+      self.detailedMode_GroupBox.visible = (engine.integrationMode === 2);
    };
    
    // Initial visibility update
@@ -1094,7 +990,7 @@ function DrawSignatureDialog()
    // Date
    this.date_Label = new Label(this);
    this.date_Label.text = "Date:";
-   this.date_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   this.date_Label.textAlignment = TextAlignment.Right|TextAlignment.VertCenter;
    this.date_Label.minWidth = labelWidth1 - this.logicalPixelsToPhysical( 4+1 );
    
    this.date_Edit = new Edit(this);
@@ -1109,7 +1005,7 @@ function DrawSignatureDialog()
    // Location
    this.location_Label = new Label(this);
    this.location_Label.text = "Location:";
-   this.location_Label.textAlignment = TextAlign_Right|TextAlign_VertCenter;
+   this.location_Label.textAlignment = TextAlignment.Right|TextAlignment.VertCenter;
    this.location_Label.minWidth = labelWidth1 - this.logicalPixelsToPhysical( 4+1 );
    
    this.location_Edit = new Edit(this);
@@ -1133,16 +1029,16 @@ function DrawSignatureDialog()
    this.zoomInButton.text = "";
    this.zoomInButton.icon = this.scaledResource(":/icons/zoom-in.png");
    this.zoomInButton.toolTip = "Zoom In";
-   this.zoomInButton.onClick = () => {
-      this.previewControl.zoomIn();
+   this.zoomInButton.onClick = function() {
+      self.previewControl.zoomIn();
    };
 
    this.zoomOutButton = new PushButton(this);
    this.zoomOutButton.text = "";
    this.zoomOutButton.icon = this.scaledResource(":/icons/zoom-out.png");
    this.zoomOutButton.toolTip = "Zoom Out";
-   this.zoomOutButton.onClick = () => {
-      this.previewControl.zoomOut();
+   this.zoomOutButton.onClick = function() {
+      self.previewControl.zoomOut();
    };
 
    this.zoomLabel = new Label(this);
@@ -1173,87 +1069,17 @@ function DrawSignatureDialog()
    leftSizer.add(this.buttons_Sizer);
    // leftSizer.addStretch();
 
-   // --- Add updatePreview method to the dialog instance ---
    this.updatePreview = function() {
       if (!engine.targetView || engine.targetView.isNull)
          return;
       var previewImage = new Image(engine.targetView.image);
-      var font = new Font(engine.fontFace);
-      font.pixelSize = engine.fontSize;
-      var text = engine.composeText();
-      var lines = text.split("\n");
-      var innerMargin = Math.round(font.pixelSize/5);
-      var linePadding = 10; // Add 10px padding between lines
-      var maxWidth = 0;
-      for (var i = 0; i < lines.length; ++i)
-         maxWidth = Math.max(maxWidth, font.width(lines[i]));
-      var width = maxWidth + 2*innerMargin;
-      var height = font.ascent*lines.length + font.descent + 2*innerMargin + (lines.length > 1 ? (lines.length-1)*linePadding : 0);
-      var bmp = new Bitmap(width, height);
-      bmp.fill(0x00000000);
-      var G = new Graphics(bmp);
-      G.font = font;
-      G.pen = new Pen(0xFFFFFFFF);
-      G.transparentBackground = true;
-      G.textAntialiasing = true;
-      for (var i = 0; i < lines.length; ++i)
-         G.drawText(
-            innerMargin,
-            height - font.descent - innerMargin - (lines.length-1-i)*(font.ascent + linePadding),
-            lines[i]
-         );
-      G.end();
-      
-      // Apply text opacity
-      var textBmp = engine.applyOpacity(bmp, engine.textOpacity);
-      previewImage.selectedPoint = new Point(engine.margin, previewImage.height - engine.margin - height);
-      previewImage.blend(textBmp);
-
-        var logoPath = logoDir;
-        console.writeln("Logo path resolved to: " + logoPath);
-
-        //check if the logo file exists
-        if (!File.exists(logoPath)) {
-            console.criticalln("Logo file not found!");
-        } else {
-            console.writeln("Logo file exists. Trying to load bitmap...");
-        }
-
-        if(engine.showLogo) {
-            try {
-                var logoBmp = new Bitmap(logoPath);
-                console.writeln("Bitmap loaded. Size: " + logoBmp.width + "x" + logoBmp.height);
-
-                // Apply logo opacity
-                var logoWithOpacity = engine.applyOpacity(logoBmp, engine.logoOpacity);
-                
-                var x = previewImage.width - engine.margin - logoBmp.width;
-                var y = previewImage.height - engine.margin - logoBmp.height;
-
-                previewImage.selectedPoint = new Point(x, y);
-                previewImage.blend(logoWithOpacity);
-            } catch (e) {
-                console.criticalln("Failed to create Bitmap: " + e.toString());
-            }
-        }
+      engine.renderSignature(previewImage, false);
       this.previewControl.doUpdateImage(previewImage);
    };
 
-   // Target image selection
-   this.targetImage_ViewList.onViewSelected = function(view) {
-      engine.targetView = view;
-      this.updatePreview();
-   };
-
-   // Ensure preview updates on dialog show (fixes initial text not updating)
    this.onShow = function() {
-      this._fitZoomInitialized = false;
       this.updatePreview();
    };
-
-   // Initial preview
-   this._fitZoomInitialized = false;
-   this.updatePreview();
 
    var rightSizer = new VerticalSizer;
    rightSizer.spacing = 6;
@@ -1271,12 +1097,12 @@ function DrawSignatureDialog()
    this.windowTitle = #TITLE + " Script";
    this.adjustToContents();
    this.setFixedSize();
+   }
 }
-DrawSignatureDialog.prototype = new Dialog;
 
-function DrawSignaturePreviewControl(parent) {
-   this.__base__ = ScrollBox;
-   this.__base__(parent);
+class DrawSignaturePreviewControl extends ScrollBox {
+   constructor(parent) {
+      super(parent);
 
    // Larger preview area
    this.setMinWidth(900);
@@ -1286,6 +1112,7 @@ function DrawSignaturePreviewControl(parent) {
    this.tracking = true;
 
    this.previewImage = null;
+   this.previewBitmap = null;
    this.zoomFactor = 1.0;
    this.minZoomFactor = 0.1;
    this.maxZoomFactor = 10.0;
@@ -1297,7 +1124,12 @@ function DrawSignaturePreviewControl(parent) {
    };
 
    this.doUpdateImage = function(image) {
+      if (this.previewImage && this.previewImage !== image)
+         this.previewImage.free();
+      if (this.previewBitmap)
+         this.previewBitmap.clear();
       this.previewImage = image;
+      this.previewBitmap = (image && image.width > 0 && image.height > 0) ? image.render() : null;
       // Automatically set zoom to fit the image to the viewport
       if (this.viewport && image && image.width > 0 && image.height > 0) {
          var fitZoom = Math.min(
@@ -1365,7 +1197,7 @@ function DrawSignaturePreviewControl(parent) {
       parent.dragging = true;
       parent.dragOrigin.x = x;
       parent.dragOrigin.y = y;
-      this.cursor = new Cursor(StdCursor_ClosedHand);
+      this.cursor = new Cursor(StdCursor.ClosedHand);
    };
    this.viewport.onMouseMove = function(x, y, buttons, modifiers) {
       var parent = this.parent;
@@ -1382,7 +1214,7 @@ function DrawSignaturePreviewControl(parent) {
       }
    };
    this.viewport.onMouseRelease = function(x, y, button, buttons, modifiers) {
-      this.cursor = new Cursor(StdCursor_OpenHand);
+      this.cursor = new Cursor(StdCursor.OpenHand);
       this.parent.dragging = false;
    };
 
@@ -1394,16 +1226,15 @@ function DrawSignaturePreviewControl(parent) {
    // Paint the preview with zoom and scroll
    this.viewport.onPaint = function(x0, y0, x1, y1) {
       var g = new Graphics(this);
-      var previewImage = this.parent.previewImage;
+      var previewBitmap = this.parent.previewBitmap;
       var zoom = this.parent.zoomFactor;
       var scroll = this.parent.scrollPosition || new Point(0, 0);
-      if (previewImage && previewImage.width > 0 && previewImage.height > 0) {
-         g.fillRect(x0, y0, x1, y1, new Brush(0xff222222));
+      g.fillRect(x0, y0, x1, y1, new Brush(0xff222222));
+      if (previewBitmap) {
          g.scaleTransformation(zoom);
          g.translateTransformation(-scroll.x / zoom, -scroll.y / zoom);
-         g.drawBitmap(0, 0, previewImage.render());
+         g.drawBitmap(0, 0, previewBitmap);
       } else {
-         g.fillRect(x0, y0, x1, y1, new Brush(0xff222222));
          g.drawText(10, 30, "No preview available");
       }
       g.end();
@@ -1411,8 +1242,8 @@ function DrawSignaturePreviewControl(parent) {
 
    // Initial scrollbars
    this.initScrollBars();
+   }
 }
-DrawSignaturePreviewControl.prototype = new ScrollBox;
 
 /*
  * Script entry point.
@@ -1430,7 +1261,7 @@ function main()
    }
 
 #ifndef __DEBUG__
-   console.hide();
+   Console.hide();
 #endif
 
    // If the script is being executed either directly or in the global context,
@@ -1438,7 +1269,7 @@ function main()
    if ( !engine.targetView )
    {
       var msg = new MessageBox( "There is no active image window!",
-                                (#TITLE + " Script"), StdIcon_Error, StdButton_Ok );
+                                (#TITLE + " Script"), StdIcon.Error, StdButton.Ok );
       msg.execute();
       return;
    }
@@ -1454,7 +1285,7 @@ function main()
       if ( engine.targetView.isNull )
       {
          var msg = new MessageBox( "You must select a view to apply this script.",
-                                   (#TITLE + " Script"), StdIcon_Error, StdButton_Ok );
+                                   (#TITLE + " Script"), StdIcon.Error, StdButton.Ok );
          msg.execute();
          continue;
       }
@@ -1476,3 +1307,5 @@ function getFITSKeyword(view, key) {
          return view.keywords[i].strippedValue || view.keywords[i].value || "";
    return "";
 }
+
+})();

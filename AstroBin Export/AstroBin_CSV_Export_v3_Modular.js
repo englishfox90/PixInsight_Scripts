@@ -8,6 +8,7 @@
  * Modular structure for easier maintenance and debugging.
  */
 
+#engine v8
 #feature-id    AstroBinExport : PFRAstro > AstroBin Export
 
 #feature-info   Scans a folder of image files, extracts metadata, and generates an export file \
@@ -15,22 +16,12 @@
                 the process of creating image entries on AstroBin.
 
 #feature-icon  @script_icons_dir/AstroBin.svg
+CoreApplication.ensureMinimumVersion( 1, 9, 4 );
 
 // === SCRIPT ISOLATION WRAPPER ===
 // Wraps entire script in IIFE (Immediately Invoked Function Expression) to prevent global scope pollution
 (function() {
 "use strict";  // Enables strict mode to catch accidental global variable assignments
-
-// Include necessary PJSR libraries for UI functionality
-#include <pjsr/Sizer.jsh>
-#include <pjsr/FrameStyle.jsh>
-#include <pjsr/TextAlign.jsh>
-#include <pjsr/StdButton.jsh>
-#include <pjsr/StdIcon.jsh>
-#include <pjsr/Color.jsh>
-#include <pjsr/FontFamily.jsh>
-// Needed for DataType_* constants used by Settings.read/write
-#include <pjsr/DataType.jsh>
 
 // Include our modular components
 #include "AstroBin-core.js"

@@ -3,8 +3,11 @@
  * Dialog method implementations and event handlers
  */
 
+// NOTE: AstroBinDialog class body is opened in AstroBin-gui.js.
+// This file continues that class body and closes it after calculateTotalIntegrationTime().
+
 // Method implementations
-AstroBinDialog.prototype.scanForFiles = function()
+scanForFiles()
 {
    if (!CONFIG.rootDir) return;
 
@@ -39,9 +42,9 @@ AstroBinDialog.prototype.scanForFiles = function()
       Console.criticalln("Error scanning files: " + e);
       this.fileCountLabel.text = "Error scanning files";
    }
-};
+}
 
-AstroBinDialog.prototype.showExcludePatternHelp = function()
+showExcludePatternHelp()
 {
    var msg =
       "<b>Exclude Pattern Help</b><br><br>" +
@@ -66,11 +69,11 @@ AstroBinDialog.prototype.showExcludePatternHelp = function()
 
       "<i>Leave empty to include all files. Applied on Analyze Images.</i>";
 
-   var msgBox = new MessageBox(msg, "Exclude Pattern Help", StdIcon_Information, StdButton_Ok);
+   var msgBox = new MessageBox(msg, "Exclude Pattern Help", StdIcon.Information, StdButton.Ok);
    msgBox.execute();
-};
+}
 
-AstroBinDialog.prototype.analyzeImages = function()
+analyzeImages()
 {
    if (g_imageFiles.length === 0) {
       Console.warningln("No files to analyze. Please select a directory first.");
@@ -83,18 +86,18 @@ AstroBinDialog.prototype.analyzeImages = function()
    // Reset UI controls to enabled state for new analysis
    this.resetGlobalParametersUI();
    
-   processEvents();
+   CoreApplication.processEvents();
    
    try {
       // Filter mappings are now handled by the JavaScript database
       Console.writeln("Using JavaScript filter database...");
       this.analysisStatusLabel.text = "Using filter database...";
-      processEvents();
+      CoreApplication.processEvents();
       
       // Analyze files with progress updates
       Console.writeln("Analyzing image files...");
       this.analysisStatusLabel.text = "Extracting metadata from images...";
-      processEvents();
+      CoreApplication.processEvents();
       
       try {
          var result = analyzeFiles(g_imageFiles);
@@ -117,7 +120,7 @@ AstroBinDialog.prototype.analyzeImages = function()
       // Aggregate data
       Console.writeln("Aggregating data...");
       this.analysisStatusLabel.text = "Grouping acquisition sessions...";
-      processEvents();
+      CoreApplication.processEvents();
       
       try {
          g_analysisData = aggregate(rows, globalData);
@@ -129,7 +132,7 @@ AstroBinDialog.prototype.analyzeImages = function()
       
       Console.writeln("Populating results table...");
       this.analysisStatusLabel.text = "Updating display...";
-      processEvents();
+      CoreApplication.processEvents();
       
       this.populateImageTree();
       
@@ -147,10 +150,10 @@ AstroBinDialog.prototype.analyzeImages = function()
       this.analyzeButton.enabled = true;
       this.updateUI();
    }
-};
+}
 
 // Method to populate global parameters from image metadata
-AstroBinDialog.prototype.populateGlobalParametersFromMetadata = function(globalData)
+populateGlobalParametersFromMetadata(globalData)
 {
    if (!globalData) return;
    
@@ -209,10 +212,10 @@ AstroBinDialog.prototype.populateGlobalParametersFromMetadata = function(globalD
    if (globalData.skyTemp !== undefined) {
       Console.writeln("Available sky temperature: " + globalData.skyTemp + "°C");
    }
-};
+}
 
 // Reset global parameters UI to enabled state for new analysis
-AstroBinDialog.prototype.resetGlobalParametersUI = function()
+resetGlobalParametersUI()
 {
    // Re-enable all input controls
    this.darksEdit.enabled = true;
@@ -242,9 +245,9 @@ AstroBinDialog.prototype.resetGlobalParametersUI = function()
    // Reset info label
    this.metadataInfoLabel.text = "Analyzing images to detect available metadata...";
    this.metadataInfoLabel.styleSheet = "QLabel { color: #666; font-size: 9pt; }";
-};
+}
 
-AstroBinDialog.prototype.populateImageTree = function()
+populateImageTree()
 {
    this.imageTreeBox.clear();
    
@@ -298,11 +301,11 @@ AstroBinDialog.prototype.populateImageTree = function()
       // Store data index for editing
       node.dataIndex = i;
    }
-   
-   this.updateUI();
-};
 
-AstroBinDialog.prototype.generateCSV = function()
+   this.updateUI();
+}
+
+generateCSV()
 {
    if (g_analysisData.length === 0) {
       Console.warningln("No data to export. Please analyze images first.");
@@ -352,9 +355,9 @@ AstroBinDialog.prototype.generateCSV = function()
    } catch (e) {
       Console.criticalln("Error generating CSV: " + e);
    }
-};
+}
 
-AstroBinDialog.prototype.createCSVContent = function(data)
+createCSVContent(data)
 {
    var lines = [];
    
@@ -467,9 +470,9 @@ AstroBinDialog.prototype.createCSVContent = function(data)
    }
    
    return lines.join("\n");
-};
+}
 
-AstroBinDialog.prototype.saveCSVFile = function()
+saveCSVFile()
 {
    if (!this.csvPreviewTextBox.text) return;
    
@@ -486,19 +489,19 @@ AstroBinDialog.prototype.saveCSVFile = function()
          Console.criticalln("Error saving CSV file: " + e);
       }
    }
-};
+}
 
-AstroBinDialog.prototype.copyCSVToClipboard = function()
+copyCSVToClipboard()
 {
    if (!this.csvPreviewTextBox.text) return;
    
    // Note: PixInsight doesn't have direct clipboard access, so we show a message
    Console.noteln("CSV content is in the preview box. Please select all text and copy manually.");
    this.csvPreviewTextBox.selectAll();
-};
+}
 
    // Modal: Export Columns selection
-   AstroBinDialog.prototype.showExportColumnsDialog = function()
+   showExportColumnsDialog()
    {
       var dlg = new Dialog(this);
       dlg.windowTitle = "Export Columns";
@@ -585,9 +588,9 @@ AstroBinDialog.prototype.copyCSVToClipboard = function()
       cancelBtn.onClick = function(){ dlg.cancel(); };
 
       dlg.execute();
-   };
+   }
 
-AstroBinDialog.prototype.updateConfigFromUI = function()
+updateConfigFromUI()
 {
    CONFIG.darks = this.darksEdit.text;
    CONFIG.flats = this.flatsEdit.text;
@@ -598,18 +601,18 @@ AstroBinDialog.prototype.updateConfigFromUI = function()
    CONFIG.meanFwhm = this.meanFwhmEdit.text;
    CONFIG.ambientTemp = this.temperatureEdit.text;
    CONFIG.preferredFilterBrand = this.filterBrandCombo.itemText(this.filterBrandCombo.currentItem);
-};
+}
 
-AstroBinDialog.prototype.updateUI = function()
+updateUI()
 {
    this.analyzeButton.enabled = (g_imageFiles.length > 0);
    this.mapFiltersButton.enabled = (g_analysisData.length > 0);
    this.generateCSVButton.enabled = (g_analysisData.length > 0);
    this.summaryButton.enabled = (g_analysisData.length > 0);
-};
+}
 
 // Override ok() to save Bortle setting when dialog closes
-AstroBinDialog.prototype.ok = function()
+ok()
 {
    // Update CONFIG from UI before saving
    this.updateConfigFromUI();
@@ -618,11 +621,11 @@ AstroBinDialog.prototype.ok = function()
    saveBortleScale(CONFIG.bortle);
    
    // Call parent Dialog.ok() to close dialog
-   Dialog.prototype.ok.call(this);
-};
+   super.ok();
+}
 
 // Convert Bortle Scale to SQM estimate
-AstroBinDialog.prototype.updateSQMFromBortle = function()
+updateSQMFromBortle()
 {
    var bortleValue = parseFloat(CONFIG.bortle);
    if (isNaN(bortleValue) || bortleValue < 1 || bortleValue > 9) {
@@ -636,10 +639,10 @@ AstroBinDialog.prototype.updateSQMFromBortle = function()
       this.meanSqmEdit.text = CONFIG.meanSqm;
       Console.writeln("Estimated SQM " + CONFIG.meanSqm + " mag/arcsec² from Bortle Class " + bortleValue);
    }
-};
+}
 
 // Bortle to SQM conversion lookup
-AstroBinDialog.prototype.bortleToSQM = function(bortleClass)
+bortleToSQM(bortleClass)
 {
    // Based on typical Bortle-SQM relationships
    var sqmValues = {
@@ -656,11 +659,11 @@ AstroBinDialog.prototype.bortleToSQM = function(bortleClass)
    
    var roundedClass = Math.round(bortleClass);
    return sqmValues[roundedClass] || 19.0; // Default fallback
-};
+}
 
-AstroBinDialog.prototype.showAbout = function()
+showAbout()
 {
-   var msg = "<b>AstroBin CSV Export v3.0</b><br><br>" +
+   var msg = "<b>AstroBin CSV Export v" + SCRIPT_VERSION + "</b><br><br>" +
              "Enhanced tool for generating CSV files compatible with AstroBin's acquisition data import.<br><br>" +
              "<b>Features:</b><br>" +
              "• Automatic metadata extraction from FITS/XISF files<br>" +
@@ -690,12 +693,12 @@ AstroBinDialog.prototype.showAbout = function()
              "4. Map filters to AstroBin IDs and generate CSV<br><br>" +
              "Supports FITS and XISF image formats.";
              
-   var msgBox = new MessageBox(msg, "About AstroBin CSV Export", StdIcon_Information, StdButton_Ok);
+   var msgBox = new MessageBox(msg, "About AstroBin CSV Export", StdIcon.Information, StdButton.Ok);
    msgBox.execute();
-};
+}
 
 // Filter Mapping Dialog
-AstroBinDialog.prototype.showFilterMappingDialog = function()
+showFilterMappingDialog()
 {
    if (g_analysisData.length === 0) {
       Console.warningln("No analysis data available. Please analyze images first.");
@@ -721,14 +724,302 @@ AstroBinDialog.prototype.showFilterMappingDialog = function()
       Console.criticalln("Error creating or executing filter mapping dialog: " + e);
       Console.criticalln("Stack trace: " + (e.stack || "No stack trace available"));
    }
-};
+}
+
+// Integration Summary Dialog
+showIntegrationSummary()
+{
+   if (g_analysisData.length === 0) {
+      return;
+   }
+
+   try {
+      // Calculate summary statistics
+      var stats = this.calculateIntegrationStats();
+
+      var msg = "<b>🌟 Integration Session Summary</b><br><br>" +
+
+                "<b>📊 Total Integration:</b><br>" +
+                "• Total time: " + this.formatDuration(stats.totalIntegrationTime) + "<br>" +
+                "• Images captured: " + stats.totalImages + " frames<br>" +
+                "• Sessions detected: " + stats.sessionCount + "<br>" +
+                "• Date range: " + stats.dateRange + "<br><br>" +
+
+                "<b>🔭 Filter Breakdown:</b><br>" +
+                stats.filterStats + "<br>" +
+
+                "<b>⚙️ Acquisition Settings:</b><br>" +
+                "• Exposure times: " + stats.exposureTimes + "<br>" +
+                "• Binning modes: " + stats.binningModes + "<br>" +
+                "• Gain settings: " + stats.gainSettings + "<br>" +
+                "• F-ratios: " + stats.fNumberSettings + "<br><br>" +
+
+                "<b>🌡️ Environmental Conditions:</b><br>" +
+                "• Temperature range: " + stats.tempRange + "<br>" +
+                "• Sensor cooling: " + stats.coolingRange + "<br>" +
+                "• Sky quality: " + stats.skyQuality + "<br><br>" +
+
+                "<b>📈 Session Quality:</b><br>" +
+                "• Longest session: " + this.formatDuration(stats.longestSession) + "<br>" +
+                "• Most productive filter: " + stats.mostProductiveFilter + "<br>" +
+                "• Average session length: " + this.formatDuration(stats.avgSessionLength) + "<br><br>" +
+
+                "<b>🎯 Calibration Ready:</b><br>" +
+                "• Dark frames needed: " + (CONFIG.darks || "Not set") + "<br>" +
+                "• Flat frames needed: " + (CONFIG.flats || "Not set") + "<br>" +
+                "• Bias frames needed: " + (CONFIG.bias || "Not set") + "<br><br>" +
+
+                "<b>💡 Session Insights:</b><br>" +
+                stats.insights;
+
+      var msgBox = new MessageBox(msg, "Integration Session Summary", StdIcon.Information, StdButton.Ok);
+      msgBox.execute();
+
+   } catch (e) {
+      Console.warningln("Error generating integration summary: " + e);
+   }
+}
+
+calculateIntegrationStats()
+{
+   var stats = {
+      totalIntegrationTime: 0,
+      totalImages: 0,
+      sessionCount: g_analysisData.length,
+      dateRange: "",
+      filterStats: "",
+      exposureTimes: "",
+      binningModes: "",
+      gainSettings: "",
+      fNumberSettings: "",
+      tempRange: "",
+      coolingRange: "",
+      skyQuality: "",
+      longestSession: 0,
+      mostProductiveFilter: "",
+      avgSessionLength: 0,
+      insights: ""
+   };
+
+   var filters = {};
+   var exposures = {};
+   var binnings = {};
+   var gains = {};
+   var fNumbers = {};
+   var temperatures = [];
+   var coolings = [];
+   var dates = [];
+   var sessionTimes = [];
+
+   // Process each session
+   for (var i = 0; i < g_analysisData.length; i++) {
+      var session = g_analysisData[i];
+      if (session.excluded) continue;
+      var sessionTime = parseFloat(session.duration || 0) * parseInt(session.number || 0);
+
+      stats.totalIntegrationTime += sessionTime;
+      stats.totalImages += parseInt(session.number || 0);
+      sessionTimes.push(sessionTime);
+
+      // Track filter usage
+      var filterKey = session.filter || "No Filter";
+      if (!filters[filterKey]) {
+         filters[filterKey] = { time: 0, frames: 0 };
+      }
+      filters[filterKey].time += sessionTime;
+      filters[filterKey].frames += parseInt(session.number || 0);
+
+      // Track unique settings
+      if (session.duration) exposures[session.duration] = true;
+      if (session.binning) binnings[session.binning] = true;
+      if (session.gain) gains[session.gain] = true;
+      if (session.fNumber) fNumbers[session.fNumber] = true;
+
+      // Track environmental data
+      if (session.temperature && session.temperature !== "" && session.temperature !== "0") {
+         temperatures.push(parseFloat(session.temperature));
+      }
+      if (session.sensorCooling && session.sensorCooling !== "" && session.sensorCooling !== "0") {
+         coolings.push(parseFloat(session.sensorCooling));
+      }
+
+      // Track dates
+      if (session.date) dates.push(session.date);
+   }
+
+   // Calculate longest session
+   stats.longestSession = Math.max.apply(Math, sessionTimes);
+   stats.avgSessionLength = stats.totalIntegrationTime / stats.sessionCount;
+
+   // Find most productive filter
+   var maxTime = 0;
+   for (var filter in filters) {
+      if (filters[filter].time > maxTime) {
+         maxTime = filters[filter].time;
+         stats.mostProductiveFilter = filter + " (" + this.formatDuration(filters[filter].time) + ")";
+      }
+   }
+
+   // Format filter stats
+   var filterLines = [];
+   for (var filter in filters) {
+      var f = filters[filter];
+      filterLines.push("&nbsp;&nbsp;• " + filter + ": " + this.formatDuration(f.time) + " (" + f.frames + " frames)");
+   }
+   stats.filterStats = filterLines.join("<br>");
+
+   // Format setting ranges
+   stats.exposureTimes = Object.keys(exposures).sort((a,b) => parseFloat(a) - parseFloat(b)).join("s, ") + "s";
+   stats.binningModes = Object.keys(binnings).sort().join(", ");
+   stats.gainSettings = Object.keys(gains).sort((a,b) => parseInt(a) - parseInt(b)).join(", ");
+   stats.fNumberSettings = Object.keys(fNumbers).sort((a,b) => parseFloat(a) - parseFloat(b)).join(", ");
+
+   // Format temperature range
+   if (temperatures.length > 0) {
+      var minTemp = Math.min.apply(Math, temperatures);
+      var maxTemp = Math.max.apply(Math, temperatures);
+      stats.tempRange = minTemp.toFixed(1) + "°C to " + maxTemp.toFixed(1) + "°C";
+   } else {
+      stats.tempRange = "Not available in FITS";
+   }
+
+   // Format cooling range
+   if (coolings.length > 0) {
+      var minCool = Math.min.apply(Math, coolings);
+      var maxCool = Math.max.apply(Math, coolings);
+      stats.coolingRange = minCool.toFixed(1) + "°C to " + maxCool.toFixed(1) + "°C";
+   } else {
+      stats.coolingRange = "Not available in FITS";
+   }
+
+   // Format sky quality
+   var sqmValue = CONFIG.meanSqm;
+   var bortleValue = CONFIG.bortle;
+   if (sqmValue && sqmValue !== "" && sqmValue !== "0") {
+      var sqmFloat = parseFloat(sqmValue);
+      var quality = "";
+      if (sqmFloat > 21.5) quality = " (Excellent dark site)";
+      else if (sqmFloat > 20.5) quality = " (Good dark site)";
+      else if (sqmFloat > 19.0) quality = " (Suburban)";
+      else if (sqmFloat > 17.0) quality = " (Urban)";
+      else quality = " (Inner city)";
+      stats.skyQuality = sqmValue + " mag/arcsec²" + quality;
+   } else if (bortleValue && bortleValue !== "" && bortleValue !== "0") {
+      stats.skyQuality = "Bortle Class " + bortleValue + " (SQM estimated)";
+   } else {
+      stats.skyQuality = "Not specified";
+   }
+
+   // Format date range
+   if (dates.length > 0) {
+      dates.sort();
+      if (dates.length === 1) {
+         stats.dateRange = dates[0];
+      } else {
+         stats.dateRange = dates[0] + " to " + dates[dates.length - 1];
+      }
+   }
+
+   // Generate insights for astrophotographers
+   var insights = [];
+
+   // Integration time insights
+   if (stats.totalIntegrationTime > 7200) { // > 2 hours
+      insights.push("• Great integration time! " + this.formatDuration(stats.totalIntegrationTime) + " should provide excellent SNR");
+   } else if (stats.totalIntegrationTime > 3600) { // > 1 hour
+      insights.push("• Good integration time of " + this.formatDuration(stats.totalIntegrationTime) + " for deep sky work");
+   } else {
+      insights.push("• Consider more integration time for better signal-to-noise ratio");
+   }
+
+   // Filter diversity
+   var filterCount = Object.keys(filters).length;
+   if (filterCount > 3) {
+      insights.push("• Excellent filter diversity (" + filterCount + " filters) for rich color data");
+   } else if (filterCount > 1) {
+      insights.push("• Good multi-filter approach for enhanced color information");
+   }
+
+   // Session consistency
+   if (sessionTimes.length > 1) {
+      var avgDiff = 0;
+      for (var i = 0; i < sessionTimes.length; i++) {
+         avgDiff += Math.abs(sessionTimes[i] - stats.avgSessionLength);
+      }
+      avgDiff = avgDiff / sessionTimes.length / stats.avgSessionLength;
+
+      if (avgDiff < 0.3) {
+         insights.push("• Consistent session lengths - excellent for balanced processing");
+      }
+   }
+
+   // Temperature stability
+   if (temperatures.length > 1) {
+      var tempRange = Math.max.apply(Math, temperatures) - Math.min.apply(Math, temperatures);
+      if (tempRange < 3) {
+         insights.push("• Excellent temperature stability (±" + (tempRange/2).toFixed(1) + "°C)");
+      } else if (tempRange < 8) {
+         insights.push("• Good temperature stability across sessions");
+      } else {
+         insights.push("• Wide temperature range - monitor thermal effects on calibration");
+      }
+   }
+
+   // Exposure time analysis
+   var expCount = Object.keys(exposures).length;
+   if (expCount === 1) {
+      insights.push("• Consistent exposure times - optimal for stacking workflow");
+   } else if (expCount > 3) {
+      insights.push("• Multiple exposure times detected - verify intentional for HDR/dithering");
+   }
+
+   stats.insights = insights.length > 0 ? insights.join("<br>") : "• Analysis complete - ready for calibration and processing";
+
+   return stats;
+}
+
+formatDuration(seconds)
+{
+   if (!seconds || seconds === 0) return "0 min";
+
+   var hours = Math.floor(seconds / 3600);
+   var minutes = Math.floor((seconds % 3600) / 60);
+   var secs = Math.floor(seconds % 60);
+
+   var parts = [];
+   if (hours > 0) parts.push(hours + "h");
+   if (minutes > 0) parts.push(minutes + "m");
+   if (secs > 0 && hours === 0) parts.push(secs + "s");
+
+   return parts.join(" ") || "0 min";
+}
+
+// Simple helper to calculate total integration time from analysis data
+calculateTotalIntegrationTime()
+{
+   if (!g_analysisData || g_analysisData.length === 0) return 0;
+
+   var totalSeconds = 0;
+   for (var i = 0; i < g_analysisData.length; i++) {
+      var data = g_analysisData[i];
+      if (data.excluded) continue;
+      var exposure = parseFloat(data.duration) || 0;
+      var count = parseInt(data.number, 10) || 0;
+      totalSeconds += exposure * count;
+   }
+
+   return totalSeconds;
+}
+
+} // end class AstroBinDialog
 
 // Filter Mapping Dialog Class
-function FilterMappingDialog(parentDialog)
+class FilterMappingDialog extends Dialog
 {
-   this.__base__ = Dialog;
-   this.__base__();
-   
+constructor(parentDialog)
+{
+   super();
+
    this.parentDialog = parentDialog; // Store reference to main dialog
    this.windowTitle = "Filter Mapping";
    this.scaledMinWidth = 900;  // Further increased width to accommodate wider manual entry field
@@ -743,9 +1034,7 @@ function FilterMappingDialog(parentDialog)
    this.populateFilterMappings();
 }
 
-FilterMappingDialog.prototype = new Dialog;
-
-FilterMappingDialog.prototype.getUniqueFilters = function()
+getUniqueFilters()
 {
    var filters = [];
    var seen = {};
@@ -759,9 +1048,9 @@ FilterMappingDialog.prototype.getUniqueFilters = function()
    }
    
    return filters.sort();
-};
+}
 
-FilterMappingDialog.prototype.createFilterMappingUI = function()
+createFilterMappingUI()
 {
    var self = this;
    
@@ -850,9 +1139,9 @@ FilterMappingDialog.prototype.createFilterMappingUI = function()
    this.sizer.add(this.personalGroupBox);
    this.sizer.add(this.filterMappingGroupBox, 100);
    this.sizer.add(this.buttonSizer);
-};
+}
 
-FilterMappingDialog.prototype.createPersonalFilterRow = function(role)
+createPersonalFilterRow(role)
 {
   var rowSizer = new HorizontalSizer;
   rowSizer.spacing = 4;
@@ -860,19 +1149,19 @@ FilterMappingDialog.prototype.createPersonalFilterRow = function(role)
   var label = new Label(this.personalGroupBox);
   label.text = role + ":";
   label.minWidth = 40;
-  label.textAlignment = TextAlign_Right | TextAlign_VertCenter;
+  label.textAlignment = TextAlignment.Right | TextAlignment.VertCenter;
 
   var brandCombo = new ComboBox(this.personalGroupBox);
   brandCombo.editEnabled = false;
-  brandCombo.minWidth = 130;
+  brandCombo.minWidth = 180;
   brandCombo.addItem("-- Brand --");
-  var brands = this.getUniqueBrands();
+  var brands = getFilterBrands();
   for (var i = 0; i < brands.length; i++) brandCombo.addItem(brands[i]);
   brandCombo.addItem("-- Manual Entry --");
 
   var filterCombo = new ComboBox(this.personalGroupBox);
   filterCombo.editEnabled = false;
-  filterCombo.minWidth = 180;
+  filterCombo.minWidth = 380;
   filterCombo.addItem("-- Filter --");
   filterCombo.enabled = false;
 
@@ -910,14 +1199,10 @@ FilterMappingDialog.prototype.createPersonalFilterRow = function(role)
   };
   filterCombo.onItemSelected = function(index){
      if (index === 0){ idLabel.text = ""; return; }
-     var selectedText = filterCombo.itemText(index);
-     for (var i = 0; i < ASTROBIN_FILTERS.length; i++) {
-        var f = ASTROBIN_FILTERS[i];
-        if ((f.display || f.name) === selectedText) {
-           idLabel.text = f.id.toString();
-           idLabel.styleSheet = "QLabel { border: 1px solid green; padding: 4px; background: #e6ffe6; }";
-           break;
-        }
+     var f = FILTER_BY_DISPLAY.get(filterCombo.itemText(index));
+     if (f) {
+        idLabel.text = f.id.toString();
+        idLabel.styleSheet = "QLabel { border: 1px solid green; padding: 4px; background: #e6ffe6; }";
      }
   };
   validateBtn.onClick = function(){
@@ -928,8 +1213,7 @@ FilterMappingDialog.prototype.createPersonalFilterRow = function(role)
      }
      var num = parseInt(entered,10);
      if (isNaN(num) || num <= 0){ idLabel.text = "Invalid"; idLabel.styleSheet = "QLabel { border: 1px solid red; padding: 4px; background: #ffe6e6; }"; return; }
-     // check presence
-     var exists = false; for (var i=0;i<ASTROBIN_FILTERS.length;i++){ if (ASTROBIN_FILTERS[i].id == num){ exists = true; break; } }
+     var exists = FILTER_BY_ID.has(num.toString());
      idLabel.text = num.toString();
      if (exists) idLabel.styleSheet = "QLabel { border: 1px solid green; padding: 4px; background: #e6ffe6; }"; else idLabel.styleSheet = "QLabel { border: 1px solid orange; padding: 4px; background: #fff3cd; }";
   };
@@ -938,9 +1222,9 @@ FilterMappingDialog.prototype.createPersonalFilterRow = function(role)
   rowSizer.add(label); rowSizer.add(brandCombo); rowSizer.add(filterCombo); rowSizer.add(manualEdit); rowSizer.add(validateBtn); rowSizer.add(idLabel); rowSizer.addStretch();
   this.personalGroupBox.sizer.add(rowSizer);
   this.personalControls[role] = {brandCombo: brandCombo, filterCombo: filterCombo, manualEdit: manualEdit, validateBtn: validateBtn, idLabel: idLabel};
-};
+}
 
-FilterMappingDialog.prototype.loadPersonalFilterSetIntoUI = function(){
+loadPersonalFilterSetIntoUI(){
   var set = getPersonalFilterSet();
   if (!set) return;
   for (var role in this.personalControls){
@@ -948,8 +1232,7 @@ FilterMappingDialog.prototype.loadPersonalFilterSetIntoUI = function(){
      if (!id) continue;
      // attempt to locate in database
      var ctrl = this.personalControls[role];
-     var target = null;
-     for (var i=0;i<ASTROBIN_FILTERS.length;i++){ if (ASTROBIN_FILTERS[i].id.toString()===id){ target=ASTROBIN_FILTERS[i]; break; } }
+     var target = FILTER_BY_ID.get(id);
      if (target){
         // select brand
         for (var bi=0; bi<ctrl.brandCombo.numberOfItems; bi++) if (ctrl.brandCombo.itemText(bi)===target.brand){ ctrl.brandCombo.currentItem=bi; break; }
@@ -961,9 +1244,9 @@ FilterMappingDialog.prototype.loadPersonalFilterSetIntoUI = function(){
         for (var mi=0; mi<ctrl.brandCombo.numberOfItems; mi++) if (ctrl.brandCombo.itemText(mi)==="-- Manual Entry --") { ctrl.brandCombo.currentItem=mi; ctrl.filterCombo.visible=false; ctrl.manualEdit.visible=true; ctrl.validateBtn.visible=true; ctrl.manualEdit.text=id; ctrl.validateBtn.onClick(); break; }
      }
   }
-};
+}
 
-FilterMappingDialog.prototype.savePersonalFilterSet = function(){
+savePersonalFilterSet(){
   var set = {L:"",R:"",G:"",B:"",Ha:"",OIII:"",SII:""};
   for (var role in this.personalControls){
      var id = this.personalControls[role].idLabel.text.trim();
@@ -974,9 +1257,9 @@ FilterMappingDialog.prototype.savePersonalFilterSet = function(){
   
   // Call the global save function to persist to PixInsight Settings
   savePersonalFilterSet(set);
-};
+}
 
-FilterMappingDialog.prototype.applyPersonalToSession = function(){
+applyPersonalToSession(){
    var set = getPersonalFilterSet();
    if (!set) {
       Console.warningln("[AstroBin] No personal filter set defined.");
@@ -1017,9 +1300,9 @@ FilterMappingDialog.prototype.applyPersonalToSession = function(){
    if (this.parentDialog && this.parentDialog.populateImageTree) {
       this.parentDialog.populateImageTree();
    }
-};
+}
 
-FilterMappingDialog.prototype.createFilterMappingRow = function(filterName)
+createFilterMappingRow(filterName)
 {
    var rowSizer = new HorizontalSizer;
    rowSizer.spacing = 4;
@@ -1042,16 +1325,16 @@ FilterMappingDialog.prototype.createFilterMappingRow = function(filterName)
    var filterLabel = new Label(this.filterMappingGroupBox);
    filterLabel.text = filterName + ":";
    filterLabel.minWidth = 120;  // Increased width for filter names
-   filterLabel.textAlignment = TextAlign_Right | TextAlign_VertCenter;
+   filterLabel.textAlignment = TextAlignment.Right | TextAlignment.VertCenter;
    
    // Brand selection combo
    var brandCombo = new ComboBox(this.filterMappingGroupBox);
    brandCombo.editEnabled = false;
-   brandCombo.minWidth = 150;  // Set consistent width
+   brandCombo.minWidth = 180;  // Set consistent width
    brandCombo.addItem("-- Select Brand --");
    
    // Get unique brands from filter database
-   var brands = this.getUniqueBrands();
+   var brands = getFilterBrands();
    for (var i = 0; i < brands.length; i++) {
       brandCombo.addItem(brands[i]);
    }
@@ -1060,7 +1343,7 @@ FilterMappingDialog.prototype.createFilterMappingRow = function(filterName)
    // Filter selection combo
    var filterCombo = new ComboBox(this.filterMappingGroupBox);
    filterCombo.editEnabled = false;
-   filterCombo.minWidth = 200;  // Set consistent width
+   filterCombo.minWidth = 380;  // Set consistent width
    filterCombo.addItem("-- Select Filter --");
    filterCombo.enabled = false; // Initially disabled
    
@@ -1083,9 +1366,9 @@ FilterMappingDialog.prototype.createFilterMappingRow = function(filterName)
    // Filter ID display
    var filterIdLabel = new Label(this.filterMappingGroupBox);
    filterIdLabel.text = "";
-   filterIdLabel.minWidth = 80;  // Increased width to show filter IDs properly
+   filterIdLabel.minWidth = 100;  // Increased width to show filter IDs properly
    filterIdLabel.maxHeight = 25; // Prevent vertical stretching
-   filterIdLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   filterIdLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
    filterIdLabel.styleSheet = "QLabel { border: 1px solid gray; padding: 4px; background: white; }";
    
    // Brand selection handler
@@ -1166,25 +1449,9 @@ FilterMappingDialog.prototype.createFilterMappingRow = function(filterName)
       validateIdButton: validateIdButton,
       excludeCheckBox: excludeCheckBox
    });
-};
+}
 
-FilterMappingDialog.prototype.getUniqueBrands = function()
-{
-   var brands = [];
-   var seen = {};
-   
-   for (var i = 0; i < ASTROBIN_FILTERS.length; i++) {
-      var brand = ASTROBIN_FILTERS[i].brand;
-      if (!seen[brand]) {
-         brands.push(brand);
-         seen[brand] = true;
-      }
-   }
-   
-   return brands.sort();
-};
-
-FilterMappingDialog.prototype.updateFilterCombo = function(brandCombo, filterCombo, filterIdLabel, filterName)
+updateFilterCombo(brandCombo, filterCombo, filterIdLabel, filterName)
 {
    // Clear existing filter items
    filterCombo.clear();
@@ -1199,18 +1466,16 @@ FilterMappingDialog.prototype.updateFilterCombo = function(brandCombo, filterCom
    var selectedBrand = brandCombo.itemText(brandCombo.currentItem);
    
    // Populate filters for selected brand
-   for (var i = 0; i < ASTROBIN_FILTERS.length; i++) {
-      var filter = ASTROBIN_FILTERS[i];
-      if (filter.brand === selectedBrand) {
-         filterCombo.addItem(filter.display || filter.name);
-      }
+   var brandFilters = FILTERS_BY_BRAND.get(selectedBrand) || [];
+   for (var i = 0; i < brandFilters.length; i++) {
+      filterCombo.addItem(brandFilters[i].display || brandFilters[i].name);
    }
    
    filterCombo.enabled = true;
    filterIdLabel.text = "";
-};
+}
 
-FilterMappingDialog.prototype.updateFilterId = function(filterCombo, filterIdLabel, filterName)
+updateFilterId(filterCombo, filterIdLabel, filterName)
 {
    if (filterCombo.currentItem === 0) {
       filterIdLabel.text = "";
@@ -1221,19 +1486,15 @@ FilterMappingDialog.prototype.updateFilterId = function(filterCombo, filterIdLab
    var selectedText = filterCombo.itemText(filterCombo.currentItem);
    
    // Find the matching filter in the database
-   for (var i = 0; i < ASTROBIN_FILTERS.length; i++) {
-      var filter = ASTROBIN_FILTERS[i];
-      var comboText = filter.display || filter.name;
-      if (comboText === selectedText) {
-         filterIdLabel.text = filter.id.toString();
-         filterIdLabel.styleSheet = "QLabel { border: 1px solid gray; padding: 4px; background: white; }";
-         this.filterMappings[filterName] = filter.id.toString();
-         break;
-      }
+   var filter = FILTER_BY_DISPLAY.get(selectedText);
+   if (filter) {
+      filterIdLabel.text = filter.id.toString();
+      filterIdLabel.styleSheet = "QLabel { border: 1px solid gray; padding: 4px; background: white; }";
+      this.filterMappings[filterName] = filter.id.toString();
    }
-};
+}
 
-FilterMappingDialog.prototype.validateManualFilterId = function(manualIdEdit, filterIdLabel, filterName)
+validateManualFilterId(manualIdEdit, filterIdLabel, filterName)
 {
    var enteredId = manualIdEdit.text.trim();
    
@@ -1271,66 +1532,51 @@ FilterMappingDialog.prototype.validateManualFilterId = function(manualIdEdit, fi
    }
    
    // Check if this ID exists in our database (optional - for feedback only)
-   var existsInDatabase = false;
-   for (var i = 0; i < ASTROBIN_FILTERS.length; i++) {
-      if (ASTROBIN_FILTERS[i].id === filterId) {
-         existsInDatabase = true;
-         break;
-      }
-   }
-   
+   var matchedFilter = FILTER_BY_ID.get(filterId.toString());
+
    // Set the filter ID (green background if found in database, yellow if manual)
    filterIdLabel.text = filterId.toString();
-   if (existsInDatabase) {
+   if (matchedFilter) {
       filterIdLabel.styleSheet = "QLabel { border: 1px solid green; padding: 4px; background: #e6ffe6; }";
-      filterIdLabel.toolTip = "Found in database: " + ASTROBIN_FILTERS[i].brand + " " + (ASTROBIN_FILTERS[i].display || ASTROBIN_FILTERS[i].name);
+      filterIdLabel.toolTip = "Found in database: " + matchedFilter.brand + " " + (matchedFilter.display || matchedFilter.name);
    } else {
       filterIdLabel.styleSheet = "QLabel { border: 1px solid orange; padding: 4px; background: #fff3cd; }";
       filterIdLabel.toolTip = "Manual entry - ID will be used as-is";
    }
    
    this.filterMappings[filterName] = filterId.toString();
-};
+}
 
-FilterMappingDialog.prototype.populateFilterMappings = function()
+populateFilterMappings()
 {
-   // Auto-populate based on current filter IDs in analysis data
+   var idByFilter = {};
+   for (var j = 0; j < g_analysisData.length; j++) {
+      var row = g_analysisData[j];
+      if (row.filterId && !idByFilter[row.filter]) {
+         idByFilter[row.filter] = row.filterId;
+      }
+   }
+
    for (var i = 0; i < this.filterControls.length; i++) {
       var control = this.filterControls[i];
       var filterName = control.filterName;
-      
-      // Find current filter ID for this filter name
-      var currentFilterId = "";
-      for (var j = 0; j < g_analysisData.length; j++) {
-         if (g_analysisData[j].filter === filterName && g_analysisData[j].filterId) {
-            currentFilterId = g_analysisData[j].filterId;
-            break;
-         }
-      }
-      
-      // If we have a filter ID, try to select it
+      var currentFilterId = idByFilter[filterName] || "";
+
       if (currentFilterId) {
          this.selectFilterById(control, currentFilterId);
       } else {
-         // Try auto-suggestion based on filter name
          var suggestedId = suggestFilterId(filterName);
          if (suggestedId) {
             this.selectFilterById(control, suggestedId);
          }
       }
    }
-};
+}
 
-FilterMappingDialog.prototype.selectFilterById = function(control, filterId)
+selectFilterById(control, filterId)
 {
    // Find the filter in the database
-   var targetFilter = null;
-   for (var i = 0; i < ASTROBIN_FILTERS.length; i++) {
-      if (ASTROBIN_FILTERS[i].id.toString() === filterId.toString()) {
-         targetFilter = ASTROBIN_FILTERS[i];
-         break;
-      }
-   }
+   var targetFilter = FILTER_BY_ID.get(filterId.toString());
    
    if (targetFilter) {
       // Filter found in database - use dropdown selection
@@ -1372,9 +1618,9 @@ FilterMappingDialog.prototype.selectFilterById = function(control, filterId)
       control.manualIdEdit.text = filterId.toString();
       this.validateManualFilterId(control.manualIdEdit, control.filterIdLabel, control.filterName);
    }
-};
+}
 
-FilterMappingDialog.prototype.saveFilterMappings = function()
+saveFilterMappings()
 {
    // Build set of excluded filter names
    var excludedFilters = {};
@@ -1411,289 +1657,6 @@ FilterMappingDialog.prototype.saveFilterMappings = function()
    if (excludedCount > 0) {
       Console.noteln("[AstroBin] Excluded " + excludedCount + " session(s) from " + Object.keys(excludedFilters).length + " filter(s)");
    }
-};
+}
 
-// Integration Summary Dialog
-AstroBinDialog.prototype.showIntegrationSummary = function()
-{
-   if (g_analysisData.length === 0) {
-      return;
-   }
-   
-   try {
-      // Calculate summary statistics
-      var stats = this.calculateIntegrationStats();
-      
-      var msg = "<b>🌟 Integration Session Summary</b><br><br>" +
-                
-                "<b>📊 Total Integration:</b><br>" +
-                "• Total time: " + this.formatDuration(stats.totalIntegrationTime) + "<br>" +
-                "• Images captured: " + stats.totalImages + " frames<br>" +
-                "• Sessions detected: " + stats.sessionCount + "<br>" +
-                "• Date range: " + stats.dateRange + "<br><br>" +
-                
-                "<b>🔭 Filter Breakdown:</b><br>" +
-                stats.filterStats + "<br>" +
-                
-                "<b>⚙️ Acquisition Settings:</b><br>" +
-                "• Exposure times: " + stats.exposureTimes + "<br>" +
-                "• Binning modes: " + stats.binningModes + "<br>" +
-                "• Gain settings: " + stats.gainSettings + "<br>" +
-                "• F-ratios: " + stats.fNumberSettings + "<br><br>" +
-                
-                "<b>🌡️ Environmental Conditions:</b><br>" +
-                "• Temperature range: " + stats.tempRange + "<br>" +
-                "• Sensor cooling: " + stats.coolingRange + "<br>" +
-                "• Sky quality: " + stats.skyQuality + "<br><br>" +
-                
-                "<b>📈 Session Quality:</b><br>" +
-                "• Longest session: " + this.formatDuration(stats.longestSession) + "<br>" +
-                "• Most productive filter: " + stats.mostProductiveFilter + "<br>" +
-                "• Average session length: " + this.formatDuration(stats.avgSessionLength) + "<br><br>" +
-                
-                "<b>🎯 Calibration Ready:</b><br>" +
-                "• Dark frames needed: " + (CONFIG.darks || "Not set") + "<br>" +
-                "• Flat frames needed: " + (CONFIG.flats || "Not set") + "<br>" +
-                "• Bias frames needed: " + (CONFIG.bias || "Not set") + "<br><br>" +
-                
-                "<b>💡 Session Insights:</b><br>" +
-                stats.insights;
-      
-      var msgBox = new MessageBox(msg, "Integration Session Summary", StdIcon_Information, StdButton_Ok);
-      msgBox.execute();
-      
-   } catch (e) {
-      Console.warningln("Error generating integration summary: " + e);
-   }
-};
-
-AstroBinDialog.prototype.calculateIntegrationStats = function()
-{
-   var stats = {
-      totalIntegrationTime: 0,
-      totalImages: 0,
-      sessionCount: g_analysisData.length,
-      dateRange: "",
-      filterStats: "",
-      exposureTimes: "",
-      binningModes: "",
-      gainSettings: "",
-      fNumberSettings: "",
-      tempRange: "",
-      coolingRange: "",
-      skyQuality: "",
-      longestSession: 0,
-      mostProductiveFilter: "",
-      avgSessionLength: 0,
-      insights: ""
-   };
-   
-   var filters = {};
-   var exposures = {};
-   var binnings = {};
-   var gains = {};
-   var fNumbers = {};
-   var temperatures = [];
-   var coolings = [];
-   var dates = [];
-   var sessionTimes = [];
-   
-   // Process each session
-   for (var i = 0; i < g_analysisData.length; i++) {
-      var session = g_analysisData[i];
-      if (session.excluded) continue;
-      var sessionTime = parseFloat(session.duration || 0) * parseInt(session.number || 0);
-      
-      stats.totalIntegrationTime += sessionTime;
-      stats.totalImages += parseInt(session.number || 0);
-      sessionTimes.push(sessionTime);
-      
-      // Track filter usage
-      var filterKey = session.filter || "No Filter";
-      if (!filters[filterKey]) {
-         filters[filterKey] = { time: 0, frames: 0 };
-      }
-      filters[filterKey].time += sessionTime;
-      filters[filterKey].frames += parseInt(session.number || 0);
-      
-      // Track unique settings
-      if (session.duration) exposures[session.duration] = true;
-      if (session.binning) binnings[session.binning] = true;
-      if (session.gain) gains[session.gain] = true;
-      if (session.fNumber) fNumbers[session.fNumber] = true;
-      
-      // Track environmental data
-      if (session.temperature && session.temperature !== "" && session.temperature !== "0") {
-         temperatures.push(parseFloat(session.temperature));
-      }
-      if (session.sensorCooling && session.sensorCooling !== "" && session.sensorCooling !== "0") {
-         coolings.push(parseFloat(session.sensorCooling));
-      }
-      
-      // Track dates
-      if (session.date) dates.push(session.date);
-   }
-   
-   // Calculate longest session
-   stats.longestSession = Math.max.apply(Math, sessionTimes);
-   stats.avgSessionLength = stats.totalIntegrationTime / stats.sessionCount;
-   
-   // Find most productive filter
-   var maxTime = 0;
-   for (var filter in filters) {
-      if (filters[filter].time > maxTime) {
-         maxTime = filters[filter].time;
-         stats.mostProductiveFilter = filter + " (" + this.formatDuration(filters[filter].time) + ")";
-      }
-   }
-   
-   // Format filter stats
-   var filterLines = [];
-   for (var filter in filters) {
-      var f = filters[filter];
-      filterLines.push("&nbsp;&nbsp;• " + filter + ": " + this.formatDuration(f.time) + " (" + f.frames + " frames)");
-   }
-   stats.filterStats = filterLines.join("<br>");
-   
-   // Format setting ranges
-   stats.exposureTimes = Object.keys(exposures).sort((a,b) => parseFloat(a) - parseFloat(b)).join("s, ") + "s";
-   stats.binningModes = Object.keys(binnings).sort().join(", ");
-   stats.gainSettings = Object.keys(gains).sort((a,b) => parseInt(a) - parseInt(b)).join(", ");
-   stats.fNumberSettings = Object.keys(fNumbers).sort((a,b) => parseFloat(a) - parseFloat(b)).join(", ");
-   
-   // Format temperature range
-   if (temperatures.length > 0) {
-      var minTemp = Math.min.apply(Math, temperatures);
-      var maxTemp = Math.max.apply(Math, temperatures);
-      stats.tempRange = minTemp.toFixed(1) + "°C to " + maxTemp.toFixed(1) + "°C";
-   } else {
-      stats.tempRange = "Not available in FITS";
-   }
-   
-   // Format cooling range
-   if (coolings.length > 0) {
-      var minCool = Math.min.apply(Math, coolings);
-      var maxCool = Math.max.apply(Math, coolings);
-      stats.coolingRange = minCool.toFixed(1) + "°C to " + maxCool.toFixed(1) + "°C";
-   } else {
-      stats.coolingRange = "Not available in FITS";
-   }
-   
-   // Format sky quality
-   var sqmValue = CONFIG.meanSqm;
-   var bortleValue = CONFIG.bortle;
-   if (sqmValue && sqmValue !== "" && sqmValue !== "0") {
-      var sqmFloat = parseFloat(sqmValue);
-      var quality = "";
-      if (sqmFloat > 21.5) quality = " (Excellent dark site)";
-      else if (sqmFloat > 20.5) quality = " (Good dark site)";
-      else if (sqmFloat > 19.0) quality = " (Suburban)";
-      else if (sqmFloat > 17.0) quality = " (Urban)";
-      else quality = " (Inner city)";
-      stats.skyQuality = sqmValue + " mag/arcsec²" + quality;
-   } else if (bortleValue && bortleValue !== "" && bortleValue !== "0") {
-      stats.skyQuality = "Bortle Class " + bortleValue + " (SQM estimated)";
-   } else {
-      stats.skyQuality = "Not specified";
-   }
-   
-   // Format date range
-   if (dates.length > 0) {
-      dates.sort();
-      if (dates.length === 1) {
-         stats.dateRange = dates[0];
-      } else {
-         stats.dateRange = dates[0] + " to " + dates[dates.length - 1];
-      }
-   }
-   
-   // Generate insights for astrophotographers
-   var insights = [];
-   
-   // Integration time insights
-   if (stats.totalIntegrationTime > 7200) { // > 2 hours
-      insights.push("• Great integration time! " + this.formatDuration(stats.totalIntegrationTime) + " should provide excellent SNR");
-   } else if (stats.totalIntegrationTime > 3600) { // > 1 hour
-      insights.push("• Good integration time of " + this.formatDuration(stats.totalIntegrationTime) + " for deep sky work");
-   } else {
-      insights.push("• Consider more integration time for better signal-to-noise ratio");
-   }
-   
-   // Filter diversity
-   var filterCount = Object.keys(filters).length;
-   if (filterCount > 3) {
-      insights.push("• Excellent filter diversity (" + filterCount + " filters) for rich color data");
-   } else if (filterCount > 1) {
-      insights.push("• Good multi-filter approach for enhanced color information");
-   }
-   
-   // Session consistency  
-   if (sessionTimes.length > 1) {
-      var avgDiff = 0;
-      for (var i = 0; i < sessionTimes.length; i++) {
-         avgDiff += Math.abs(sessionTimes[i] - stats.avgSessionLength);
-      }
-      avgDiff = avgDiff / sessionTimes.length / stats.avgSessionLength;
-      
-      if (avgDiff < 0.3) {
-         insights.push("• Consistent session lengths - excellent for balanced processing");
-      }
-   }
-   
-   // Temperature stability
-   if (temperatures.length > 1) {
-      var tempRange = Math.max.apply(Math, temperatures) - Math.min.apply(Math, temperatures);
-      if (tempRange < 3) {
-         insights.push("• Excellent temperature stability (±" + (tempRange/2).toFixed(1) + "°C)");
-      } else if (tempRange < 8) {
-         insights.push("• Good temperature stability across sessions");
-      } else {
-         insights.push("• Wide temperature range - monitor thermal effects on calibration");
-      }
-   }
-   
-   // Exposure time analysis
-   var expCount = Object.keys(exposures).length;
-   if (expCount === 1) {
-      insights.push("• Consistent exposure times - optimal for stacking workflow");
-   } else if (expCount > 3) {
-      insights.push("• Multiple exposure times detected - verify intentional for HDR/dithering");
-   }
-   
-   stats.insights = insights.length > 0 ? insights.join("<br>") : "• Analysis complete - ready for calibration and processing";
-   
-   return stats;
-};
-
-AstroBinDialog.prototype.formatDuration = function(seconds)
-{
-   if (!seconds || seconds === 0) return "0 min";
-   
-   var hours = Math.floor(seconds / 3600);
-   var minutes = Math.floor((seconds % 3600) / 60);
-   var secs = Math.floor(seconds % 60);
-   
-   var parts = [];
-   if (hours > 0) parts.push(hours + "h");
-   if (minutes > 0) parts.push(minutes + "m");
-   if (secs > 0 && hours === 0) parts.push(secs + "s");
-   
-   return parts.join(" ") || "0 min";
-};
-
-// Simple helper to calculate total integration time from analysis data
-AstroBinDialog.prototype.calculateTotalIntegrationTime = function()
-{
-   if (!g_analysisData || g_analysisData.length === 0) return 0;
-   
-   var totalSeconds = 0;
-   for (var i = 0; i < g_analysisData.length; i++) {
-      var data = g_analysisData[i];
-      if (data.excluded) continue;
-      var exposure = parseFloat(data.duration) || 0;
-      var count = parseInt(data.number, 10) || 0;
-      totalSeconds += exposure * count;
-   }
-   
-   return totalSeconds;
-};
+} // end class FilterMappingDialog

@@ -269,6 +269,21 @@ var ASTROBIN_FILTERS = [
   {id: "1397", brand: "ZWO", name: "CH4", display: "ZWO CH4", keywords: ["zwo", "asi", "ch4", "methane"]}
 ];
 
+// Pre-built indexes for O(1) lookups — built once at load time
+var FILTER_BY_ID = new Map();      // id.toString() → filter
+var FILTERS_BY_BRAND = new Map();  // brand → filter[]
+var FILTER_BY_DISPLAY = new Map(); // (display || name) → filter
+
+(function buildFilterIndexes() {
+   for (var i = 0; i < ASTROBIN_FILTERS.length; i++) {
+      var f = ASTROBIN_FILTERS[i];
+      FILTER_BY_ID.set(f.id.toString(), f);
+      if (!FILTERS_BY_BRAND.has(f.brand)) FILTERS_BY_BRAND.set(f.brand, []);
+      FILTERS_BY_BRAND.get(f.brand).push(f);
+      FILTER_BY_DISPLAY.set(f.display || f.name, f);
+   }
+})();
+
 // Internal helper moved out of suggestFilterId to avoid nested function warning in strict mode
 function _astrobinValidFilterId(id){ return id && (""+id).trim().length>0; }
 
@@ -323,23 +338,20 @@ function suggestFilterId(fitsFilterName)
 // Get filter display name by ID
 function getFilterDisplayName(filterId)
 {
-   for (var i = 0; i < ASTROBIN_FILTERS.length; i++) {
-      if (ASTROBIN_FILTERS[i].id === filterId) {
-         return ASTROBIN_FILTERS[i].display || ASTROBIN_FILTERS[i].name;
-      }
-   }
-   return "Unknown Filter";
+   var f = FILTER_BY_ID.get(filterId.toString());
+   return f ? (f.display || f.name) : "Unknown Filter";
 }
 
 // Find filter by ID
 function findFilterById(filterId)
 {
-   for (var i = 0; i < ASTROBIN_FILTERS.length; i++) {
-      if (ASTROBIN_FILTERS[i].id === filterId) {
-         return ASTROBIN_FILTERS[i];
-      }
-   }
-   return null;
+   return FILTER_BY_ID.get(filterId.toString()) || null;
+}
+
+// Sorted unique brand names
+function getFilterBrands()
+{
+   return Array.from(FILTERS_BY_BRAND.keys()).sort();
 }
 
 // Search filters by name or brand
