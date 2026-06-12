@@ -25,7 +25,7 @@ constructor()
    this.createFileSelectionSection();
    this.createGlobalParametersSection();
    this.createImageAnalysisSection();
-   this.createCSVPreviewSection();
+   this.createOutputTabsSection();
    this.createButtonSection();
 
    // Layout everything
@@ -36,7 +36,7 @@ constructor()
    this.sizer.add(this.fileSelectionGroupBox);
    this.sizer.add(this.globalParametersGroupBox);
    this.sizer.add(this.imageAnalysisGroupBox, 100); // Takes most space
-   this.sizer.add(this.csvPreviewGroupBox);
+   this.sizer.add(this.outputTabBox, 50);           // CSV Export + Visualize tabs
    this.sizer.add(this.buttonSizer);
 
    this.updateUI();
@@ -610,43 +610,44 @@ createImageAnalysisSection()
    this.imageAnalysisGroupBox.sizer.add(this.imageTreeBox, 100);
 }
 
-// CSV Preview Section
-createCSVPreviewSection()
+// Output Tabs Section — CSV Export preview + Visualize (charts)
+createOutputTabsSection()
 {
-   this.csvPreviewGroupBox = new GroupBox(this);
-   this.csvPreviewGroupBox.title = "CSV Export Preview";
-   this.csvPreviewGroupBox.sizer = new VerticalSizer;
-   this.csvPreviewGroupBox.sizer.margin = 6;
-   this.csvPreviewGroupBox.sizer.spacing = 4;
+   var self = this;
+
+   // ---- Page 1: CSV Export ----
+   var exportPage = new Control(this);
+   exportPage.sizer = new VerticalSizer;
+   exportPage.sizer.margin = 6;
+   exportPage.sizer.spacing = 4;
 
    // Export controls
    var exportSizer = new HorizontalSizer;
    exportSizer.spacing = 4;
-   
+
    this.generateCSVButton = new PushButton(this);
    this.generateCSVButton.text = "Generate CSV";
    this.generateCSVButton.toolTip = "Generate CSV content from analyzed data";
-   var self = this;
    this.generateCSVButton.onClick = function() { self.generateCSV(); };
-   
+
    this.saveCSVButton = new PushButton(this);
    this.saveCSVButton.text = "Save CSV File";
    this.saveCSVButton.toolTip = "Save CSV to file";
    this.saveCSVButton.onClick = function() { self.saveCSVFile(); };
    this.saveCSVButton.enabled = false;
-   
+
    this.copyCSVButton = new PushButton(this);
    this.copyCSVButton.text = "Copy to Clipboard";
    this.copyCSVButton.toolTip = "Copy CSV content to clipboard";
    this.copyCSVButton.onClick = function() { self.copyCSVToClipboard(); };
    this.copyCSVButton.enabled = false;
-   
+
    // Settings button (opens export columns dialog)
    this.exportSettingsButton = new PushButton(this);
    this.exportSettingsButton.text = "Columns...";
    this.exportSettingsButton.toolTip = "Select which columns to populate in the CSV";
    this.exportSettingsButton.onClick = function() { self.showExportColumnsDialog(); };
-   
+
    exportSizer.add(this.generateCSVButton);
    exportSizer.add(this.saveCSVButton);
    exportSizer.add(this.copyCSVButton);
@@ -658,8 +659,82 @@ createCSVPreviewSection()
    this.csvPreviewTextBox.readOnly = true;
    this.csvPreviewTextBox.setMinHeight(120);
 
-   this.csvPreviewGroupBox.sizer.add(exportSizer);
-   this.csvPreviewGroupBox.sizer.add(this.csvPreviewTextBox, 100);
+   exportPage.sizer.add(exportSizer);
+   exportPage.sizer.add(this.csvPreviewTextBox, 100);
+
+   // ---- Page 2: Visualize ----
+   var visualizePage = new Control(this);
+   visualizePage.sizer = new VerticalSizer;
+   visualizePage.sizer.margin = 6;
+   visualizePage.sizer.spacing = 4;
+
+   var chartControlsSizer = new HorizontalSizer;
+   chartControlsSizer.spacing = 6;
+
+   var groupByLabel = new Label(this);
+   groupByLabel.text = "Group by:";
+   groupByLabel.textAlignment = TextAlignment.Right | TextAlignment.VertCenter;
+
+   // chartGroupKeys maps the combo index -> the key used by computeChartData()
+   this.chartGroupKeys = ["filter", "exposure", "date", "dow", "date_filter"];
+   this.chartGroupByCombo = new ComboBox(this);
+   this.chartGroupByCombo.editEnabled = false;
+   this.chartGroupByCombo.toolTip = "Dimension to group integration data by";
+   this.chartGroupByCombo.addItem("Filter");
+   this.chartGroupByCombo.addItem("Exposure");
+   this.chartGroupByCombo.addItem("Date");
+   this.chartGroupByCombo.addItem("Day of Week");
+   this.chartGroupByCombo.addItem("Date by Filter (stacked)");
+   this.chartGroupByCombo.currentItem = 0;
+   this.chartGroupByCombo.onItemSelected = function() { self.refreshChart(); };
+
+   var measureLabel = new Label(this);
+   measureLabel.text = "Measure:";
+   measureLabel.textAlignment = TextAlignment.Right | TextAlignment.VertCenter;
+
+   // chartMeasureKeys maps the combo index -> the measure used by computeChartData()
+   this.chartMeasureKeys = ["time", "frames"];
+   this.chartMeasureCombo = new ComboBox(this);
+   this.chartMeasureCombo.editEnabled = false;
+   this.chartMeasureCombo.toolTip = "Value plotted for each group";
+   this.chartMeasureCombo.addItem("Integration time");
+   this.chartMeasureCombo.addItem("Frame count");
+   this.chartMeasureCombo.currentItem = 0;
+   this.chartMeasureCombo.onItemSelected = function() { self.refreshChart(); };
+
+   chartControlsSizer.add(groupByLabel);
+   chartControlsSizer.add(this.chartGroupByCombo);
+   chartControlsSizer.addSpacing(12);
+   chartControlsSizer.add(measureLabel);
+   chartControlsSizer.add(this.chartMeasureCombo);
+   chartControlsSizer.addStretch();
+
+   // Custom-drawn bar chart surface, hosted in a ScrollBox so many dates scroll.
+   this.chartData = [];
+   this.chartStacked = false;
+   this.chartScroll = new ScrollBox(this);
+   this.chartScroll.autoScroll = true;
+   this.chartScroll.tracking = true;
+   this.chartScroll.setMinHeight(220);
+   this.chartScroll.viewport.onPaint = function() { self.paintChart(); };
+   this.chartScroll.viewport.onResize = function() {
+      self.updateChartScrollRange();
+      self.chartScroll.viewport.repaint();
+   };
+   this.chartScroll.onVerticalScrollPosUpdated = function() {
+      self.chartScroll.viewport.repaint();
+   };
+
+   visualizePage.sizer.add(chartControlsSizer);
+   visualizePage.sizer.add(this.chartScroll, 100);
+
+   // ---- TabBox ----
+   this.outputTabBox = new TabBox(this);
+   this.outputTabBox.addPage(exportPage, "CSV Export");
+   this.outputTabBox.addPage(visualizePage, "Visualize");
+   this.outputTabBox.onPageSelected = function(index) {
+      if (index === 1) self.refreshChart();
+   };
 }
 
 // Button Section

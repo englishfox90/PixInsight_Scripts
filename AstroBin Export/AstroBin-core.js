@@ -16,7 +16,7 @@
 
 // Script metadata
 var SCRIPT_NAME = "AstroBin Export";
-var SCRIPT_VERSION = "3.4.0";  // V8 engine migration (PixInsight 1.9.4+)
+var SCRIPT_VERSION = "3.5.0";  // V8 migration + Visualize tab (bar charts) & accurate Integration Summary
 var SCRIPT_DESCRIPTION = "Generates CSV files compatible with AstroBin's bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.";
 var SCRIPT_DEVELOPER = "Paul Fox-Reeks (englishfox90)";
 

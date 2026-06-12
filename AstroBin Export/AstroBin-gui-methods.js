@@ -81,8 +81,13 @@ analyzeImages()
    }
    
    this.analyzeButton.enabled = false;
+   // Disable downstream actions for the duration of the run so they can't be
+   // clicked against the previous run's stale g_analysisData (re-enabled in finally).
+   this.mapFiltersButton.enabled = false;
+   this.generateCSVButton.enabled = false;
+   this.summaryButton.enabled = false;
    this.analysisStatusLabel.text = "Analyzing " + g_imageFiles.length + " files...";
-   
+
    // Reset UI controls to enabled state for new analysis
    this.resetGlobalParametersUI();
    
@@ -149,6 +154,7 @@ analyzeImages()
    } finally {
       this.analyzeButton.enabled = true;
       this.updateUI();
+      this.refreshChart(); // keep the Visualize tab in sync with the new data
    }
 }
 
@@ -733,46 +739,42 @@ showIntegrationSummary()
       return;
    }
 
+   // Pull the latest UI values into CONFIG so the summary reflects edits made
+   // since the dialog opened (calibration counts, SQM, Bortle) rather than the
+   // values captured the last time the dialog was saved/opened.
+   this.updateConfigFromUI();
+
    try {
       // Calculate summary statistics
       var stats = this.calculateIntegrationStats();
 
-      var msg = "<b>🌟 Integration Session Summary</b><br><br>" +
+      // High-level totals card. Per-filter / per-night / per-exposure breakdowns
+      // now live as interactive charts on the Visualize tab.
+      var msg = "<b>🌟 Integration Summary</b><br><br>" +
 
-                "<b>📊 Total Integration:</b><br>" +
-                "• Total time: " + this.formatDuration(stats.totalIntegrationTime) + "<br>" +
-                "• Images captured: " + stats.totalImages + " frames<br>" +
-                "• Sessions detected: " + stats.sessionCount + "<br>" +
-                "• Date range: " + stats.dateRange + "<br><br>" +
-
-                "<b>🔭 Filter Breakdown:</b><br>" +
-                stats.filterStats + "<br>" +
-
-                "<b>⚙️ Acquisition Settings:</b><br>" +
-                "• Exposure times: " + stats.exposureTimes + "<br>" +
-                "• Binning modes: " + stats.binningModes + "<br>" +
-                "• Gain settings: " + stats.gainSettings + "<br>" +
-                "• F-ratios: " + stats.fNumberSettings + "<br><br>" +
-
-                "<b>🌡️ Environmental Conditions:</b><br>" +
-                "• Temperature range: " + stats.tempRange + "<br>" +
-                "• Sensor cooling: " + stats.coolingRange + "<br>" +
+                "<b>📊 Totals:</b><br>" +
+                "• Total integration: " + this.formatDuration(stats.totalIntegrationTime) + "<br>" +
+                "• Frames captured: " + stats.totalImages + "<br>" +
+                "• Sessions: " + stats.sessionCount + "<br>" +
+                "• Date range: " + (stats.dateRange || "—") + "<br>" +
+                "• Most productive filter: " + (stats.mostProductiveFilter || "—") + "<br>" +
                 "• Sky quality: " + stats.skyQuality + "<br><br>" +
 
-                "<b>📈 Session Quality:</b><br>" +
-                "• Longest session: " + this.formatDuration(stats.longestSession) + "<br>" +
-                "• Most productive filter: " + stats.mostProductiveFilter + "<br>" +
-                "• Average session length: " + this.formatDuration(stats.avgSessionLength) + "<br><br>" +
-
                 "<b>🎯 Calibration Ready:</b><br>" +
-                "• Dark frames needed: " + (CONFIG.darks || "Not set") + "<br>" +
-                "• Flat frames needed: " + (CONFIG.flats || "Not set") + "<br>" +
-                "• Bias frames needed: " + (CONFIG.bias || "Not set") + "<br><br>" +
+                "• Darks: " + (CONFIG.darks || "Not set") +
+                " &nbsp; Flats: " + (CONFIG.flats || "Not set") +
+                " &nbsp; Bias: " + (CONFIG.bias || "Not set") + "<br>";
 
-                "<b>💡 Session Insights:</b><br>" +
-                stats.insights;
+      if (stats.unmappedFilters && stats.unmappedFilters.length > 0) {
+         msg += "<br><b>⚠ " + stats.unmappedFilters.length + " filter" +
+                (stats.unmappedFilters.length > 1 ? "s" : "") + " not mapped:</b> " +
+                stats.unmappedFilters.join(", ") + " — run Map Filters before exporting.<br>";
+      }
 
-      var msgBox = new MessageBox(msg, "Integration Session Summary", StdIcon.Information, StdButton.Ok);
+      msg += "<br><i>Open the <b>Visualize</b> tab for per-filter, per-night and " +
+             "per-exposure breakdowns.</i>";
+
+      var msgBox = new MessageBox(msg, "Integration Summary", StdIcon.Information, StdButton.Ok);
       msgBox.execute();
 
    } catch (e) {
@@ -824,10 +826,15 @@ calculateIntegrationStats()
       // Track filter usage
       var filterKey = session.filter || "No Filter";
       if (!filters[filterKey]) {
-         filters[filterKey] = { time: 0, frames: 0 };
+         filters[filterKey] = { time: 0, frames: 0, filterId: "", mapped: false };
       }
       filters[filterKey].time += sessionTime;
       filters[filterKey].frames += parseInt(session.number || 0);
+      // Capture the mapped AstroBin filter ID so the breakdown reflects mapping state
+      if (!filters[filterKey].mapped && _astrobinValidFilterId(session.filterId)) {
+         filters[filterKey].filterId = session.filterId;
+         filters[filterKey].mapped = true;
+      }
 
       // Track unique settings
       if (session.duration) exposures[session.duration] = true;
@@ -860,13 +867,22 @@ calculateIntegrationStats()
       }
    }
 
-   // Format filter stats
+   // Format filter stats — include AstroBin mapping state ("filters leveraged")
    var filterLines = [];
+   var unmappedFilters = [];
    for (var filter in filters) {
       var f = filters[filter];
-      filterLines.push("&nbsp;&nbsp;• " + filter + ": " + this.formatDuration(f.time) + " (" + f.frames + " frames)");
+      var mapInfo;
+      if (f.mapped) {
+         mapInfo = " → " + getFilterDisplayName(f.filterId);
+      } else {
+         mapInfo = " ⚠ not mapped";
+         unmappedFilters.push(filter);
+      }
+      filterLines.push("&nbsp;&nbsp;• " + filter + ": " + this.formatDuration(f.time) + " (" + f.frames + " frames)" + mapInfo);
    }
    stats.filterStats = filterLines.join("<br>");
+   stats.unmappedFilters = unmappedFilters;
 
    // Format setting ranges
    stats.exposureTimes = Object.keys(exposures).sort((a,b) => parseFloat(a) - parseFloat(b)).join("s, ") + "s";
@@ -922,6 +938,14 @@ calculateIntegrationStats()
 
    // Generate insights for astrophotographers
    var insights = [];
+
+   // Filter mapping completeness — flag first since the CSV isn't export-ready
+   // until every filter has an AstroBin ID.
+   if (unmappedFilters.length > 0) {
+      insights.push("• ⚠ " + unmappedFilters.length + " filter" + (unmappedFilters.length > 1 ? "s" : "") +
+                    " not yet mapped to AstroBin IDs (" + unmappedFilters.join(", ") +
+                    ") — run Map Filters before exporting");
+   }
 
    // Integration time insights
    if (stats.totalIntegrationTime > 7200) { // > 2 hours
@@ -1009,6 +1033,284 @@ calculateTotalIntegrationTime()
    }
 
    return totalSeconds;
+}
+
+// ============================================================================
+// Visualize tab — custom-drawn bar charts of integration data
+// ============================================================================
+
+// Map a combo selection into chart data and repaint. Recomputes from the live
+// g_analysisData every call, so tree exclusions / filter mapping stay reflected.
+refreshChart()
+{
+   if (!this.chartScroll) return;
+   var groupBy = this.chartGroupKeys[this.chartGroupByCombo.currentItem];
+   var measure = this.chartMeasureKeys[this.chartMeasureCombo.currentItem];
+   this.chartData = this.computeChartData(groupBy, measure);
+   this.chartMeasure = measure;
+   this.chartStacked = (groupBy === "date_filter");
+   this.updateChartScrollRange();
+   this.chartScroll.viewport.repaint();
+}
+
+// Aggregate non-excluded sessions for one dimension. Returns [{label, value}]
+// plus, for the stacked "date_filter" mode, a per-row `segments` array.
+computeChartData(groupBy, measure)
+{
+   // Stacked mode: one bar per date, segmented by filter.
+   if (groupBy === "date_filter") {
+      var byDate = {}; // date -> { total, filters: { name: value } }
+      for (var di = 0; di < g_analysisData.length; di++) {
+         var drow = g_analysisData[di];
+         if (drow.excluded) continue;
+         var dcount = parseInt(drow.number, 10) || 0;
+         var dvalue = (measure === "frames") ? dcount : (parseFloat(drow.duration) || 0) * dcount;
+         if (dvalue <= 0) continue;
+         var date = drow.date || "(no date)";
+         var fname = drow.filter || "(No Filter)";
+         if (!byDate[date]) byDate[date] = { total: 0, filters: {} };
+         byDate[date].total += dvalue;
+         byDate[date].filters[fname] = (byDate[date].filters[fname] || 0) + dvalue;
+      }
+      var self = this;
+      var rows = [];
+      for (var d in byDate) {
+         if (!byDate.hasOwnProperty(d)) continue;
+         var segs = [];
+         for (var fn in byDate[d].filters) {
+            if (!byDate[d].filters.hasOwnProperty(fn)) continue;
+            segs.push({ label: fn, value: byDate[d].filters[fn], color: this.chartBarColor(fn, 0) });
+         }
+         segs.sort(function(a, b) {
+            var r = self.filterSortRank(a.label) - self.filterSortRank(b.label);
+            return r !== 0 ? r : (a.label < b.label ? -1 : 1);
+         });
+         rows.push({ label: d, value: byDate[d].total, segments: segs });
+      }
+      rows.sort(function(a, b) { return a.label < b.label ? -1 : (a.label > b.label ? 1 : 0); });
+      return rows;
+   }
+
+   var groups = {}; // label -> { value, key }
+
+   for (var i = 0; i < g_analysisData.length; i++) {
+      var row = g_analysisData[i];
+      if (row.excluded) continue;
+
+      var count = parseInt(row.number, 10) || 0;
+      var seconds = (parseFloat(row.duration) || 0) * count;
+      var value = (measure === "frames") ? count : seconds;
+      if (value <= 0) continue;
+
+      var label;
+      switch (groupBy) {
+         case "exposure": label = (row.duration || "?") + "s"; break;
+         case "date":     label = row.date || "(no date)"; break;
+         case "dow":      label = this.dayOfWeekFromDate(row.date); break;
+         case "filter":
+         default:         label = row.filter || "(No Filter)"; break;
+      }
+
+      if (!groups[label]) groups[label] = { value: 0, key: label };
+      groups[label].value += value;
+   }
+
+   // Materialize and sort according to the dimension.
+   var arr = [];
+   for (var k in groups) {
+      if (groups.hasOwnProperty(k)) arr.push({ label: k, value: groups[k].value, key: groups[k].key });
+   }
+
+   var dowOrder = { "Mon": 0, "Tue": 1, "Wed": 2, "Thu": 3, "Fri": 4, "Sat": 5, "Sun": 6 };
+   if (groupBy === "date") {
+      arr.sort(function(a, b) { return a.label < b.label ? -1 : (a.label > b.label ? 1 : 0); });
+   } else if (groupBy === "dow") {
+      arr.sort(function(a, b) { return (dowOrder[a.label] || 0) - (dowOrder[b.label] || 0); });
+   } else if (groupBy === "exposure") {
+      arr.sort(function(a, b) { return parseFloat(a.label) - parseFloat(b.label); });
+   } else {
+      arr.sort(function(a, b) { return b.value - a.value; }); // filter: longest first
+   }
+
+   return arr;
+}
+
+// "YYYY-MM-DD" night key -> short weekday name. Noon avoids TZ date rollover.
+dayOfWeekFromDate(dateStr)
+{
+   if (!dateStr) return "(no date)";
+   var names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+   var d = new Date(dateStr + "T12:00:00");
+   if (isNaN(d.getTime())) return "(no date)";
+   return names[d.getDay()];
+}
+
+// Conventional 0xAARRGGBB colors for filters; index palette for other dimensions.
+chartBarColor(label, index)
+{
+   var name = (label || "").toLowerCase();
+   // Narrowband hues are kept well clear of the broadband R/G/B so SHO and LRGB
+   // never read as the same color (e.g. Ha = pink/crimson, not red).
+   if (name.indexOf("ha") === 0 || name.indexOf("h-alpha") >= 0 || name.indexOf("halpha") >= 0) return 0xFFEC407A; // Ha pink/crimson
+   if (name.indexOf("oiii") >= 0 || name === "o3" || name.indexOf("oxygen") >= 0)              return 0xFF00BCD4; // OIII cyan
+   if (name.indexOf("sii") >= 0 || name === "s2" || name.indexOf("sulf") >= 0 || name.indexOf("sulph") >= 0) return 0xFFFFB300; // SII amber
+   if (name === "l" || name.indexOf("lum") >= 0 || name.indexOf("clear") >= 0)                  return 0xFFBFBFBF; // L grey
+   if (name === "r" || name.indexOf("red") >= 0)                                                return 0xFFE53935; // R red
+   if (name === "g" || name.indexOf("green") >= 0)                                              return 0xFF43A047; // G green
+   if (name === "b" || name.indexOf("blue") >= 0)                                               return 0xFF1E88E5; // B blue
+
+   var palette = [0xFF5B8FF9, 0xFF61DDAA, 0xFFF6BD16, 0xFF7262FD, 0xFF78D3F8,
+                  0xFF9661BC, 0xFFF6903D, 0xFF008685, 0xFFF08BB4, 0xFF6DC8EC];
+   return palette[(index | 0) % palette.length];
+}
+
+// Canonical filter ordering (L,R,G,B,Ha,OIII,SII, then others) for stacked
+// segments and the legend, so colors line up across bars.
+filterSortRank(label)
+{
+   var name = (label || "").toLowerCase();
+   if (name === "l" || name.indexOf("lum") >= 0 || name.indexOf("clear") >= 0) return 0;
+   if (name === "r" || name.indexOf("red") >= 0)   return 1;
+   if (name === "g" || name.indexOf("green") >= 0) return 2;
+   if (name === "b" || name.indexOf("blue") >= 0)  return 3;
+   if (name.indexOf("ha") === 0 || name.indexOf("halpha") >= 0 || name.indexOf("h-alpha") >= 0) return 4;
+   if (name.indexOf("oiii") >= 0 || name === "o3" || name.indexOf("oxygen") >= 0) return 5;
+   if (name.indexOf("sii") >= 0 || name === "s2" || name.indexOf("sulf") >= 0 || name.indexOf("sulph") >= 0) return 6;
+   return 99;
+}
+
+// Chart layout metrics (kept in one place so paint + scroll-range agree).
+chartMetrics()
+{
+   return { pad: 10, rowH: 22, legendH: this.chartStacked ? 22 : 0, bottomPad: 6 };
+}
+
+// Size the ScrollBox's vertical range to the full stack of bars.
+updateChartScrollRange()
+{
+   if (!this.chartScroll) return;
+   var m = this.chartMetrics();
+   var n = (this.chartData || []).length;
+   var totalH = m.legendH + m.pad + n * m.rowH + m.bottomPad;
+   var maxScroll = Math.max(0, totalH - this.chartScroll.viewport.height);
+   this.chartScroll.setHorizontalScrollRange(0, 0);
+   this.chartScroll.setVerticalScrollRange(0, maxScroll);
+}
+
+// Render the bar chart onto the ScrollBox viewport (offset by scroll position).
+paintChart()
+{
+   var control = this.chartScroll.viewport;
+   var g = new Graphics(control);
+   try {
+      var W = control.width, H = control.height;
+      g.fillRect(0, 0, W, H, new Brush(0xFF1A1A1A));
+
+      var data = this.chartData || [];
+      if (data.length === 0) {
+         g.pen = new Pen(0xFF999999);
+         g.font = new Font(FontFamily.Helvetica, 9);
+         var msg = "Analyze images to see charts.";
+         g.drawText((W - g.font.width(msg)) / 2, H / 2, msg);
+         return;
+      }
+
+      var isTime = (this.chartMeasure !== "frames");
+      var stacked = !!this.chartStacked;
+      var m = this.chartMetrics();
+      var rowH = m.rowH, barH = rowH - 6, legendH = m.legendH, pad = m.pad;
+      var labelW = 92, gap = 8, valueW = 78;
+      var barLeft = pad + labelW + gap;
+      var barAreaW = Math.max(20, W - barLeft - valueW - pad);
+      var scrollPos = this.chartScroll.verticalScrollPosition || 0;
+
+      var maxValue = 0;
+      for (var v = 0; v < data.length; v++) if (data[v].value > maxValue) maxValue = data[v].value;
+      if (maxValue <= 0) maxValue = 1;
+
+      g.antialiasing = true;
+      g.font = new Font(FontFamily.Helvetica, 8);
+      var ascent = g.font.ascent;
+
+      for (var i = 0; i < data.length; i++) {
+         var item = data[i];
+         var y = legendH + pad + i * rowH - scrollPos;
+         if (y + rowH < legendH) continue; // scrolled above the bar area
+         if (y > H) break;                 // below the viewport
+         var barTop = y + (rowH - barH) / 2;
+         var textY = y + (rowH + ascent) / 2 - 1;
+
+         // Label (right-aligned against the bar start)
+         g.pen = new Pen(0xFFDDDDDD);
+         var label = item.label;
+         while (label.length > 1 && g.font.width(label) > labelW) label = label.substring(0, label.length - 1);
+         g.drawText(pad + labelW - g.font.width(label), textY, label);
+
+         var barW = Math.max(1, Math.round((item.value / maxValue) * barAreaW));
+
+         if (stacked && item.segments && item.segments.length > 0) {
+            var x = barLeft;
+            for (var s = 0; s < item.segments.length; s++) {
+               var seg = item.segments[s];
+               var segW = Math.max(1, Math.round((seg.value / maxValue) * barAreaW));
+               g.fillRect(x, barTop, x + segW, barTop + barH, new Brush(seg.color));
+               x += segW;
+            }
+         } else {
+            g.fillRect(barLeft, barTop, barLeft + barW, barTop + barH,
+                       new Brush(this.chartBarColor(item.label, i)));
+         }
+
+         // Total value at the end of the bar
+         g.pen = new Pen(0xFFBBBBBB);
+         var valText = isTime ? this.formatDuration(item.value) : (item.value + " frames");
+         g.drawText(barLeft + barW + 6, textY, valText);
+      }
+
+      // Fixed legend overlay for stacked mode (drawn last so bars don't cover it)
+      if (stacked) {
+         g.fillRect(0, 0, W, legendH, new Brush(0xFF1A1A1A));
+         this.drawChartLegend(g, data, W, legendH);
+      }
+   } catch (e) {
+      Console.warningln("Error painting chart: " + e);
+   } finally {
+      g.end();
+   }
+}
+
+// One-line color legend of the filters present in the stacked chart.
+drawChartLegend(g, rows, W, legendH)
+{
+   var seen = {}, items = [];
+   for (var r = 0; r < rows.length; r++) {
+      var segs = rows[r].segments || [];
+      for (var s = 0; s < segs.length; s++) {
+         if (!seen[segs[s].label]) { seen[segs[s].label] = true; items.push({ label: segs[s].label, color: segs[s].color }); }
+      }
+   }
+   var self = this;
+   items.sort(function(a, b) {
+      var d = self.filterSortRank(a.label) - self.filterSortRank(b.label);
+      return d !== 0 ? d : (a.label < b.label ? -1 : 1);
+   });
+
+   g.antialiasing = true;
+   g.font = new Font(FontFamily.Helvetica, 8);
+   var ascent = g.font.ascent;
+   var sq = 10, x = 10;
+   var sqTop = (legendH - sq) / 2;
+   var textY = (legendH + ascent) / 2 - 1;
+
+   for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      var advance = sq + 4 + g.font.width(it.label) + 14;
+      if (x + advance > W - 10) { g.pen = new Pen(0xFF999999); g.drawText(x, textY, "…"); break; }
+      g.fillRect(x, sqTop, x + sq, sqTop + sq, new Brush(it.color));
+      g.pen = new Pen(0xFFCCCCCC);
+      g.drawText(x + sq + 4, textY, it.label);
+      x += advance;
+   }
 }
 
 } // end class AstroBinDialog
