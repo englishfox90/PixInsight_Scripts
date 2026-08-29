@@ -10,16 +10,16 @@
   </description>
 
   <platform os="all" arch="noarch" version="1.9.4:2.0.0">
-    <package fileName="AstroBinExport-3.5.0-20260611.zip"
-             sha1="12305bea6a069781de5bfb5f2aac8df80787e7ac"
+    <package fileName="AstroBinExport-3.6.0-20260829.zip"
+             sha1="a2ec341cd370ce9929f792c728ea85ab0f71e994"
              type="script"
-             releaseDate="20260611">
+             releaseDate="20260829">
       <title>
         AstroBin Export
       </title>
       <description>
         <p>
-          AstroBin Export v3.5.0
+          AstroBin Export v3.6.0
         </p>
         <p>
           Generates CSV files compatible with AstroBin&apos;s bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.
@@ -40,10 +40,10 @@
       </description>
     </package>
 
-    <package fileName="SNRAnalysis-1.6.6-20260611.zip"
-             sha1="d4d7ed2afebe54966173d2fa39c17a28b61127f6"
+    <package fileName="SNRAnalysis-1.6.6-20260829.zip"
+             sha1="fa34fae3ebf3b73651a737df07f20de31da01aa4"
              type="script"
-             releaseDate="20260611">
+             releaseDate="20260829">
       <title>
         SNR Analysis
       </title>

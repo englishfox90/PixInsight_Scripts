@@ -108,8 +108,12 @@ createFileSelectionSection()
       var gdd = new GetDirectoryDialog;
       gdd.caption = "Select Directory Containing Image Files";
       if (gdd.execute()) {
+         var changedDirectory = (gdd.directoryPath !== CONFIG.rootDir);
          CONFIG.rootDir = gdd.directoryPath;
          self.directoryEdit.text = CONFIG.rootDir;
+         // A different folder is a different project, so overrides made for the previous
+         // one must not silently carry over into its CSV
+         if (changedDirectory) self.resetParameterOverrides();
          self.scanForFiles();
       }
    };
@@ -204,7 +208,12 @@ createGlobalParametersSection()
    this.darksEdit = new Edit(this);
    this.darksEdit.text = CONFIG.darks;
    this.darksEdit.setFixedWidth(60);
-   this.darksEdit.onTextUpdated = function(text) { CONFIG.darks = text; };
+   this.darksEdit.toolTip = "Number of dark frames used. Auto-filled from DARK frames found in the\n" +
+                            "scanned directory, but always editable - type your own count to override it.";
+   this.darksEdit.onTextUpdated = function(text) {
+      CONFIG.darks = text;
+      CONFIG.calibrationUserSet.darks = true;
+   };
    calibrationSizer.add(this.darksEdit);
 
    // Flats
@@ -216,7 +225,12 @@ createGlobalParametersSection()
    this.flatsEdit = new Edit(this);
    this.flatsEdit.text = CONFIG.flats;
    this.flatsEdit.setFixedWidth(60);
-   this.flatsEdit.onTextUpdated = function(text) { CONFIG.flats = text; };
+   this.flatsEdit.toolTip = "Number of flat frames used. Auto-filled from FLAT frames found in the\n" +
+                            "scanned directory, but always editable - type your own count to override it.";
+   this.flatsEdit.onTextUpdated = function(text) {
+      CONFIG.flats = text;
+      CONFIG.calibrationUserSet.flats = true;
+   };
    calibrationSizer.add(this.flatsEdit);
 
    // Flat Darks
@@ -228,7 +242,12 @@ createGlobalParametersSection()
    this.flatDarksEdit = new Edit(this);
    this.flatDarksEdit.text = CONFIG.flatDarks;
    this.flatDarksEdit.setFixedWidth(60);
-   this.flatDarksEdit.onTextUpdated = function(text) { CONFIG.flatDarks = text; };
+   this.flatDarksEdit.toolTip = "Number of flat dark frames used. Auto-filled from FLAT DARK frames found in\n" +
+                                "the scanned directory, but always editable - type your own count to override it.";
+   this.flatDarksEdit.onTextUpdated = function(text) {
+      CONFIG.flatDarks = text;
+      CONFIG.calibrationUserSet.flatDarks = true;
+   };
    calibrationSizer.add(this.flatDarksEdit);
 
    // Bias
@@ -240,7 +259,12 @@ createGlobalParametersSection()
    this.biasEdit = new Edit(this);
    this.biasEdit.text = CONFIG.bias;
    this.biasEdit.setFixedWidth(60);
-   this.biasEdit.onTextUpdated = function(text) { CONFIG.bias = text; };
+   this.biasEdit.toolTip = "Number of bias frames used. Auto-filled from BIAS frames found in the\n" +
+                           "scanned directory, but always editable - type your own count to override it.";
+   this.biasEdit.onTextUpdated = function(text) {
+      CONFIG.bias = text;
+      CONFIG.calibrationUserSet.bias = true;
+   };
    calibrationSizer.add(this.biasEdit);
 
    calibrationSizer.addStretch();
@@ -260,7 +284,9 @@ createGlobalParametersSection()
    this.bortleComboBox.setFixedWidth(420);
    this.bortleComboBox.toolTip = "Bortle Dark-Sky Scale - Select your sky conditions.\n" +
                                  "This dropdown shows descriptions to help you choose,\n" +
-                                 "but only the number (1-9) is stored and exported.";
+                                 "but only the number (1-9) is stored and exported.\n" +
+                                 "A value found in the FITS headers is only a starting point -\n" +
+                                 "change it here and your choice is kept, including across re-analysis.";
    
    // Add Bortle scale options with descriptions
    var bortleOptions = [
@@ -291,6 +317,8 @@ createGlobalParametersSection()
    this.bortleComboBox.onItemSelected = function(itemIndex) {
       // Store only the number (1-9) in CONFIG.bortle
       CONFIG.bortle = (itemIndex + 1).toString(); // Convert back to 1-based
+      // The user picked this deliberately, so FITS metadata must not override it later
+      CONFIG.bortleUserSet = true;
       self.updateSQMFromBortle();
    };
    
@@ -348,6 +376,8 @@ createGlobalParametersSection()
    this.meanSqmEdit.text = CONFIG.meanSqm;
    this.meanSqmEdit.setFixedWidth(80);
    this.meanSqmEdit.toolTip = "Sky Quality Meter reading in mag/arcsec². Leave empty if unavailable.\n" +
+                              "Always editable: type your own value to override anything read from FITS,\n" +
+                              "or clear the field to leave SQM out of the CSV entirely.\n" +
                               "Script auto-converts sky brightness (lux) from FITS to proper SQM values.\n" +
                               "If empty, will estimate from Bortle Scale (enter Bortle first, then tab here).\n" +
                               "If you don't have SQM data:\n" +
@@ -356,7 +386,12 @@ createGlobalParametersSection()
                               "• Estimate from Bortle scale: Class 1=21.7-22, Class 4=20.4-21.3, Class 9=13-18\n" +
                               "• Buy a hardware SQM device (~$200) for accurate readings\n" +
                               "• Leave blank - it's optional for AstroBin";
-   this.meanSqmEdit.onTextUpdated = function(text) { CONFIG.meanSqm = text; };
+   this.meanSqmEdit.onTextUpdated = function(text) {
+      CONFIG.meanSqm = text;
+      // Remember where the value came from: an empty field is a deliberate "don't export SQM",
+      // anything typed is a manual override. Both must survive Bortle changes and re-analysis.
+      CONFIG.sqmSource = (text.trim() === "") ? "cleared" : "user";
+   };
    this.meanSqmEdit.onGetFocus = function() { self.updateSQMFromBortle(); };
    environmentSizer.add(this.meanSqmEdit);
 
@@ -377,7 +412,10 @@ createGlobalParametersSection()
                                "4. Read the 'FWHM' value from results (typically 1-4 arcseconds)\n" +
                                "5. Average the readings from different stars\n" +
                                "If no suitable stars or tools, leave blank - it's optional";
-   this.meanFwhmEdit.onTextUpdated = function(text) { CONFIG.meanFwhm = text; };
+   this.meanFwhmEdit.onTextUpdated = function(text) {
+      CONFIG.meanFwhm = text;
+      CONFIG.fwhmUserSet = true;
+   };
    environmentSizer.add(this.meanFwhmEdit);
 
    // Temperature
@@ -391,7 +429,10 @@ createGlobalParametersSection()
    this.temperatureEdit.setFixedWidth(80);
    this.temperatureEdit.toolTip = "Ambient air temperature in Celsius. Used as fallback if not available in FITS.\n" +
                                   "Per-session temperatures from FITS take precedence when available.";
-   this.temperatureEdit.onTextUpdated = function(text) { CONFIG.ambientTemp = text; };
+   this.temperatureEdit.onTextUpdated = function(text) {
+      CONFIG.ambientTemp = text;
+      CONFIG.ambientTempUserSet = true;
+   };
    environmentSizer.add(this.temperatureEdit);
 
    environmentSizer.addStretch();
@@ -427,72 +468,106 @@ updateGlobalParametersFromMetadata(globalData)
    var availableMetadata = globalData.availableMetadata || {};
    var calibrationCounts = globalData.calibrationCounts || {};
    
-   // Update calibration frame counts if detected
-   if (calibrationCounts.darks > 0) {
-      this.darksEdit.text = calibrationCounts.darks.toString();
-      this.darksEdit.enabled = false;
-      this.darksEdit.toolTip = "Auto-detected from " + calibrationCounts.darks + " DARK frames in directory";
-      infoMessages.push("Found " + calibrationCounts.darks + " dark frames");
-   }
-   
-   if (calibrationCounts.flats > 0) {
-      this.flatsEdit.text = calibrationCounts.flats.toString();
-      this.flatsEdit.enabled = false;
-      this.flatsEdit.toolTip = "Auto-detected from " + calibrationCounts.flats + " FLAT frames in directory";
-      infoMessages.push("Found " + calibrationCounts.flats + " flat frames");
-   }
-   
-   if (calibrationCounts.flatDarks > 0) {
-      this.flatDarksEdit.text = calibrationCounts.flatDarks.toString();
-      this.flatDarksEdit.enabled = false;
-      this.flatDarksEdit.toolTip = "Auto-detected from " + calibrationCounts.flatDarks + " FLAT DARK frames in directory";
-      infoMessages.push("Found " + calibrationCounts.flatDarks + " flat dark frames");
-   }
-   
-   if (calibrationCounts.bias > 0) {
-      this.biasEdit.text = calibrationCounts.bias.toString();
-      this.biasEdit.enabled = false;
-      this.biasEdit.toolTip = "Auto-detected from " + calibrationCounts.bias + " BIAS frames in directory";
-      infoMessages.push("Found " + calibrationCounts.bias + " bias frames");
-   }
-   
-   // Update environmental parameters if available in FITS
-   if (availableMetadata.hasBortle && globalData.bortle) {
-      // Set Bortle dropdown selection
-      var bortleValue = parseInt(globalData.bortle) || 4;
-      if (bortleValue >= 1 && bortleValue <= 9) {
-         this.bortleComboBox.currentItem = bortleValue - 1; // ComboBox is 0-indexed
+   // Update calibration frame counts if detected. Like the environmental fields these
+   // stay editable: the scan only sees frames under the selected directory, so a rig
+   // with shared masters or calibration kept elsewhere needs a manual count to win.
+   var calibrationFields = [
+      { key: "darks",     edit: this.darksEdit,     label: "DARK",      noun: "dark frames" },
+      { key: "flats",     edit: this.flatsEdit,     label: "FLAT",      noun: "flat frames" },
+      { key: "flatDarks", edit: this.flatDarksEdit, label: "FLAT DARK", noun: "flat dark frames" },
+      { key: "bias",      edit: this.biasEdit,      label: "BIAS",      noun: "bias frames" }
+   ];
+
+   for (var c = 0; c < calibrationFields.length; c++) {
+      var field = calibrationFields[c];
+      var count = calibrationCounts[field.key];
+      if (!(count > 0)) continue;
+
+      if (CONFIG.calibrationUserSet[field.key]) {
+         infoMessages.push("Found " + count + " " + field.noun + " (your count kept)");
+         continue;
       }
-      this.bortleComboBox.enabled = false;
-      this.bortleComboBox.toolTip = "Auto-detected from FITS metadata";
-      infoMessages.push("Bortle scale extracted from FITS");
+
+      field.edit.text = count.toString();
+      // Set CONFIG after the text assignment so it wins over any onTextUpdated echo,
+      // then clear the flag that echo would have set
+      CONFIG[field.key] = field.edit.text;
+      CONFIG.calibrationUserSet[field.key] = false;
+      field.edit.toolTip = "Auto-detected from " + count + " " + field.label + " frames in directory." +
+                           "\nEditable: type your own count to override it.";
+      infoMessages.push("Found " + count + " " + field.noun);
+   }
+   
+   // Update environmental parameters if available in FITS.
+   // These stay editable: FITS values are a starting point, not a lock. Sites that
+   // stamp a house Bortle/SQM into every header are often wrong for your own data,
+   // and AstroBin accepts a blank SQM, so the user must be able to change or clear it.
+   var overrideTip = "\nEditable: change this value, or clear it to leave the field out of the CSV.";
+
+   if (availableMetadata.hasBortle && globalData.bortle) {
+      if (CONFIG.bortleUserSet) {
+         infoMessages.push("Bortle in FITS ignored (your selection kept)");
+      } else {
+         // Set Bortle dropdown selection
+         var bortleValue = parseInt(globalData.bortle) || 4;
+         if (bortleValue >= 1 && bortleValue <= 9) {
+            this.bortleComboBox.currentItem = bortleValue - 1; // ComboBox is 0-indexed
+            // Set CONFIG after the widget, then clear the flag that assignment may have
+            // set via onItemSelected - adopting a FITS class is not a user choice
+            CONFIG.bortle = bortleValue.toString();
+            CONFIG.bortleUserSet = false;
+            // Keep an SQM that was estimated from the OLD class in step with the new one.
+            // Only refresh an already-derived value: filling a blank SQM here would start
+            // exporting an estimate where previous versions correctly left the cell empty.
+            if (CONFIG.sqmSource === "bortle") this.updateSQMFromBortle();
+         }
+         this.bortleComboBox.toolTip = "Auto-detected from FITS metadata." +
+                                       "\nEditable: pick a different class and your choice is kept.";
+         infoMessages.push("Bortle scale extracted from FITS");
+      }
    }
    
    if (availableMetadata.hasSQM && globalData.meanSqm) {
-      this.meanSqmEdit.text = globalData.meanSqm.toFixed(2);
-      this.meanSqmEdit.enabled = false;
-      this.meanSqmEdit.toolTip = "Auto-detected from FITS metadata";
-      infoMessages.push("SQM extracted from FITS");
+      if (CONFIG.sqmSource === "user" || CONFIG.sqmSource === "cleared") {
+         infoMessages.push("SQM in FITS ignored (your value kept)");
+      } else {
+         this.meanSqmEdit.text = globalData.meanSqm.toFixed(2);
+         // Set CONFIG after the text assignment so it wins over any onTextUpdated echo
+         CONFIG.meanSqm = this.meanSqmEdit.text;
+         CONFIG.sqmSource = "fits";
+         this.meanSqmEdit.toolTip = "Auto-detected from FITS metadata." + overrideTip;
+         infoMessages.push("SQM extracted from FITS");
+      }
    }
    
    if (availableMetadata.hasFWHM && globalData.meanFwhm) {
-      this.meanFwhmEdit.text = globalData.meanFwhm.toFixed(2);
-      this.meanFwhmEdit.enabled = false;
-      this.meanFwhmEdit.toolTip = "Auto-detected from FITS metadata";
-      infoMessages.push("FWHM extracted from FITS");
+      if (CONFIG.fwhmUserSet) {
+         infoMessages.push("FWHM in FITS ignored (your value kept)");
+      } else {
+         this.meanFwhmEdit.text = globalData.meanFwhm.toFixed(2);
+         CONFIG.meanFwhm = this.meanFwhmEdit.text;
+         CONFIG.fwhmUserSet = false;
+         this.meanFwhmEdit.toolTip = "Auto-detected from FITS metadata." + overrideTip;
+         infoMessages.push("FWHM extracted from FITS");
+      }
    }
    
    if (availableMetadata.hasAmbientTemp && globalData.ambientTemp) {
-      this.temperatureEdit.text = globalData.ambientTemp.toFixed(1);
-      this.temperatureEdit.enabled = false;
-      this.temperatureEdit.toolTip = "Auto-detected from FITS metadata";
-      infoMessages.push("Ambient temperature extracted from FITS");
+      if (CONFIG.ambientTempUserSet) {
+         infoMessages.push("Ambient temperature in FITS ignored (your value kept)");
+      } else {
+         this.temperatureEdit.text = globalData.ambientTemp.toFixed(1);
+         CONFIG.ambientTemp = this.temperatureEdit.text;
+         CONFIG.ambientTempUserSet = false;
+         this.temperatureEdit.toolTip = "Auto-detected from FITS metadata." + overrideTip;
+         infoMessages.push("Ambient temperature extracted from FITS");
+      }
    }
    
    // Update info label
    if (infoMessages.length > 0) {
       this.metadataInfoLabel.text = "Auto-detected: " + infoMessages.join(", ") + ".\n" +
-                                   "Remaining fields use manual values or will need to be entered.\n" +
+                                   "Every auto-detected value can be edited - or cleared to omit it from the CSV.\n" +
                                    "SQM: Sky quality meter (16-22 mag/arcsec²). FWHM: Star seeing (1-4\").";
       this.metadataInfoLabel.styleSheet = "QLabel { color: #008000; font-size: 9pt; }"; // Green for success
    } else {

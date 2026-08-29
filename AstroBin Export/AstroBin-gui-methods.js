@@ -171,8 +171,9 @@ populateGlobalParametersFromMetadata(globalData)
       Console.writeln("Populated ambient temperature: " + temp + "°C");
    }
    
-   // Try to estimate SQM from sky brightness if available
-   if (globalData.skyBrightness !== undefined && (!this.meanSqmEdit.text || this.meanSqmEdit.text === CONFIG.meanSqm)) {
+   // Try to estimate SQM from sky brightness if available (never over a manual value)
+   if (globalData.skyBrightness !== undefined && CONFIG.sqmSource !== "user" && CONFIG.sqmSource !== "cleared" &&
+       (!this.meanSqmEdit.text || this.meanSqmEdit.text === CONFIG.meanSqm)) {
       // Sky brightness is typically in [lux], need to convert to mag/arcsec²
       // This is a rough approximation: SQM ≈ -2.5 * log10(skyBrightness) + constant
       // For more accurate conversion, this would need calibration
@@ -180,6 +181,7 @@ populateGlobalParametersFromMetadata(globalData)
       if (estimatedSqm > 15 && estimatedSqm < 23) { // Reasonable SQM range
          this.meanSqmEdit.text = estimatedSqm.toString();
          CONFIG.meanSqm = estimatedSqm.toString();
+         CONFIG.sqmSource = "fits";
          Console.writeln("Estimated SQM from sky brightness: " + estimatedSqm + " mag/arcsec²");
       }
    }
@@ -220,28 +222,39 @@ populateGlobalParametersFromMetadata(globalData)
    }
 }
 
+// Forget every manual override of an auto-detected field. Called when the user picks a
+// different root directory: overrides belong to the project they were entered for, not
+// to the dialog. Deliberately NOT called from resetGlobalParametersUI(), which runs on
+// every analysis and would undo the overrides on the very next re-analyse.
+resetParameterOverrides()
+{
+   CONFIG.sqmSource = "none";
+   CONFIG.bortleUserSet = false;
+   CONFIG.fwhmUserSet = false;
+   CONFIG.ambientTempUserSet = false;
+   CONFIG.calibrationUserSet = { darks: false, flats: false, flatDarks: false, bias: false };
+}
+
 // Reset global parameters UI to enabled state for new analysis
 resetGlobalParametersUI()
 {
-   // Re-enable all input controls
-   this.darksEdit.enabled = true;
-   this.flatsEdit.enabled = true;
-   this.flatDarksEdit.enabled = true;
-   this.biasEdit.enabled = true;
-   this.bortleComboBox.enabled = true;
-   this.meanSqmEdit.enabled = true;
-   this.meanFwhmEdit.enabled = true;
-   this.temperatureEdit.enabled = true;
-   
-   // Clear tooltips (except for helpful defaults)
-   this.darksEdit.toolTip = "";
-   this.flatsEdit.toolTip = "";
-   this.flatDarksEdit.toolTip = "";
-   this.biasEdit.toolTip = "";
-   this.bortleComboBox.toolTip = "";
+   // Nothing disables these controls any more - auto-detection fills them in and
+   // leaves them editable - so there is nothing to re-enable here.
+
+   // Drop the "auto-detected from N frames" tooltips, but keep telling the user the
+   // counts are theirs to change - the scan only sees what is under the chosen directory
+   var calibrationTip = "Auto-filled from the frames found in the scanned directory.\n" +
+                        "Editable: type your own count to override it.";
+   this.darksEdit.toolTip = calibrationTip;
+   this.flatsEdit.toolTip = calibrationTip;
+   this.flatDarksEdit.toolTip = calibrationTip;
+   this.biasEdit.toolTip = calibrationTip;
+   this.bortleComboBox.toolTip = "Bortle Dark-Sky Scale - only the number (1-9) is exported.\n" +
+                                 "Editable: a class found in the FITS headers is only a starting point.";
    // Keep helpful tooltips for SQM, FWHM, and Temperature
    this.meanSqmEdit.toolTip = "Sky Quality Meter reading in mag/arcsec². Range: 16-22 (higher = darker skies)\n" +
-                              "Urban: 16-18, Suburban: 18-20, Rural: 20-21, Dark site: 21-22";
+                              "Urban: 16-18, Suburban: 18-20, Rural: 20-21, Dark site: 21-22\n" +
+                              "Type your own value to override FITS metadata, or clear it to omit SQM from the CSV.";
    this.meanFwhmEdit.toolTip = "Full Width Half Maximum in arcseconds. Measures seeing quality.\n" +
                                "Excellent: <1.5\", Good: 1.5-2.5\", Average: 2.5-3.5\", Poor: >3.5\"\n" +
                                "Measure star FWHM in PixInsight with DynamicPSF or similar tools";
@@ -604,6 +617,11 @@ updateConfigFromUI()
    CONFIG.bias = this.biasEdit.text;
    CONFIG.bortle = (this.bortleComboBox.currentItem + 1).toString(); // Get numeric value (1-9) from ComboBox
    CONFIG.meanSqm = this.meanSqmEdit.text;
+   // A field emptied after it held a value is a deliberate "don't export SQM" and must
+   // stay empty. A field that was never filled in stays "none", so picking a Bortle
+   // class can still estimate one - this runs on Generate CSV / Summary / OK, none of
+   // which say anything about the user's intent for SQM.
+   if (CONFIG.sqmSource !== "none" && CONFIG.meanSqm.trim() === "") CONFIG.sqmSource = "cleared";
    CONFIG.meanFwhm = this.meanFwhmEdit.text;
    CONFIG.ambientTemp = this.temperatureEdit.text;
    CONFIG.preferredFilterBrand = this.filterBrandCombo.itemText(this.filterBrandCombo.currentItem);
@@ -638,11 +656,18 @@ updateSQMFromBortle()
       return; // Invalid Bortle value
    }
    
-   // Only update SQM if it's currently empty
-   if (CONFIG.meanSqm === "" || CONFIG.meanSqm === "0") {
+   // Never overwrite a value the user typed, a field the user deliberately emptied,
+   // or a genuine SQM reading taken from the FITS headers
+   if (CONFIG.sqmSource === "user" || CONFIG.sqmSource === "cleared" || CONFIG.sqmSource === "fits") {
+      return;
+   }
+   
+   // Fill in (or refresh) the Bortle-derived estimate while the field is still ours
+   if (CONFIG.meanSqm === "" || CONFIG.meanSqm === "0" || CONFIG.sqmSource === "bortle") {
       var estimatedSQM = this.bortleToSQM(bortleValue);
       CONFIG.meanSqm = estimatedSQM.toFixed(1);
       this.meanSqmEdit.text = CONFIG.meanSqm;
+      CONFIG.sqmSource = "bortle";
       Console.writeln("Estimated SQM " + CONFIG.meanSqm + " mag/arcsec² from Bortle Class " + bortleValue);
    }
 }

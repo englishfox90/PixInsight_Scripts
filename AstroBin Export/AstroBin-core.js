@@ -16,7 +16,7 @@
 
 // Script metadata
 var SCRIPT_NAME = "AstroBin Export";
-var SCRIPT_VERSION = "3.5.0";  // V8 migration + Visualize tab (bar charts) & accurate Integration Summary
+var SCRIPT_VERSION = "3.6.0";  // Auto-detected values no longer lock their fields: SQM/Bortle/FWHM/temp and calibration counts are all overridable
 var SCRIPT_DESCRIPTION = "Generates CSV files compatible with AstroBin's bulk acquisition upload feature. Includes automatic FITS header analysis, comprehensive filter database (200+ filters), personal filter sets, and more.";
 var SCRIPT_DEVELOPER = "Paul Fox-Reeks (englishfox90)";
 
@@ -42,6 +42,23 @@ var CONFIG = {
   bortle: "4",
   meanSqm: "",
   meanFwhm: "",
+  // Provenance of meanSqm, so auto-detection never overwrites a manual override.
+  // "none"    - never set
+  // "bortle"  - estimated from the Bortle class
+  // "fits"    - read from FITS headers (SQM/SKYMAG/sky brightness)
+  // "user"    - typed by the user; wins over every auto source
+  // "cleared" - deliberately emptied by the user; stays empty and exports blank
+  sqmSource: "none",
+  // Set once the user picks a Bortle class themselves, so FITS values stop overriding it
+  bortleUserSet: false,
+  // Set once the user types their own FWHM / ambient temperature, so FITS values stop
+  // overriding them (e.g. a DynamicPSF measurement beating the header's seeing figure)
+  fwhmUserSet: false,
+  ambientTempUserSet: false,
+  // Per-field flags set once the user edits a calibration count themselves, so the
+  // frame counts detected in the directory stop overriding it (rig-shared masters,
+  // frames kept outside the scanned folder, etc.)
+  calibrationUserSet: { darks: false, flats: false, flatDarks: false, bias: false },
   ambientTemp: "",
   preferredFilterBrand: "Auto",
   // Regex pattern for excluding files/folders from analysis
@@ -139,8 +156,17 @@ function saveExportColumnSettings(columns) {
 CONFIG.exportColumns = loadExportColumnSettings();
 // Personal filter set will be loaded lazily on first access
 CONFIG.personalFilterSet = null;
-// Load Bortle scale from settings
-CONFIG.bortle = loadBortleScale();
+// Load Bortle scale from settings. A stored class is the user's own choice from a
+// previous session, so it counts as a deliberate override that FITS must not undo -
+// otherwise a header-stamped Bortle wins again on the first analysis after a restart.
+// Wrapped so the lookup does not leak a module-scope global (see hygiene note above).
+(function() {
+   var stored = loadBortleScale();
+   if (stored) {
+      CONFIG.bortle = stored;
+      CONFIG.bortleUserSet = true;
+   }
+})();
 
 // Personal Filter Set: L R G B Ha OIII SII
 var DEFAULT_PERSONAL_FILTER_SET = { L: "", R: "", G: "", B: "", Ha: "", OIII: "", SII: "" };
@@ -214,6 +240,8 @@ function savePersonalFilterSet(set) {
 }
 
 // Bortle Scale Settings
+// Returns the stored class, or null when nothing valid is stored - the caller needs to
+// tell a remembered user choice apart from the built-in default.
 function loadBortleScale() {
   try {
     var bortle = Settings.read(AB_SETTINGS_MODULE + "/bortle", DataType.String);
@@ -227,7 +255,7 @@ function loadBortleScale() {
   } catch (e) {
     Console.warningln("[AstroBin] Failed to load Bortle scale: " + e);
   }
-  return "4"; // Default to Bortle 4
+  return null; // Nothing stored; CONFIG keeps its built-in default of Bortle 4
 }
 
 function saveBortleScale(bortle) {
