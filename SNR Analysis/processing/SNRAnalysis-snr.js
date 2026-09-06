@@ -96,12 +96,12 @@ function promptForROIs(refImageId, autoModeFailed, filterName) {
                                  x1: fgRect.x1, y1: fgRect.y1}) + "\n\n" +
          "Use these previews for analysis?",
          "Confirm ROI Previews" + filterLabel,
-         StdIcon_Question,
-         StdButton_Yes,
-         StdButton_No
+         StdIcon.Question,
+         StdButton.Yes,
+         StdButton.No
       );
       
-      if (confirmMsg.execute() === StdButton_Yes) {
+      if (confirmMsg.execute() === StdButton.Yes) {
          return {
             bg: {
                x0: bgRect.x0,
@@ -146,12 +146,12 @@ function promptForROIs(refImageId, autoModeFailed, filterName) {
    var msg = new MessageBox(
       msgText,
       "Create ROI Previews",
-      StdIcon_Information,
-      StdButton_Ok,
-      StdButton_Cancel
+      StdIcon.Information,
+      StdButton.Ok,
+      StdButton.Cancel
    );
    
-   if (msg.execute() !== StdButton_Ok) {
+   if (msg.execute() !== StdButton.Ok) {
       throw new Error("Analysis cancelled - ROI previews not created.");
    }
    
@@ -233,7 +233,7 @@ function scaleForMeasurement(window, bgRef, bgRect) {
       window.mainView.id + "_scaled_temp"
    );
    
-   scaledWindow.mainView.beginProcess(UndoFlag_NoSwapFile);
+   scaledWindow.mainView.beginProcess(UndoFlag.NoSwapFile);
    scaledWindow.mainView.image.assign(image);
    
    // Apply multiplicative scaling to all channels
@@ -302,7 +302,7 @@ function measureSNR(imageId, bgRect, fgRect, bgRef) {
             window.mainView.id + "_scaled_meas"
          );
          
-         scaledWindow.mainView.beginProcess(UndoFlag_NoSwapFile);
+         scaledWindow.mainView.beginProcess(UndoFlag.NoSwapFile);
          scaledWindow.mainView.image.assign(imageToMeasure);
          scaledWindow.mainView.endProcess();
          scaledWindow.hide();
@@ -333,8 +333,8 @@ function measureSNR(imageId, bgRect, fgRect, bgRef) {
          P.newImageWidth = 0;
          P.newImageHeight = 0;
          P.newImageAlpha = false;
-         P.newImageColorSpace = PixelMath.prototype.SameAsTarget;
-         P.newImageSampleFormat = PixelMath.prototype.SameAsTarget;
+         P.newImageColorSpace = PixelMath.SameAsTarget;
+         P.newImageSampleFormat = PixelMath.SameAsTarget;
          
          P.executeOn(scaledWindow.mainView);
          

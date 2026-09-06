@@ -6,11 +6,6 @@
 #ifndef __SNR_ANALYSIS_PROGRESS_JS
 #define __SNR_ANALYSIS_PROGRESS_JS
 
-#include <pjsr/Sizer.jsh>
-#include <pjsr/FrameStyle.jsh>
-#include <pjsr/TextAlign.jsh>
-#include <pjsr/StdButton.jsh>
-#include <pjsr/StdIcon.jsh>
 
 /**
  * Progress monitor dialog - shows real-time progress of analysis steps
@@ -51,7 +46,7 @@ function ProgressMonitor() {
       // Status label
       this.statusLabel = new Label(this.dialog);
       this.statusLabel.text = "Initializing...";
-      this.statusLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+      this.statusLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
       this.statusLabel.styleSheet = "QLabel { font-weight: bold; }";
       
       // Progress bar (visual using Label)
@@ -61,7 +56,7 @@ function ProgressMonitor() {
       
       this.progressBarFill = new Label(this.progressBarContainer);
       this.progressBarFill.text = "0%";
-      this.progressBarFill.textAlignment = TextAlign_Center | TextAlign_VertCenter;
+      this.progressBarFill.textAlignment = TextAlignment.Center | TextAlignment.VertCenter;
       this.progressBarFill.backgroundColor = 0xFF4CAF50; // Green fill
       this.progressBarFill.setScaledFixedHeight(25);
       this.progressBarFill.setScaledFixedWidth(0); // Start at 0 width
@@ -93,7 +88,7 @@ function ProgressMonitor() {
       // Elapsed time label
       this.elapsedLabel = new Label(this.dialog);
       this.elapsedLabel.text = "Elapsed: 0s";
-      this.elapsedLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+      this.elapsedLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
       
       // Cancel button
       var cancelButton = new PushButton(this.dialog);
@@ -118,7 +113,7 @@ function ProgressMonitor() {
       
       // Show non-modal so we can update it
       this.dialog.show();
-      processEvents();
+      CoreApplication.processEvents();
       
       // Start live timer update
       var self = this;
@@ -129,7 +124,7 @@ function ProgressMonitor() {
          if (!self.isComplete && self.elapsedLabel && self.startTime) {
             var elapsed = (new Date() - self.startTime) / 1000;
             self.elapsedLabel.text = "Elapsed: " + formatTime(elapsed);
-            processEvents();
+            CoreApplication.processEvents();
          }
       };
       this.updateTimer.start();
@@ -154,7 +149,7 @@ function ProgressMonitor() {
          endTime: null
       });
       
-      processEvents();
+      CoreApplication.processEvents();
    };
    
    /**
@@ -210,7 +205,7 @@ function ProgressMonitor() {
             // Auto-update progress percentage based on completed steps
             this.updateProgressFromSteps();
             
-            processEvents();
+            CoreApplication.processEvents();
             break;
          }
       }
@@ -242,7 +237,7 @@ function ProgressMonitor() {
    this.setStatus = function(text) {
       if (this.statusLabel) {
          this.statusLabel.text = text;
-         processEvents();
+         CoreApplication.processEvents();
       }
    };
    
@@ -269,7 +264,7 @@ function ProgressMonitor() {
             this.progressBarFill.backgroundColor = 0xFFFF9800; // Orange
          }
          
-         processEvents();
+         CoreApplication.processEvents();
       }
    };
    
@@ -280,7 +275,7 @@ function ProgressMonitor() {
       if (this.elapsedLabel && this.startTime) {
          var elapsed = (new Date() - this.startTime) / 1000;
          this.elapsedLabel.text = "Elapsed: " + formatTime(elapsed);
-         processEvents();
+         CoreApplication.processEvents();
       }
    };
    
@@ -300,7 +295,7 @@ function ProgressMonitor() {
     * Check if cancel was requested
     */
    this.isCancelled = function() {
-      processEvents();
+      CoreApplication.processEvents();
       return this.cancelRequested;
    };
    

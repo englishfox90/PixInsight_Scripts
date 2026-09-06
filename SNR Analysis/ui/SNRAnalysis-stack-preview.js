@@ -87,7 +87,7 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
       infoLabel.toolTip = "Preview uses an automatic display stretch for visibility only. SNR calculations are performed on the linear (pre-stretch) integration.";
    }
    infoLabel.styleSheet = "font-style: italic; color: #606060;";
-   infoLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   infoLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
    
    // Depth selector row
    var selectorSizer = new HorizontalSizer;
@@ -95,7 +95,7 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
    
    var depthLabel = new Label(panel);
    depthLabel.text = "Depth:";
-   depthLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   depthLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
    depthLabel.minWidth = 60;
    
    var depthCombo = new ComboBox(panel);
@@ -114,7 +114,7 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
    previewBox.setScaledMinSize(780, 350);
    previewBox.autoScroll = true;
    previewBox.tracking = true;
-   previewBox.cursor = new Cursor(StdCursor_Arrow);
+   previewBox.cursor = new Cursor(StdCursor.Arrow);
    
    // Store preview data
    previewBox.currentBitmap = null;
@@ -158,7 +158,7 @@ function createStackPreviewPanel(parent, previewEntries, isCroppedMode, filterNa
    // Info label below preview
    var infoTextLabel = new Label(panel);
    infoTextLabel.text = "";
-   infoTextLabel.textAlignment = TextAlign_Center | TextAlign_VertCenter;
+   infoTextLabel.textAlignment = TextAlignment.Center | TextAlignment.VertCenter;
    infoTextLabel.styleSheet = "font-weight: bold; font-size: 11pt;";
    
    // Function to load and display a stack

@@ -10,10 +10,10 @@
   </description>
 
   <platform os="all" arch="noarch" version="1.9.4:2.0.0">
-    <package fileName="AstroBinExport-3.6.0-20260829.zip"
+    <package fileName="AstroBinExport-3.6.0-20260905.zip"
              sha1="a2ec341cd370ce9929f792c728ea85ab0f71e994"
              type="script"
-             releaseDate="20260829">
+             releaseDate="20260905">
       <title>
         AstroBin Export
       </title>
@@ -40,16 +40,16 @@
       </description>
     </package>
 
-    <package fileName="SNRAnalysis-1.6.6-20260829.zip"
-             sha1="fa34fae3ebf3b73651a737df07f20de31da01aa4"
+    <package fileName="SNRAnalysis-1.7.0-20260905.zip"
+             sha1="b7dc39548327f47d6966f25febbf23bba4539a6d"
              type="script"
-             releaseDate="20260829">
+             releaseDate="20260905">
       <title>
         SNR Analysis
       </title>
       <description>
         <p>
-          SNR Analysis v1.6.6
+          SNR Analysis v1.7.0
         </p>
         <p>
           Analyzes how SNR improves with integration depth by creating partial integrations from calibrated and registered subframes and measuring SNR in user-defined ROIs. Generates dual graphs (SNR &amp; Gain/hr), CSV/JSON output, and provides actionable insights about diminishing returns.
@@ -58,6 +58,7 @@
           <b>Key Features:</b>
         </p>
         <ul>
+          <li>V8 JavaScript engine (requires PixInsight 1.9.4+)</li>
           <li>MorphologicalTransformation-based range masking for accurate foreground/background separation</li>
           <li>Expanded integration methods: OSC preset, doubling, Fibonacci, logarithmic, by-hour, custom</li>
           <li>Dual graph system: SNR vs Time and Gain/hr vs Time with dropdown selector</li>

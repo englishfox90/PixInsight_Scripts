@@ -92,16 +92,16 @@ function performFullIntegration(subframes, outputDir, filterSuffix) {
    
    // Configure integration parameters
    P.inputHints = "";
-   P.combination = ImageIntegration.prototype.Average;
-   P.normalization = ImageIntegration.prototype.AdditiveWithScaling;
-   P.weightMode = ImageIntegration.prototype.DontCare;
+   P.combination = ImageIntegration.Average;
+   P.normalization = ImageIntegration.AdditiveWithScaling;
+   P.weightMode = ImageIntegration.DontCare;
    P.weightKeyword = "";
-   P.weightScale = ImageIntegration.prototype.WeightScale_IKSS;
+   P.weightScale = ImageIntegration.WeightScale_IKSS;
    P.ignoreNoiseKeywords = false;
    
    // Adaptive rejection algorithm (WBPP-style Auto mode)
    P.rejection = selectRejectionAlgorithm(subframes.length);
-   P.rejectionNormalization = ImageIntegration.prototype.Scale;
+   P.rejectionNormalization = ImageIntegration.Scale;
    P.minMaxLow = 1;
    P.minMaxHigh = 1;
    
@@ -175,30 +175,30 @@ function selectRejectionAlgorithm(depth) {
       // WBPP Auto mode logic: adapt based on image count
       if (depth < 5) {
          Console.writeln("  Auto mode: Using PercentileClip (depth < 5)");
-         return ImageIntegration.prototype.PercentileClip;
+         return ImageIntegration.PercentileClip;
       } else if (depth < 15) {
          Console.writeln("  Auto mode: Using PercentileClip (depth < 15)");
-         return ImageIntegration.prototype.PercentileClip;
+         return ImageIntegration.PercentileClip;
       } else if (depth < 25) {
          Console.writeln("  Auto mode: Using WinsorizedSigmaClip (depth 15-24)");
-         return ImageIntegration.prototype.WinsorizedSigmaClip;
+         return ImageIntegration.WinsorizedSigmaClip;
       } else {
          Console.writeln("  Auto mode: Using LinearFit (depth >= 25)");
-         return ImageIntegration.prototype.LinearFit;
+         return ImageIntegration.LinearFit;
       }
    }
    
    // Manual selection
-   if (algo === "PercentileClip") return ImageIntegration.prototype.PercentileClip;
-   if (algo === "WinsorizedSigmaClip") return ImageIntegration.prototype.WinsorizedSigmaClip;
-   if (algo === "LinearFit") return ImageIntegration.prototype.LinearFit;
-   if (algo === "ESD" && ImageIntegration.prototype.Rejection_ESD) {
-      return ImageIntegration.prototype.Rejection_ESD;
+   if (algo === "PercentileClip") return ImageIntegration.PercentileClip;
+   if (algo === "WinsorizedSigmaClip") return ImageIntegration.WinsorizedSigmaClip;
+   if (algo === "LinearFit") return ImageIntegration.LinearFit;
+   if (algo === "ESD" && ImageIntegration.Rejection_ESD) {
+      return ImageIntegration.Rejection_ESD;
    }
    
    // Fallback
    Console.warningln("  Unknown rejection algorithm '" + algo + "', using WinsorizedSigmaClip");
-   return ImageIntegration.prototype.WinsorizedSigmaClip;
+   return ImageIntegration.WinsorizedSigmaClip;
 }
 
 /**
@@ -228,7 +228,7 @@ function integrateDepth(job, subframes, outputDir, filterSuffix) {
             "int_" + job.label + filterSuffix
          );
          
-         newWindow.mainView.beginProcess(UndoFlag_NoSwapFile);
+         newWindow.mainView.beginProcess(UndoFlag.NoSwapFile);
          newWindow.mainView.image.assign(refWindow.mainView.image);
          newWindow.mainView.endProcess();
          
@@ -288,16 +288,16 @@ function integrateDepth(job, subframes, outputDir, filterSuffix) {
    
    // Configure integration
    P.inputHints = "";
-   P.combination = ImageIntegration.prototype.Average;
-   P.normalization = ImageIntegration.prototype.AdditiveWithScaling;
-   P.weightMode = ImageIntegration.prototype.DontCare;
+   P.combination = ImageIntegration.Average;
+   P.normalization = ImageIntegration.AdditiveWithScaling;
+   P.weightMode = ImageIntegration.DontCare;
    P.weightKeyword = "";
-   P.weightScale = ImageIntegration.prototype.WeightScale_IKSS;
+   P.weightScale = ImageIntegration.WeightScale_IKSS;
    P.ignoreNoiseKeywords = false;
    
    // Adaptive rejection algorithm (WBPP-style Auto mode)
    P.rejection = selectRejectionAlgorithm(job.depth);
-   P.rejectionNormalization = ImageIntegration.prototype.Scale;
+   P.rejectionNormalization = ImageIntegration.Scale;
    P.minMaxLow = 1;
    P.minMaxHigh = 1;
    

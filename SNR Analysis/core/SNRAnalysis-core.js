@@ -15,7 +15,7 @@
  */
 
 var SCRIPT_NAME = "SNR Analysis";
-var SCRIPT_VERSION = "1.6.6";  // Bumped for hygiene improvements
+var SCRIPT_VERSION = "1.7.0";  // V8 engine migration (PixInsight 1.9.4+)
 var SCRIPT_DESCRIPTION = "Analyzes how SNR improves with integration depth by creating partial integrations and measuring SNR in user-defined ROIs.";
 
 // Settings module ID (unique to avoid conflicts with other tools)
@@ -88,104 +88,104 @@ var CONFIG = {
  */
 function loadSettings() {
    try {
-      var init = Settings.read(SNR_SETTINGS_MODULE + "/_initialized", DataType_UInt32);
+      var init = Settings.read(SNR_SETTINGS_MODULE + "/_initialized", DataType.Uint32);
       if (!Settings.lastReadOK || init !== SETTINGS_VERSION) {
          // First run or version mismatch - use defaults
          return;
       }
       
       // Input settings
-      var dir = Settings.read(SNR_SETTINGS_MODULE + "/inputDir", DataType_String);
+      var dir = Settings.read(SNR_SETTINGS_MODULE + "/inputDir", DataType.String);
       if (Settings.lastReadOK) CONFIG.inputDir = dir;
       
-      var pattern = Settings.read(SNR_SETTINGS_MODULE + "/filePattern", DataType_String);
+      var pattern = Settings.read(SNR_SETTINGS_MODULE + "/filePattern", DataType.String);
       if (Settings.lastReadOK) CONFIG.filePattern = pattern;
       
-      var analyzeAll = Settings.read(SNR_SETTINGS_MODULE + "/analyzeAllFilters", DataType_Boolean);
+      var analyzeAll = Settings.read(SNR_SETTINGS_MODULE + "/analyzeAllFilters", DataType.Boolean);
       if (Settings.lastReadOK) CONFIG.analyzeAllFilters = analyzeAll;
       
       // ROI Mode
-      var roiMode = Settings.read(SNR_SETTINGS_MODULE + "/roiMode", DataType_String);
+      var roiMode = Settings.read(SNR_SETTINGS_MODULE + "/roiMode", DataType.String);
       if (Settings.lastReadOK) CONFIG.roiMode = roiMode;
       
-      var tileSize = Settings.read(SNR_SETTINGS_MODULE + "/autoRoiTileSize", DataType_UInt32);
+      var tileSize = Settings.read(SNR_SETTINGS_MODULE + "/autoRoiTileSize", DataType.Uint32);
       if (Settings.lastReadOK) CONFIG.autoRoiTileSize = tileSize;
       
-      var debugOverlay = Settings.read(SNR_SETTINGS_MODULE + "/saveDebugOverlay", DataType_Boolean);
+      var debugOverlay = Settings.read(SNR_SETTINGS_MODULE + "/saveDebugOverlay", DataType.Boolean);
       if (Settings.lastReadOK) CONFIG.saveDebugOverlay = debugOverlay;
       
       // Depth strategy
-      var strategy = Settings.read(SNR_SETTINGS_MODULE + "/depthStrategy", DataType_String);
+      var strategy = Settings.read(SNR_SETTINGS_MODULE + "/depthStrategy", DataType.String);
       if (Settings.lastReadOK) CONFIG.depthStrategy = strategy;
       
-      var custom = Settings.read(SNR_SETTINGS_MODULE + "/customDepths", DataType_String);
+      var custom = Settings.read(SNR_SETTINGS_MODULE + "/customDepths", DataType.String);
       if (Settings.lastReadOK) CONFIG.customDepths = custom;
       
-      var includeFullDepth = Settings.read(SNR_SETTINGS_MODULE + "/includeFullDepth", DataType_Boolean);
+      var includeFullDepth = Settings.read(SNR_SETTINGS_MODULE + "/includeFullDepth", DataType.Boolean);
       if (Settings.lastReadOK) CONFIG.includeFullDepth = includeFullDepth;
       
       // Star removal
-      var starless = Settings.read(SNR_SETTINGS_MODULE + "/generateStarless", DataType_Boolean);
+      var starless = Settings.read(SNR_SETTINGS_MODULE + "/generateStarless", DataType.Boolean);
       if (Settings.lastReadOK) CONFIG.generateStarless = starless;
       // Enforce starless processing for SNR fidelity
       CONFIG.generateStarless = true;
       
-      var method = Settings.read(SNR_SETTINGS_MODULE + "/starRemovalMethod", DataType_String);
+      var method = Settings.read(SNR_SETTINGS_MODULE + "/starRemovalMethod", DataType.String);
       if (Settings.lastReadOK) CONFIG.starRemovalMethod = method;
       
-      var linear = Settings.read(SNR_SETTINGS_MODULE + "/starRemovalLinear", DataType_Boolean);
+      var linear = Settings.read(SNR_SETTINGS_MODULE + "/starRemovalLinear", DataType.Boolean);
       if (Settings.lastReadOK) CONFIG.starRemovalLinear = linear;
       
-      var strength = Settings.read(SNR_SETTINGS_MODULE + "/starRemovalStrength", DataType_Double);
+      var strength = Settings.read(SNR_SETTINGS_MODULE + "/starRemovalStrength", DataType.Double);
       if (Settings.lastReadOK) CONFIG.starRemovalStrength = strength;
       
       // Signal normalization
-      var lockScale = Settings.read(SNR_SETTINGS_MODULE + "/lockSignalScale", DataType_Boolean);
+      var lockScale = Settings.read(SNR_SETTINGS_MODULE + "/lockSignalScale", DataType.Boolean);
       if (Settings.lastReadOK) CONFIG.lockSignalScale = lockScale;
       
       // Rejection algorithm settings
-      var rejAlgo = Settings.read(SNR_SETTINGS_MODULE + "/rejectionAlgorithm", DataType_String);
+      var rejAlgo = Settings.read(SNR_SETTINGS_MODULE + "/rejectionAlgorithm", DataType.String);
       if (Settings.lastReadOK) CONFIG.rejectionAlgorithm = rejAlgo;
       
-      var pctLow = Settings.read(SNR_SETTINGS_MODULE + "/percentileLow", DataType_Double);
+      var pctLow = Settings.read(SNR_SETTINGS_MODULE + "/percentileLow", DataType.Double);
       if (Settings.lastReadOK) CONFIG.percentileLow = pctLow;
       
-      var pctHigh = Settings.read(SNR_SETTINGS_MODULE + "/percentileHigh", DataType_Double);
+      var pctHigh = Settings.read(SNR_SETTINGS_MODULE + "/percentileHigh", DataType.Double);
       if (Settings.lastReadOK) CONFIG.percentileHigh = pctHigh;
       
-      var sigLow = Settings.read(SNR_SETTINGS_MODULE + "/sigmaLow", DataType_Double);
+      var sigLow = Settings.read(SNR_SETTINGS_MODULE + "/sigmaLow", DataType.Double);
       if (Settings.lastReadOK) CONFIG.sigmaLow = sigLow;
       
-      var sigHigh = Settings.read(SNR_SETTINGS_MODULE + "/sigmaHigh", DataType_Double);
+      var sigHigh = Settings.read(SNR_SETTINGS_MODULE + "/sigmaHigh", DataType.Double);
       if (Settings.lastReadOK) CONFIG.sigmaHigh = sigHigh;
       
-      var linLow = Settings.read(SNR_SETTINGS_MODULE + "/linearFitLow", DataType_Double);
+      var linLow = Settings.read(SNR_SETTINGS_MODULE + "/linearFitLow", DataType.Double);
       if (Settings.lastReadOK) CONFIG.linearFitLow = linLow;
       
-      var linHigh = Settings.read(SNR_SETTINGS_MODULE + "/linearFitHigh", DataType_Double);
+      var linHigh = Settings.read(SNR_SETTINGS_MODULE + "/linearFitHigh", DataType.Double);
       if (Settings.lastReadOK) CONFIG.linearFitHigh = linHigh;
       
       // Stretch
-      var stretch = Settings.read(SNR_SETTINGS_MODULE + "/applyStretch", DataType_Boolean);
+      var stretch = Settings.read(SNR_SETTINGS_MODULE + "/applyStretch", DataType.Boolean);
       if (Settings.lastReadOK) CONFIG.applyStretch = stretch;
       
       // Output
-      var outDir = Settings.read(SNR_SETTINGS_MODULE + "/outputDir", DataType_String);
+      var outDir = Settings.read(SNR_SETTINGS_MODULE + "/outputDir", DataType.String);
       if (Settings.lastReadOK) CONFIG.outputDir = outDir;
       
-      var csv = Settings.read(SNR_SETTINGS_MODULE + "/outputCSV", DataType_Boolean);
+      var csv = Settings.read(SNR_SETTINGS_MODULE + "/outputCSV", DataType.Boolean);
       if (Settings.lastReadOK) CONFIG.outputCSV = csv;
       
-      var json = Settings.read(SNR_SETTINGS_MODULE + "/outputJSON", DataType_Boolean);
+      var json = Settings.read(SNR_SETTINGS_MODULE + "/outputJSON", DataType.Boolean);
       if (Settings.lastReadOK) CONFIG.outputJSON = json;
       
-      var graph = Settings.read(SNR_SETTINGS_MODULE + "/generateGraph", DataType_Boolean);
+      var graph = Settings.read(SNR_SETTINGS_MODULE + "/generateGraph", DataType.Boolean);
       if (Settings.lastReadOK) CONFIG.generateGraph = graph;
       
-      var insights = Settings.read(SNR_SETTINGS_MODULE + "/generateInsights", DataType_Boolean);
+      var insights = Settings.read(SNR_SETTINGS_MODULE + "/generateInsights", DataType.Boolean);
       if (Settings.lastReadOK) CONFIG.generateInsights = insights;
       
-      var timings = Settings.read(SNR_SETTINGS_MODULE + "/logTimings", DataType_Boolean);
+      var timings = Settings.read(SNR_SETTINGS_MODULE + "/logTimings", DataType.Boolean);
       if (Settings.lastReadOK) CONFIG.logTimings = timings;
       
    } catch (error) {
@@ -198,51 +198,51 @@ function loadSettings() {
  */
 function saveSettings() {
    try {
-      Settings.write(SNR_SETTINGS_MODULE + "/_initialized", DataType_UInt32, SETTINGS_VERSION);
+      Settings.write(SNR_SETTINGS_MODULE + "/_initialized", DataType.Uint32, SETTINGS_VERSION);
       
       // Input
-      Settings.write(SNR_SETTINGS_MODULE + "/inputDir", DataType_String, CONFIG.inputDir);
-      Settings.write(SNR_SETTINGS_MODULE + "/filePattern", DataType_String, CONFIG.filePattern);
-      Settings.write(SNR_SETTINGS_MODULE + "/analyzeAllFilters", DataType_Boolean, CONFIG.analyzeAllFilters);
+      Settings.write(SNR_SETTINGS_MODULE + "/inputDir", DataType.String, CONFIG.inputDir);
+      Settings.write(SNR_SETTINGS_MODULE + "/filePattern", DataType.String, CONFIG.filePattern);
+      Settings.write(SNR_SETTINGS_MODULE + "/analyzeAllFilters", DataType.Boolean, CONFIG.analyzeAllFilters);
       
       // ROI Mode
-      Settings.write(SNR_SETTINGS_MODULE + "/roiMode", DataType_String, CONFIG.roiMode);
-      Settings.write(SNR_SETTINGS_MODULE + "/autoRoiTileSize", DataType_UInt32, CONFIG.autoRoiTileSize);
-      Settings.write(SNR_SETTINGS_MODULE + "/saveDebugOverlay", DataType_Boolean, CONFIG.saveDebugOverlay);
+      Settings.write(SNR_SETTINGS_MODULE + "/roiMode", DataType.String, CONFIG.roiMode);
+      Settings.write(SNR_SETTINGS_MODULE + "/autoRoiTileSize", DataType.Uint32, CONFIG.autoRoiTileSize);
+      Settings.write(SNR_SETTINGS_MODULE + "/saveDebugOverlay", DataType.Boolean, CONFIG.saveDebugOverlay);
       
       // Depth strategy
-      Settings.write(SNR_SETTINGS_MODULE + "/depthStrategy", DataType_String, CONFIG.depthStrategy);
-      Settings.write(SNR_SETTINGS_MODULE + "/customDepths", DataType_String, CONFIG.customDepths);
-      Settings.write(SNR_SETTINGS_MODULE + "/includeFullDepth", DataType_Boolean, CONFIG.includeFullDepth);
+      Settings.write(SNR_SETTINGS_MODULE + "/depthStrategy", DataType.String, CONFIG.depthStrategy);
+      Settings.write(SNR_SETTINGS_MODULE + "/customDepths", DataType.String, CONFIG.customDepths);
+      Settings.write(SNR_SETTINGS_MODULE + "/includeFullDepth", DataType.Boolean, CONFIG.includeFullDepth);
       
       // Star removal
-      Settings.write(SNR_SETTINGS_MODULE + "/generateStarless", DataType_Boolean, CONFIG.generateStarless);
-      Settings.write(SNR_SETTINGS_MODULE + "/starRemovalMethod", DataType_String, CONFIG.starRemovalMethod);
-      Settings.write(SNR_SETTINGS_MODULE + "/starRemovalLinear", DataType_Boolean, CONFIG.starRemovalLinear);
-      Settings.write(SNR_SETTINGS_MODULE + "/starRemovalStrength", DataType_Double, CONFIG.starRemovalStrength);
+      Settings.write(SNR_SETTINGS_MODULE + "/generateStarless", DataType.Boolean, CONFIG.generateStarless);
+      Settings.write(SNR_SETTINGS_MODULE + "/starRemovalMethod", DataType.String, CONFIG.starRemovalMethod);
+      Settings.write(SNR_SETTINGS_MODULE + "/starRemovalLinear", DataType.Boolean, CONFIG.starRemovalLinear);
+      Settings.write(SNR_SETTINGS_MODULE + "/starRemovalStrength", DataType.Double, CONFIG.starRemovalStrength);
       
       // Signal normalization
-      Settings.write(SNR_SETTINGS_MODULE + "/lockSignalScale", DataType_Boolean, CONFIG.lockSignalScale);
+      Settings.write(SNR_SETTINGS_MODULE + "/lockSignalScale", DataType.Boolean, CONFIG.lockSignalScale);
       
       // Rejection algorithm settings
-      Settings.write(SNR_SETTINGS_MODULE + "/rejectionAlgorithm", DataType_String, CONFIG.rejectionAlgorithm);
-      Settings.write(SNR_SETTINGS_MODULE + "/percentileLow", DataType_Double, CONFIG.percentileLow);
-      Settings.write(SNR_SETTINGS_MODULE + "/percentileHigh", DataType_Double, CONFIG.percentileHigh);
-      Settings.write(SNR_SETTINGS_MODULE + "/sigmaLow", DataType_Double, CONFIG.sigmaLow);
-      Settings.write(SNR_SETTINGS_MODULE + "/sigmaHigh", DataType_Double, CONFIG.sigmaHigh);
-      Settings.write(SNR_SETTINGS_MODULE + "/linearFitLow", DataType_Double, CONFIG.linearFitLow);
-      Settings.write(SNR_SETTINGS_MODULE + "/linearFitHigh", DataType_Double, CONFIG.linearFitHigh);
+      Settings.write(SNR_SETTINGS_MODULE + "/rejectionAlgorithm", DataType.String, CONFIG.rejectionAlgorithm);
+      Settings.write(SNR_SETTINGS_MODULE + "/percentileLow", DataType.Double, CONFIG.percentileLow);
+      Settings.write(SNR_SETTINGS_MODULE + "/percentileHigh", DataType.Double, CONFIG.percentileHigh);
+      Settings.write(SNR_SETTINGS_MODULE + "/sigmaLow", DataType.Double, CONFIG.sigmaLow);
+      Settings.write(SNR_SETTINGS_MODULE + "/sigmaHigh", DataType.Double, CONFIG.sigmaHigh);
+      Settings.write(SNR_SETTINGS_MODULE + "/linearFitLow", DataType.Double, CONFIG.linearFitLow);
+      Settings.write(SNR_SETTINGS_MODULE + "/linearFitHigh", DataType.Double, CONFIG.linearFitHigh);
       
       // Stretch
-      Settings.write(SNR_SETTINGS_MODULE + "/applyStretch", DataType_Boolean, CONFIG.applyStretch);
+      Settings.write(SNR_SETTINGS_MODULE + "/applyStretch", DataType.Boolean, CONFIG.applyStretch);
       
       // Output
-      Settings.write(SNR_SETTINGS_MODULE + "/outputDir", DataType_String, CONFIG.outputDir);
-      Settings.write(SNR_SETTINGS_MODULE + "/outputCSV", DataType_Boolean, CONFIG.outputCSV);
-      Settings.write(SNR_SETTINGS_MODULE + "/outputJSON", DataType_Boolean, CONFIG.outputJSON);
-      Settings.write(SNR_SETTINGS_MODULE + "/generateGraph", DataType_Boolean, CONFIG.generateGraph);
-      Settings.write(SNR_SETTINGS_MODULE + "/generateInsights", DataType_Boolean, CONFIG.generateInsights);
-      Settings.write(SNR_SETTINGS_MODULE + "/logTimings", DataType_Boolean, CONFIG.logTimings);
+      Settings.write(SNR_SETTINGS_MODULE + "/outputDir", DataType.String, CONFIG.outputDir);
+      Settings.write(SNR_SETTINGS_MODULE + "/outputCSV", DataType.Boolean, CONFIG.outputCSV);
+      Settings.write(SNR_SETTINGS_MODULE + "/outputJSON", DataType.Boolean, CONFIG.outputJSON);
+      Settings.write(SNR_SETTINGS_MODULE + "/generateGraph", DataType.Boolean, CONFIG.generateGraph);
+      Settings.write(SNR_SETTINGS_MODULE + "/generateInsights", DataType.Boolean, CONFIG.generateInsights);
+      Settings.write(SNR_SETTINGS_MODULE + "/logTimings", DataType.Boolean, CONFIG.logTimings);
       
    } catch (error) {
       Console.warningln("Failed to save settings: " + error.message);

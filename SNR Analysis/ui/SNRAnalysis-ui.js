@@ -6,9 +6,9 @@
 /**
  * Main configuration dialog
  */
-function SNRAnalysisDialog() {
-   this.__base__ = Dialog;
-   this.__base__();
+const SNRAnalysisDialog = class extends Dialog {
+   constructor() {
+   super();
    
    var self = this;
    
@@ -34,18 +34,18 @@ function SNRAnalysisDialog() {
    okButton.onClick = function() {
       // Validate inputs
       if (!CONFIG.inputDir || CONFIG.inputDir.trim().length === 0) {
-         new MessageBox("Please select an input directory.", "Validation Error", StdIcon_Error, StdButton_Ok).execute();
+         new MessageBox("Please select an input directory.", "Validation Error", StdIcon.Error, StdButton.Ok).execute();
          return;
       }
       
       if (!CONFIG.outputDir || CONFIG.outputDir.trim().length === 0) {
-         new MessageBox("Please select an output directory.", "Validation Error", StdIcon_Error, StdButton_Ok).execute();
+         new MessageBox("Please select an output directory.", "Validation Error", StdIcon.Error, StdButton.Ok).execute();
          return;
       }
       
       if (CONFIG.depthStrategy === "custom") {
          if (!CONFIG.customDepths || CONFIG.customDepths.trim().length === 0) {
-            new MessageBox("Please specify custom depths or choose a different strategy.", "Validation Error", StdIcon_Error, StdButton_Ok).execute();
+            new MessageBox("Please specify custom depths or choose a different strategy.", "Validation Error", StdIcon.Error, StdButton.Ok).execute();
             return;
          }
       }
@@ -57,8 +57,8 @@ function SNRAnalysisDialog() {
          new MessageBox(
             "Star removal is required. Install StarNet2 or StarXTerminator (Process > All Processes) before running.",
             "Star Removal Required",
-            StdIcon_Error,
-            StdButton_Ok
+            StdIcon.Error,
+            StdButton.Ok
          ).execute();
          return;
       }
@@ -96,6 +96,5 @@ function SNRAnalysisDialog() {
    this.windowTitle = "SNR vs Integration Time Analysis";
    this.adjustToContents();
    this.setFixedSize();
-}
-
-SNRAnalysisDialog.prototype = new Dialog;
+   }
+};

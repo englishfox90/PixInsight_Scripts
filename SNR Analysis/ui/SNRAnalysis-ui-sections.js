@@ -23,7 +23,7 @@ function buildInputSection(dialog) {
    // Input directory
    var inputDirLabel = new Label(dialog);
    inputDirLabel.text = "Input Directory:";
-   inputDirLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   inputDirLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
    
    var inputDirEdit = new Edit(dialog);
    inputDirEdit.text = CONFIG.inputDir;
@@ -40,8 +40,8 @@ function buildInputSection(dialog) {
       var dirDialog = new GetDirectoryDialog();
       dirDialog.caption = "Select Directory with Calibrated and Registered Subframes";
       if (dirDialog.execute()) {
-         inputDirEdit.text = dirDialog.directory;
-         CONFIG.inputDir = dirDialog.directory;
+         inputDirEdit.text = dirDialog.directoryPath;
+         CONFIG.inputDir = dirDialog.directoryPath;
       }
    };
    
@@ -54,7 +54,7 @@ function buildInputSection(dialog) {
    // File pattern
    var patternLabel = new Label(dialog);
    patternLabel.text = "File Pattern:";
-   patternLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   patternLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
    patternLabel.minWidth = 100;
    
    var patternEdit = new Edit(dialog);
@@ -98,7 +98,7 @@ function buildRoiModeSection(dialog) {
    
    var roiModeLabel = new Label(dialog);
    roiModeLabel.text = "BG/FG Detection:";
-   roiModeLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   roiModeLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
    roiModeLabel.minWidth = 100;
    
    var roiModeCombo = new ComboBox(dialog);
@@ -162,7 +162,7 @@ function buildRoiModeSection(dialog) {
    // Tile size and debug checkbox on same row
    var tileSizeLabel = new Label(dialog);
    tileSizeLabel.text = "Auto Tile Size:";
-   tileSizeLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   tileSizeLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
    tileSizeLabel.minWidth = 100;
    
    var tileSizeSizer = new HorizontalSizer;
@@ -192,7 +192,7 @@ function buildDepthStrategySection(dialog) {
    
    var strategyLabel = new Label(dialog);
    strategyLabel.text = "Strategy:";
-   strategyLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   strategyLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
    strategyLabel.minWidth = 100;
    
    var strategyCombo = new ComboBox(dialog);
@@ -238,7 +238,7 @@ function buildDepthStrategySection(dialog) {
    // Custom depths
    var customLabel = new Label(dialog);
    customLabel.text = "Custom Depths:";
-   customLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   customLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
    customLabel.minWidth = 100;
    
    var customSizer = new HorizontalSizer;
@@ -277,7 +277,7 @@ function buildProcessingSection(dialog) {
 
    var starMethodLabel = new Label(dialog);
    starMethodLabel.text = "Star removal (required):";
-   starMethodLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   starMethodLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
    starMethodLabel.minWidth = 180;
    
    var starMethodCombo = new ComboBox(dialog);
@@ -323,7 +323,7 @@ function buildProcessingSection(dialog) {
    // Integration rejection algorithm section
    var rejectionLabel = new Label(dialog);
    rejectionLabel.text = "Integration rejection:";
-   rejectionLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   rejectionLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
    rejectionLabel.minWidth = 180;
    
    var rejectionCombo = new ComboBox(dialog);
@@ -401,7 +401,7 @@ function buildOutputSection(dialog) {
    // Output directory
    var outputDirLabel = new Label(dialog);
    outputDirLabel.text = "Output Directory:";
-   outputDirLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   outputDirLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
    
    var outputDirEdit = new Edit(dialog);
    outputDirEdit.text = CONFIG.outputDir;
@@ -418,8 +418,8 @@ function buildOutputSection(dialog) {
       var dirDialog = new GetDirectoryDialog();
       dirDialog.caption = "Select Output Directory";
       if (dirDialog.execute()) {
-         outputDirEdit.text = dirDialog.directory;
-         CONFIG.outputDir = dirDialog.directory;
+         outputDirEdit.text = dirDialog.directoryPath;
+         CONFIG.outputDir = dirDialog.directoryPath;
       }
    };
    

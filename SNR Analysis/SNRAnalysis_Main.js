@@ -4,10 +4,11 @@
  * Analyzes how SNR improves with integration depth by creating partial integrations
  * from calibrated  and registeredsubframes and measuring SNR in user-defined regions.
  * 
- * Version: 1.6.6
+ * Version: 1.7.0
  * Author: PixInsight Community
  */
 
+#engine v8
 #feature-id    SNRAnalysis : PFRAstro > SNR Analysis
 
 #feature-info  Analyzes how SNR improves with integration depth. Creates partial integrations \
@@ -16,24 +17,12 @@
                returns and optimal integration times.
 
 #feature-icon  @script_icons_dir/SNRAnalysis.svg
+CoreApplication.ensureMinimumVersion( 1, 9, 4 );
 
 // === SCRIPT ISOLATION WRAPPER ===
 // Wraps entire script in IIFE (Immediately Invoked Function Expression) to prevent global scope pollution
 (function() {
 "use strict";  // Enables strict mode to catch accidental global variable assignments
-
-// Include necessary PJSR libraries
-#include <pjsr/Sizer.jsh>
-#include <pjsr/FrameStyle.jsh>
-#include <pjsr/TextAlign.jsh>
-#include <pjsr/StdButton.jsh>
-#include <pjsr/StdIcon.jsh>
-#include <pjsr/StdCursor.jsh>
-#include <pjsr/Color.jsh>
-#include <pjsr/FontFamily.jsh>
-#include <pjsr/DataType.jsh>
-#include <pjsr/UndoFlag.jsh>
-#include <pjsr/MorphOp.jsh>
 
 // Include our modular components
 // Core modules
@@ -1213,13 +1202,13 @@ function SNRAnalysisEngine() {
                progress.setStatus("Waiting for ROI creation - " + missingROIs.length + " filter(s) need previews");
                
                for (var i = 0; i < 20; i++) {
-                  processEvents();
+                  CoreApplication.processEvents();
                   msleep(100);
                }
                
                progress.close();
                
-               new MessageBox(msg, "Create ROI Previews", StdIcon_Information, StdButton_Ok).execute();
+               new MessageBox(msg, "Create ROI Previews", StdIcon.Information, StdButton.Ok).execute();
                return;
             }
          }
@@ -1276,7 +1265,7 @@ function SNRAnalysisEngine() {
          
          // Small delay to show 100% and final time before closing
          for (var i = 0; i < 10; i++) {
-            processEvents();
+            CoreApplication.processEvents();
             msleep(100);
          }
          
@@ -1293,7 +1282,7 @@ function SNRAnalysisEngine() {
             
             // Keep dialog open briefly to show the error
             for (var i = 0; i < 15; i++) {
-               processEvents();
+               CoreApplication.processEvents();
                msleep(100);
             }
             

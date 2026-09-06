@@ -355,13 +355,13 @@ function cleanupMask(mask) {
       
       // Create temporary window for processing
       var tempWindow = new ImageWindow(Math.floor(mask.width), Math.floor(mask.height), 1, 32, true, false, "temp_mask_cleanup");
-      tempWindow.mainView.beginProcess(UndoFlag_NoSwapFile);
+      tempWindow.mainView.beginProcess(UndoFlag.NoSwapFile);
       tempWindow.mainView.image.assign(cleaned);
       tempWindow.mainView.endProcess();
       
       // Light gaussian blur (sigma=1.0) to smooth noise
       var G = new Convolution;
-      G.mode = Convolution.prototype.Parametric;
+      G.mode = Convolution.Parametric;
       G.sigma = 1.0;
       G.shape = 2.0;
       G.executeOn(tempWindow.mainView);
@@ -378,13 +378,13 @@ function cleanupMask(mask) {
       }
       
       // Update window with binarized image
-      tempWindow.mainView.beginProcess(UndoFlag_NoSwapFile);
+      tempWindow.mainView.beginProcess(UndoFlag.NoSwapFile);
       tempWindow.mainView.image.assign(cleaned);
       tempWindow.mainView.endProcess();
       
       // Morphological close: dilate then erode (radius=2 pixels)
       var M = new MorphologicalTransformation;
-      M.operator = MorphOp_Dilation;
+      M.operator = MorphologicalOp.Dilation;
       M.interlacingDistance = 1;
       M.lowThreshold = 0.5;
       M.highThreshold = 1.0;
@@ -397,7 +397,7 @@ function cleanupMask(mask) {
       M.executeOn(tempWindow.mainView);
       
       // Erode
-      M.operator = MorphOp_Erosion;
+      M.operator = MorphologicalOp.Erosion;
       M.executeOn(tempWindow.mainView);
       
       // Get final result
@@ -491,12 +491,12 @@ function createBGCandidateMask(fgMask, borderMargin, bufferPx) {
    
    // Create temporary window for morphological processing
    var tempWindow = new ImageWindow(Math.floor(width), Math.floor(height), 1, 32, true, false, "temp_morph_dilation");
-   tempWindow.mainView.beginProcess(UndoFlag_NoSwapFile);
+   tempWindow.mainView.beginProcess(UndoFlag.NoSwapFile);
    tempWindow.mainView.image.assign(fgBuffered);
    tempWindow.mainView.endProcess();
    
    var M = new MorphologicalTransformation;
-   M.operator = MorphOp_Dilation;
+   M.operator = MorphologicalOp.Dilation;
    M.interlacingDistance = 1;
    M.lowThreshold = 0.5;
    M.highThreshold = 1.0;
@@ -589,12 +589,12 @@ function erodeMask(mask, erodePx) {
    
    // Create temporary window for morphological processing
    var tempWindow = new ImageWindow(Math.floor(mask.width), Math.floor(mask.height), 1, 32, true, false, "temp_morph_erosion");
-   tempWindow.mainView.beginProcess(UndoFlag_NoSwapFile);
+   tempWindow.mainView.beginProcess(UndoFlag.NoSwapFile);
    tempWindow.mainView.image.assign(eroded);
    tempWindow.mainView.endProcess();
    
    var M = new MorphologicalTransformation;
-   M.operator = MorphOp_Erosion;
+   M.operator = MorphologicalOp.Erosion;
    M.interlacingDistance = 1;
    M.lowThreshold = 0.5;
    M.highThreshold = 1.0;
@@ -786,7 +786,7 @@ function saveDebugOverlay(image, fgMask, result, outputDir, filterName) {
       var debugPath = debugDir + "/ROI" + filterSuffix + "_reference.xisf";
       
       var window = new ImageWindow(Math.floor(image.width), Math.floor(image.height), 3, 32, true, true, "debug_roi");
-      window.mainView.beginProcess(UndoFlag_NoSwapFile);
+      window.mainView.beginProcess(UndoFlag.NoSwapFile);
       window.mainView.image.assign(debugImage);
       window.mainView.endProcess();
       

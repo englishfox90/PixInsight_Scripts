@@ -83,30 +83,30 @@ function removeStarsWithStarX(config, job, imageWindow, filterSuffix) {
    }
    
    // Detect version by checking available properties
-   var hasNewStyle = (P.hasOwnProperty("createStarlessImage") || 
+   var hasNewStyle = (("createStarlessImage" in P) || 
                       P.createStarlessImage !== undefined);
-   var hasOldStyle = (P.hasOwnProperty("stars") || P.stars !== undefined);
+   var hasOldStyle = (("stars" in P) || P.stars !== undefined);
    
    var finalId = "int_" + job.label + filterSuffix + "_starless";
    
    // Configure parameters (version-safe)
    if (hasNewStyle) {
       // Newer StarXTerminator versions - configure to generate new image
-      if (P.hasOwnProperty("generateStarless")) P.generateStarless = true;
-      if (P.hasOwnProperty("createStarlessImage")) P.createStarlessImage = true;
-      if (P.hasOwnProperty("replaceTarget")) P.replaceTarget = false;  // Don't replace original
-      if (P.hasOwnProperty("newStarlessImageId")) P.newStarlessImageId = finalId;
-      if (P.hasOwnProperty("linear")) P.linear = !!config.starRemovalLinear;
-      if (P.hasOwnProperty("ai_file")) P.ai_file = "";  // Default model
+      if (("generateStarless" in P)) P.generateStarless = true;
+      if (("createStarlessImage" in P)) P.createStarlessImage = true;
+      if (("replaceTarget" in P)) P.replaceTarget = false;  // Don't replace original
+      if (("newStarlessImageId" in P)) P.newStarlessImageId = finalId;
+      if (("linear" in P)) P.linear = !!config.starRemovalLinear;
+      if (("ai_file" in P)) P.ai_file = "";  // Default model
    } else if (hasOldStyle) {
       // Older StarXTerminator versions
-      if (P.hasOwnProperty("stars")) P.stars = false;  // Generate starless, not star mask
-      if (P.hasOwnProperty("linear")) P.linear = !!config.starRemovalLinear;
-      if (P.hasOwnProperty("unscreen_stars")) P.unscreen_stars = false;
-      if (P.hasOwnProperty("unscreen_correction")) {
+      if (("stars" in P)) P.stars = false;  // Generate starless, not star mask
+      if (("linear" in P)) P.linear = !!config.starRemovalLinear;
+      if (("unscreen_stars" in P)) P.unscreen_stars = false;
+      if (("unscreen_correction" in P)) {
          P.unscreen_correction = config.starRemovalStrength || 0.70;
       }
-      if (P.hasOwnProperty("ai_file")) P.ai_file = "";
+      if (("ai_file" in P)) P.ai_file = "";
    } else {
       Console.warningln("Unknown StarXTerminator version - attempting with defaults");
    }
@@ -235,21 +235,21 @@ function removeStarsWithStarNet(config, job, imageWindow, filterSuffix) {
    var finalId = "int_" + job.label + filterSuffix + "_starless";
    
    // Configure parameters (version-safe)
-   if (P.hasOwnProperty("stride")) {
+   if (("stride" in P)) {
       // Typical values: Stride_128, Stride_256
-      if (StarNet.prototype.Stride_128 !== undefined) {
-         P.stride = StarNet.prototype.Stride_128;
+      if (StarNet.Stride_128 !== undefined) {
+         P.stride = StarNet.Stride_128;
       } else if (P.stride !== undefined) {
          P.stride = 128;  // Fallback numeric value
       }
    }
    
-   if (P.hasOwnProperty("mask")) {
+   if (("mask" in P)) {
       P.mask = false;  // Generate starless image, not star mask
    }
    
    // Some versions may have linear flag
-   if (P.hasOwnProperty("linear")) {
+   if (("linear" in P)) {
       P.linear = !!config.starRemovalLinear;
    }
    

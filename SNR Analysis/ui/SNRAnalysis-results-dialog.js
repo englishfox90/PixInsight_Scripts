@@ -114,7 +114,7 @@ function showResultsDialog(results, totalTimeSec, outputDir, graphPath, gainGrap
    
    var graphTypeLabel = new Label(graphTab);
    graphTypeLabel.text = "Graph Type:";
-   graphTypeLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+   graphTypeLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
    graphTypeLabel.minWidth = 80;
    
    var graphTypeCombo = new ComboBox(graphTab);
@@ -400,7 +400,7 @@ function showMultiFilterResultsDialog(allFilterResults, outputDir) {
       
       var graphTypeLabel = new Label(graphTab);
       graphTypeLabel.text = "Graph Type:";
-      graphTypeLabel.textAlignment = TextAlign_Left | TextAlign_VertCenter;
+      graphTypeLabel.textAlignment = TextAlignment.Left | TextAlignment.VertCenter;
       graphTypeLabel.minWidth = 80;
       
       var graphTypeCombo = new ComboBox(graphTab);

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **SNR Analysis v1.7.0**: Migrated to the V8 JavaScript engine. Recent PixInsight
+  builds no longer ship the legacy SpiderMonkey (`sm`) engine, so the script failed
+  to launch with `*** Error: The legacy 'sm' JavaScript engine is not available in
+  this PixInsight build.`
+  - Added `#engine v8` and `CoreApplication.ensureMinimumVersion( 1, 9, 4 )`
+  - Removed all `#include <pjsr/*.jsh>` system includes (constants are now class properties)
+  - `DataType_*` -> `DataType.*` (note `DataType.Uint32`), `TextAlign_*` -> `TextAlignment.*`,
+    `StdButton_*`/`StdIcon_*`/`StdCursor_*`/`UndoFlag_*` -> dotted form, `MorphOp_*` -> `MorphologicalOp.*`
+  - Dropped `.prototype` from process constants (`ImageIntegration.*`, `Convolution.*`,
+    `PixelMath.*`, `StarNet.*`)
+  - `processEvents()` -> `CoreApplication.processEvents()`
+  - `GetDirectoryDialog.directory` -> `.directoryPath`
+  - `VectorGraphics` -> `Graphics` (removed in V8)
+  - `SNRAnalysisDialog` converted from the `__base__` pattern to an ES6 `class extends Dialog`
+  - Process parameter feature detection switched from `hasOwnProperty()` to the `in`
+    operator, since V8 exposes native process parameters as inherited properties
+
 ### Added
 - **SubReviewer v1.0.0**: New subframe review and culling tool
   - Recursive directory scanning for deep folder hierarchies
