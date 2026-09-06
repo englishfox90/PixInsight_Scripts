@@ -58,9 +58,20 @@ function buildInputSection(dialog) {
    patternLabel.minWidth = 100;
    
    var patternEdit = new Edit(dialog);
-   patternEdit.text = CONFIG.filePattern;
+   patternEdit.text = normalizeFilePattern(CONFIG.filePattern);
+   CONFIG.filePattern = patternEdit.text;
+   patternEdit.toolTip = "Semicolon-separated wildcards (e.g. " + DEFAULT_FILE_PATTERN
+                       + "). Left blank, it reverts to the default.";
    patternEdit.onTextUpdated = function(value) {
       CONFIG.filePattern = value;
+   };
+   patternEdit.onEditCompleted = function() {
+      // Clearing the field would otherwise persist an empty pattern, which
+      // matches nothing and reports "0 files" with no explanation.
+      if (this.text.trim().length === 0) {
+         this.text = DEFAULT_FILE_PATTERN;
+         CONFIG.filePattern = DEFAULT_FILE_PATTERN;
+      }
    };
    
    var patternSizer = new HorizontalSizer;

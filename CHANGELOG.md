@@ -25,6 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Process parameter feature detection switched from `hasOwnProperty()` to the `in`
     operator, since V8 exposes native process parameters as inherited properties
 
+- **SNR Analysis**: a blank file pattern silently found zero subframes. Clearing the
+  "File Pattern" field wrote an empty string to Settings, where it persisted across
+  sessions; an empty pattern parses to zero extensions, so the recursive scan matched
+  nothing in any directory and reported only "Found 0 files matching pattern".
+  - The field now pre-fills from `DEFAULT_FILE_PATTERN` and restores it when left blank
+  - `loadSettings()`/`saveSettings()` normalize the pattern, so an already-saved empty
+    value repairs itself on next launch
+- **SNR Analysis**: `msleep()` → `System.msleep()` (3 sites); the bare global is
+  deprecated in current builds and emitted a warning on every run.
+
 ### Added
 - **SubReviewer v1.0.0**: New subframe review and culling tool
   - Recursive directory scanning for deep folder hierarchies

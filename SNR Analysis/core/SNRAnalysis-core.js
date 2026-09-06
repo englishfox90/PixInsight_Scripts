@@ -25,6 +25,21 @@ var SETTINGS_VERSION = 1;
 // Supported file extensions
 var FILE_EXTS = [".xisf", ".fits", ".fit", ".fts"];
 
+// Default scan pattern (calibrated + registered subs). Named so that a blank
+// pattern - which matches nothing and silently yields zero subframes - can
+// always be recovered to something usable.
+var DEFAULT_FILE_PATTERN = "*_c_r.xisf;*_c_r.fits";
+
+/**
+ * Returns a usable file pattern: the supplied one if it has content,
+ * otherwise the built-in default.
+ */
+function normalizeFilePattern(pattern) {
+   return (typeof pattern === "string" && pattern.trim().length > 0)
+        ? pattern
+        : DEFAULT_FILE_PATTERN;
+}
+
 /**
  * Global configuration object
  * Stores all user preferences and analysis parameters
@@ -32,7 +47,7 @@ var FILE_EXTS = [".xisf", ".fits", ".fit", ".fts"];
 var CONFIG = {
    // Input
    inputDir: "",
-   filePattern: "*_c_r.xisf;*_c_r.fits",  // Default to calibrated and registered files
+   filePattern: DEFAULT_FILE_PATTERN,  // Calibrated and registered files
    analyzeAllFilters: true,  // If true, group by FILTER header and analyze each separately
    
    // ROI Mode
@@ -98,8 +113,10 @@ function loadSettings() {
       var dir = Settings.read(SNR_SETTINGS_MODULE + "/inputDir", DataType.String);
       if (Settings.lastReadOK) CONFIG.inputDir = dir;
       
+      // A previously saved blank pattern would match nothing at all, so fall
+      // back to the default rather than carrying the empty value forward.
       var pattern = Settings.read(SNR_SETTINGS_MODULE + "/filePattern", DataType.String);
-      if (Settings.lastReadOK) CONFIG.filePattern = pattern;
+      if (Settings.lastReadOK) CONFIG.filePattern = normalizeFilePattern(pattern);
       
       var analyzeAll = Settings.read(SNR_SETTINGS_MODULE + "/analyzeAllFilters", DataType.Boolean);
       if (Settings.lastReadOK) CONFIG.analyzeAllFilters = analyzeAll;
@@ -202,7 +219,8 @@ function saveSettings() {
       
       // Input
       Settings.write(SNR_SETTINGS_MODULE + "/inputDir", DataType.String, CONFIG.inputDir);
-      Settings.write(SNR_SETTINGS_MODULE + "/filePattern", DataType.String, CONFIG.filePattern);
+      Settings.write(SNR_SETTINGS_MODULE + "/filePattern", DataType.String,
+                     normalizeFilePattern(CONFIG.filePattern));
       Settings.write(SNR_SETTINGS_MODULE + "/analyzeAllFilters", DataType.Boolean, CONFIG.analyzeAllFilters);
       
       // ROI Mode

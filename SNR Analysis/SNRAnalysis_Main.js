@@ -1203,7 +1203,7 @@ function SNRAnalysisEngine() {
                
                for (var i = 0; i < 20; i++) {
                   CoreApplication.processEvents();
-                  msleep(100);
+                  System.msleep(100);
                }
                
                progress.close();
@@ -1266,7 +1266,7 @@ function SNRAnalysisEngine() {
          // Small delay to show 100% and final time before closing
          for (var i = 0; i < 10; i++) {
             CoreApplication.processEvents();
-            msleep(100);
+            System.msleep(100);
          }
          
          // Close progress monitor
@@ -1283,7 +1283,7 @@ function SNRAnalysisEngine() {
             // Keep dialog open briefly to show the error
             for (var i = 0; i < 15; i++) {
                CoreApplication.processEvents();
-               msleep(100);
+               System.msleep(100);
             }
             
             progress.close();
