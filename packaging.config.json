@@ -46,7 +46,7 @@
       "name": "Master Signature",
       "sourceDir": "Signature",
       "zipNamePrefix": "Signature",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "piScriptRoot": "src/scripts/Signature",
       "piResourceRoot": "rsc/Signature",
       "description": "Adds professional signature blocks and logos to processed astrophotography images with automatic FITS integration.",
@@ -59,7 +59,8 @@
       ],
       "files": {
         "scripts": [
-          "MasterSignature.js"
+          "MasterSignature.js",
+          "MasterSignature-core.js"
         ],
         "resources": [
           "lib/font/Space.ttf",
